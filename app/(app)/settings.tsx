@@ -1,10 +1,11 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
-import { Pressable, Switch, useColorScheme, View } from 'react-native';
+import { Alert, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
 import { colors } from '@/theme/colors';
@@ -52,6 +53,7 @@ function dateToTimeString(date: Date): string {
 export default function SettingsScreen() {
   const { signOut, isLoading: isSigningOut } = useSession();
   const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
+  const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
   const scheme = useColorScheme() ?? 'light';
 
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -73,6 +75,48 @@ export default function SettingsScreen() {
     } catch (signOutErr) {
       setSignOutError(signOutErr instanceof Error ? signOutErr.message : 'Não foi possível sair. Tente novamente.');
     }
+  }
+
+  /**
+   * Dupla confirmação deliberada: o primeiro diálogo explica o que será apagado, o segundo exige
+   * um "sim" para a ação irreversível em si. Excluir dado de saúde não pode acontecer por um
+   * toque acidental num botão vermelho.
+   */
+  function handleDeleteAccount(): void {
+    Alert.alert(
+      'Excluir minha conta?',
+      'Serão apagados definitivamente: todas as suas medições, os horários de lembrete, os aparelhos registrados e sua conta de acesso.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Continuar',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Tem certeza?', 'Esta ação é irreversível. Seus dados não poderão ser recuperados.', [
+              { text: 'Cancelar', style: 'cancel' },
+              {
+                text: 'Excluir definitivamente',
+                style: 'destructive',
+                onPress: () => {
+                  void (async () => {
+                    const success = await deleteAccount();
+
+                    if (success) {
+                      // O auth gate leva para a tela de login assim que a sessão cai; o alerta
+                      // fica por cima confirmando exatamente o que saiu do ar.
+                      Alert.alert(
+                        'Conta excluída',
+                        'Suas medições, lembretes, aparelhos registrados e conta de acesso foram apagados.',
+                      );
+                    }
+                  })();
+                },
+              },
+            ]);
+          },
+        },
+      ],
+    );
   }
 
   function handleToggleSlot(index: number, enabled: boolean): void {
@@ -164,6 +208,26 @@ export default function SettingsScreen() {
       {signOutError ? (
         <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger} className="mt-2">
           {signOutError}
+        </Text>
+      ) : null}
+
+      <Text variant="sectionHeader" className="mt-10">
+        Conta
+      </Text>
+      <Text variant="caption" className="mt-1">
+        Excluir a conta apaga definitivamente todas as suas medições, lembretes e aparelhos registrados.
+      </Text>
+
+      <Button
+        label="Excluir minha conta"
+        variant="destructive"
+        onPress={handleDeleteAccount}
+        loading={isDeleting}
+        className="mt-3"
+      />
+      {deleteError ? (
+        <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger} className="mt-2">
+          {deleteError}
         </Text>
       ) : null}
     </Screen>
