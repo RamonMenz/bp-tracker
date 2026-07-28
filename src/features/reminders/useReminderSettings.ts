@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { useSession } from '@/features/auth/useSession';
 
+import { syncLocalReminders } from './localReminders';
 import { registerPushToken } from './registerPushToken';
 import {
   mapReminderSubscribeError,
@@ -62,11 +63,30 @@ export function useReminderSettings(): UseReminderSettingsResult {
     }
   }
 
+  /**
+   * Sincroniza os lembretes locais depois de um save que já deu certo no Firestore. O local é
+   * um reforço (PLAN §3.5), não a fonte de verdade — se ele falhar, o save em si continua válido
+   * (retorna `true`), só o erro amigável do agendamento local aparece em `error`.
+   */
+  async function syncLocalRemindersAfterSave(reminderTimes: string[]): Promise<void> {
+    try {
+      await syncLocalReminders(reminderTimes);
+    } catch (syncError) {
+      setError(syncError instanceof Error ? syncError.message : GENERIC_MESSAGE);
+    }
+  }
+
   async function updateReminderTimes(reminderTimes: string[]): Promise<boolean> {
-    return persist({
+    const success = await persist({
       reminderTimes,
       notificationsEnabled: settings?.notificationsEnabled ?? false,
     });
+
+    if (success) {
+      await syncLocalRemindersAfterSave(reminderTimes);
+    }
+
+    return success;
   }
 
   /**
@@ -80,8 +100,16 @@ export function useReminderSettings(): UseReminderSettingsResult {
       return false;
     }
 
+    const reminderTimes = settings?.reminderTimes ?? [];
+
     if (!enabled) {
-      return persist({ reminderTimes: settings?.reminderTimes ?? [], notificationsEnabled: false });
+      const success = await persist({ reminderTimes, notificationsEnabled: false });
+
+      if (success) {
+        await syncLocalRemindersAfterSave([]);
+      }
+
+      return success;
     }
 
     setError(null);
@@ -95,7 +123,13 @@ export function useReminderSettings(): UseReminderSettingsResult {
       return false;
     }
 
-    return persist({ reminderTimes: settings?.reminderTimes ?? [], notificationsEnabled: true });
+    const success = await persist({ reminderTimes, notificationsEnabled: true });
+
+    if (success) {
+      await syncLocalRemindersAfterSave(reminderTimes);
+    }
+
+    return success;
   }
 
   return { settings, updateReminderTimes, toggleNotifications, isSaving, error };

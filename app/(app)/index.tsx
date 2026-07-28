@@ -1,6 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Haptics from 'expo-haptics';
-import { useRef, useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, TextInput, useColorScheme } from 'react-native';
 
 import { BpCategoryBadge } from '@/components/bp/BpCategoryBadge';
@@ -22,6 +23,7 @@ const measuredAtFormatter = new Intl.DateTimeFormat('pt-BR', {
 export default function RecordScreen() {
   const { addReading, isSaving, error } = useAddReading();
   const scheme = useColorScheme() ?? 'light';
+  const { autoFocus } = useLocalSearchParams<{ autoFocus?: string }>();
 
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
@@ -29,8 +31,18 @@ export default function RecordScreen() {
   const [measuredAt, setMeasuredAt] = useState(() => new Date());
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
+  const systolicRef = useRef<TextInput>(null);
   const diastolicRef = useRef<TextInput>(null);
   const pulseRef = useRef<TextInput>(null);
+
+  // Toque no lembrete (local ou push) manda para cá com autoFocus=systolic — quem tocou quer
+  // registrar, não navegar. O atraso dá tempo da transição de tela terminar antes do focus().
+  useEffect(() => {
+    if (autoFocus === 'systolic') {
+      const timeout = setTimeout(() => systolicRef.current?.focus(), 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [autoFocus]);
 
   const systolicNumber = Number(systolic);
   const diastolicNumber = Number(diastolic);
@@ -64,6 +76,7 @@ export default function RecordScreen() {
       </Text>
 
       <BpNumberInput
+        ref={systolicRef}
         label="Sistólica"
         value={systolic}
         onChangeText={setSystolic}

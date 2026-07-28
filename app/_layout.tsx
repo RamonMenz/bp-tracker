@@ -4,11 +4,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAuthRedirect } from '@/features/auth/useAuthRedirect';
 import { SessionProvider, useSession } from '@/features/auth/useSession';
+import { useNotificationRedirect } from '@/features/reminders/useNotificationRedirect';
 
 function RootNavigator() {
   const { user, isLoading } = useSession();
 
   useAuthRedirect(user, isLoading);
+  useNotificationRedirect();
 
   if (isLoading) {
     return (
