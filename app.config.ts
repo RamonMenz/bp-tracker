@@ -1,0 +1,52 @@
+import type { ConfigContext, ExpoConfig } from 'expo/config';
+
+// Config pública por design — o que protege os dados são as Security Rules + App Check, não esconder a apiKey; o `.env.local` segue gitignored só para não fixar no repositório a qual projeto Firebase (dev/prod) cada ambiente aponta.
+type FirebaseExtra = {
+  apiKey: string;
+  authDomain: string;
+  projectId: string;
+  appId: string;
+  messagingSenderId: string;
+  /** Só é usada pelo FCM na web; no Android o token vem do google-services.json. */
+  vapidKey: string | undefined;
+};
+
+const ENV_HINT =
+  'Copie .env.example para .env.local e preencha com os valores do seu projeto Firebase.';
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+
+  if (value === undefined || value.trim() === '') {
+    throw new Error(`Variável de ambiente ausente: ${name}. ${ENV_HINT}`);
+  }
+
+  return value;
+}
+
+function optionalEnv(name: string): string | undefined {
+  const value = process.env[name];
+
+  return value === undefined || value.trim() === '' ? undefined : value;
+}
+
+const firebase: FirebaseExtra = {
+  apiKey: requireEnv('EXPO_PUBLIC_FIREBASE_API_KEY'),
+  authDomain: requireEnv('EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN'),
+  projectId: requireEnv('EXPO_PUBLIC_FIREBASE_PROJECT_ID'),
+  appId: requireEnv('EXPO_PUBLIC_FIREBASE_APP_ID'),
+  messagingSenderId: requireEnv('EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID'),
+  vapidKey: optionalEnv('EXPO_PUBLIC_FIREBASE_VAPID_KEY'),
+};
+
+// `export default` aqui é exigido pelo Expo para app.config.ts — é a exceção à regra de exports nomeados.
+export default ({ config }: ConfigContext): ExpoConfig => ({
+  ...config,
+  name: 'BP Tracker',
+  slug: 'bp-tracker',
+  scheme: 'bptracker',
+  extra: {
+    ...config.extra,
+    firebase,
+  },
+});

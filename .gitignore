@@ -1,0 +1,8 @@
+# Variáveis de ambiente locais
+.env.local
+.env.*.local
+
+# Credenciais do Firebase — nunca versionar
+google-services.json
+GoogleService-Info.plist
+serviceAccountKey.json
