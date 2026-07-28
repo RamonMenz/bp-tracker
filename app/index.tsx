@@ -1,7 +1,12 @@
 import { Redirect } from 'expo-router';
 
-// Rota de entrada. Enquanto não existe sessão, aponta direto para o app;
-// o desvio para /(auth)/sign-in passa a depender do useSession na Fase 2.
+import { useSession } from '@/features/auth/useSession';
+
+// O _layout.tsx só renderiza esta rota depois que isLoading resolve, então `user`
+// já reflete o estado real de sessão aqui — sem isso, o redirect fixo do Fase 1
+// brigaria com o gate de auth (useAuthRedirect) na primeira renderização.
 export default function Index() {
-  return <Redirect href="/(app)" />;
+  const { user } = useSession();
+
+  return <Redirect href={user ? '/(app)' : '/(auth)/sign-in'} />;
 }
