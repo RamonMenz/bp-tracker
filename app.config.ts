@@ -39,6 +39,10 @@ const firebase: FirebaseExtra = {
   vapidKey: optionalEnv('EXPO_PUBLIC_FIREBASE_VAPID_KEY'),
 };
 
+// OAuth Web Client ID do mesmo projeto Firebase — @react-native-google-signin usa esse valor
+// (não o Android client ID) para obter o idToken trocado por credencial no signInWithCredential.
+const googleWebClientId = requireEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID');
+
 // `export default` aqui é exigido pelo Expo para app.config.ts — é a exceção à regra de exports nomeados.
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -48,5 +52,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     ...config.extra,
     firebase,
+    googleWebClientId,
   },
 });
