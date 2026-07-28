@@ -1,14 +1,19 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Switch, useColorScheme, View } from 'react-native';
+import { Alert, Linking, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
 import { colors } from '@/theme/colors';
+
+// Placeholder deliberado — não é uma URL real. Substitua antes de publicar; até lá, o link abre
+// um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
+const PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo';
 
 interface ReminderSlot {
   enabled: boolean;
@@ -117,6 +122,14 @@ export default function SettingsScreen() {
         },
       ],
     );
+  }
+
+  async function handleOpenPrivacyPolicy(): Promise<void> {
+    try {
+      await Linking.openURL(PRIVACY_POLICY_URL);
+    } catch {
+      Alert.alert('Não foi possível abrir', 'Tente novamente mais tarde.');
+    }
   }
 
   function handleToggleSlot(index: number, enabled: boolean): void {
@@ -230,6 +243,21 @@ export default function SettingsScreen() {
           {deleteError}
         </Text>
       ) : null}
+
+      <Text variant="sectionHeader" className="mt-10">
+        Privacidade
+      </Text>
+      <Disclaimer className="mt-2" />
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel="Abrir política de privacidade"
+        onPress={() => void handleOpenPrivacyPolicy()}
+        className="mt-3 min-h-[48px] items-start justify-center"
+      >
+        <Text variant="body" color={colors[scheme].primary} style={{ textDecorationLine: 'underline' }}>
+          Política de privacidade
+        </Text>
+      </Pressable>
     </Screen>
   );
 }
