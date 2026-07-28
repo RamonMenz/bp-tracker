@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReadingRow } from '@/components/bp/ReadingRow';
+import { TrendChart } from '@/components/bp/TrendChart';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
@@ -12,6 +13,7 @@ import { useExportCsv } from '@/features/export/useExportCsv';
 import { useDeleteReading } from '@/features/readings/useDeleteReading';
 import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
+import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
 import { colors } from '@/theme/colors';
 
 interface HeaderItem {
@@ -91,6 +93,7 @@ function buildListItems(readings: ReadingListItem[]): { items: ListItem[]; stick
 
 export default function HistoryScreen() {
   const { readings, isLoading, error } = useReadings();
+  const { trend7d, trend30d, isLoading: isTrendLoading } = useReadingsTrend();
   const { deleteReading, error: deleteError } = useDeleteReading();
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
@@ -163,7 +166,9 @@ export default function HistoryScreen() {
         stickyHeaderIndices={stickyHeaderIndices}
         estimatedItemSize={72}
         ListHeaderComponent={
-          <View className="gap-2 px-4 py-3">
+          <View className="gap-3 px-4 py-3">
+            <TrendChart trend7d={trend7d} trend30d={trend30d} isLoading={isTrendLoading} />
+
             <Button
               label="Exportar CSV"
               variant="secondary"
