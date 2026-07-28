@@ -12,6 +12,8 @@ export const colors = {
     border: '#E3E8EC',
     text: '#0F1A1C',
     muted: '#5A6B70',
+    // Ação destrutiva genérica (botão, erro de campo) — distinta da paleta AHA do badge de classificação.
+    danger: '#B3261E',
   },
   dark: {
     // Teal clareado para manter contraste sobre fundo escuro.
@@ -23,6 +25,7 @@ export const colors = {
     border: '#26343A',
     text: '#E8F0F2',
     muted: '#9BAAB0',
+    danger: '#E5484D',
   },
 } as const;
 
