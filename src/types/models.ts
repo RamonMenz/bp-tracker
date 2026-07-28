@@ -17,6 +17,9 @@ export interface Reading {
   source: 'manual';
 }
 
+/** Payload de criação: `createdAt` não existe ainda — é gerado no servidor via serverTimestamp(). */
+export type ReadingInput = Omit<Reading, 'createdAt'>;
+
 export interface UserProfile {
   displayName: string | null;
   email: string | null;

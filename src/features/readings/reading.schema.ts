@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { Reading } from '@/types/models';
+import type { Reading, ReadingInput } from '@/types/models';
 
 export const SYSTOLIC_MIN = 50;
 export const SYSTOLIC_MAX = 300;
@@ -37,46 +37,60 @@ const dateLike = z.preprocess((value) => {
   return value;
 }, z.date({ message: 'Data inválida.' }));
 
-export const readingSchema = z
-  .object({
-    systolic: z
-      .number({ message: 'Informe a sistólica.' })
-      .int({ message: 'A sistólica deve ser um número inteiro.' })
-      .min(SYSTOLIC_MIN, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` })
-      .max(SYSTOLIC_MAX, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` }),
+const readingShape = z.object({
+  systolic: z
+    .number({ message: 'Informe a sistólica.' })
+    .int({ message: 'A sistólica deve ser um número inteiro.' })
+    .min(SYSTOLIC_MIN, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` })
+    .max(SYSTOLIC_MAX, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` }),
 
-    diastolic: z
-      .number({ message: 'Informe a diastólica.' })
-      .int({ message: 'A diastólica deve ser um número inteiro.' })
-      .min(DIASTOLIC_MIN, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` })
-      .max(DIASTOLIC_MAX, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` }),
+  diastolic: z
+    .number({ message: 'Informe a diastólica.' })
+    .int({ message: 'A diastólica deve ser um número inteiro.' })
+    .min(DIASTOLIC_MIN, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` })
+    .max(DIASTOLIC_MAX, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` }),
 
-    pulse: z
-      .number()
-      .int({ message: 'O pulso deve ser um número inteiro.' })
-      .min(PULSE_MIN, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
-      .max(PULSE_MAX, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
-      .nullish()
-      .transform((value) => value ?? null),
+  pulse: z
+    .number()
+    .int({ message: 'O pulso deve ser um número inteiro.' })
+    .min(PULSE_MIN, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
+    .max(PULSE_MAX, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
+    .nullish()
+    .transform((value) => value ?? null),
 
-    measuredAt: dateLike.refine((value) => value.getTime() <= Date.now() + FUTURE_TOLERANCE_MS, {
-      message: 'A data da medição não pode estar no futuro.',
-    }),
+  measuredAt: dateLike.refine((value) => value.getTime() <= Date.now() + FUTURE_TOLERANCE_MS, {
+    message: 'A data da medição não pode estar no futuro.',
+  }),
 
-    createdAt: dateLike,
+  createdAt: dateLike,
 
-    note: z
-      .string()
-      .max(NOTE_MAX_LENGTH, { message: `A observação deve ter no máximo ${NOTE_MAX_LENGTH} caracteres.` })
-      .nullish()
-      .transform((value) => value ?? null),
+  note: z
+    .string()
+    .max(NOTE_MAX_LENGTH, { message: `A observação deve ter no máximo ${NOTE_MAX_LENGTH} caracteres.` })
+    .nullish()
+    .transform((value) => value ?? null),
 
-    source: z.literal('manual'),
-  })
-  .refine((reading) => reading.systolic > reading.diastolic, {
-    message: 'A sistólica deve ser maior que a diastólica.',
-    path: ['systolic'],
-  });
+  source: z.literal('manual'),
+});
+
+const SYSTOLIC_GT_DIASTOLIC_RULE = {
+  check: (reading: { systolic: number; diastolic: number }) => reading.systolic > reading.diastolic,
+  message: 'A sistólica deve ser maior que a diastólica.',
+};
+
+export const readingSchema = readingShape.refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
+  message: SYSTOLIC_GT_DIASTOLIC_RULE.message,
+  path: ['systolic'],
+});
+
+/**
+ * Mesma validação de `readingSchema`, sem `createdAt` — no momento da criação esse campo ainda
+ * não existe, é gerado no servidor (serverTimestamp), nunca fornecido pelo cliente.
+ */
+export const readingInputSchema = readingShape.omit({ createdAt: true }).refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
+  message: SYSTOLIC_GT_DIASTOLIC_RULE.message,
+  path: ['systolic'],
+});
 
 /**
  * Único portão de entrada de dados do Firestore para o domínio: o documento é `unknown` até
@@ -84,4 +98,9 @@ export const readingSchema = z
  */
 export function parseReading(value: unknown): Reading {
   return readingSchema.parse(value);
+}
+
+/** Valida o candidato a nova medição antes de chegar no repositório. */
+export function parseReadingInput(value: unknown): ReadingInput {
+  return readingInputSchema.parse(value);
 }

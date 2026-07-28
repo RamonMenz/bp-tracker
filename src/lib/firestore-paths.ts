@@ -3,3 +3,7 @@
 export function userDocPath(uid: string): string {
   return `users/${uid}`;
 }
+
+export function readingsCollectionPath(uid: string): string {
+  return `users/${uid}/readings`;
+}
