@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAuthRedirect } from '@/features/auth/useAuthRedirect';
 import { SessionProvider, useSession } from '@/features/auth/useSession';
@@ -25,8 +26,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <SessionProvider>
-      <RootNavigator />
-    </SessionProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionProvider>
+        <RootNavigator />
+      </SessionProvider>
+    </GestureHandlerRootView>
   );
 }

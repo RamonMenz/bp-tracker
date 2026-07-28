@@ -7,3 +7,7 @@ export function userDocPath(uid: string): string {
 export function readingsCollectionPath(uid: string): string {
   return `users/${uid}/readings`;
 }
+
+export function readingDocPath(uid: string, readingId: string): string {
+  return `users/${uid}/readings/${readingId}`;
+}
