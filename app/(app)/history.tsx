@@ -8,6 +8,7 @@ import { ReadingRow } from '@/components/bp/ReadingRow';
 import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { useExportCsv } from '@/features/export/useExportCsv';
 import { useDeleteReading } from '@/features/readings/useDeleteReading';
 import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
@@ -91,6 +92,7 @@ function buildListItems(readings: ReadingListItem[]): { items: ListItem[]; stick
 export default function HistoryScreen() {
   const { readings, isLoading, error } = useReadings();
   const { deleteReading, error: deleteError } = useDeleteReading();
+  const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
   const scheme = useColorScheme() ?? 'light';
 
@@ -160,6 +162,21 @@ export default function HistoryScreen() {
         getItemType={(item) => item.type}
         stickyHeaderIndices={stickyHeaderIndices}
         estimatedItemSize={72}
+        ListHeaderComponent={
+          <View className="gap-2 px-4 py-3">
+            <Button
+              label="Exportar CSV"
+              variant="secondary"
+              onPress={() => void exportCsv()}
+              loading={isExporting}
+            />
+            {exportError ? (
+              <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger}>
+                {exportError}
+              </Text>
+            ) : null}
+          </View>
+        }
         renderItem={({ item }) =>
           item.type === 'header' ? (
             <View className="bg-light-bg px-4 py-2 dark:bg-dark-bg">
