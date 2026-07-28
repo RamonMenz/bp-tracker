@@ -11,3 +11,7 @@ export function readingsCollectionPath(uid: string): string {
 export function readingDocPath(uid: string, readingId: string): string {
   return `users/${uid}/readings/${readingId}`;
 }
+
+export function devicesCollectionPath(uid: string): string {
+  return `users/${uid}/devices`;
+}
