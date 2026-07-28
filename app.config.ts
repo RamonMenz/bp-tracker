@@ -43,6 +43,17 @@ const firebase: FirebaseExtra = {
 // (não o Android client ID) para obter o idToken trocado por credencial no signInWithCredential.
 const googleWebClientId = requireEnv('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID');
 
+// Site key do reCAPTCHA Enterprise (App Check na web). Pública por design, igual à config do
+// Firebase. Opcional enquanto o App Check não estiver configurado no Console — sem ela o
+// initAppCheck apenas não inicializa, e com enforcement desligado o app segue funcionando.
+//
+// O DEBUG TOKEN do App Check deliberadamente NÃO entra aqui: `extra` é embutido no manifesto de
+// qualquer build, inclusive produção. Ele é lido de process.env.EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN
+// dentro de um bloco `if (__DEV__)`, que o Metro elimina no build de produção.
+const appCheck = {
+  recaptchaSiteKey: optionalEnv('EXPO_PUBLIC_APPCHECK_RECAPTCHA_SITE_KEY'),
+};
+
 // `export default` aqui é exigido pelo Expo para app.config.ts — é a exceção à regra de exports nomeados.
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -53,5 +64,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...config.extra,
     firebase,
     googleWebClientId,
+    appCheck,
   },
 });
