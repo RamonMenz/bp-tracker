@@ -150,7 +150,6 @@ export function logError<T extends Record<string, unknown>>(
     | undefined;
 
   if (__DEV__) {
-    // eslint-disable-next-line no-console
     console.error(`[${scope}]`, error, safeContext);
     return;
   }

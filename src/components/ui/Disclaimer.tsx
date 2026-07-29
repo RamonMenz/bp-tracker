@@ -1,6 +1,6 @@
 import { Pressable, useColorScheme, View, type ViewProps } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 import { Text } from './Text';
 
@@ -18,7 +18,7 @@ const DISCLAIMER_TEXT =
  * qualquer tela — Ajustes mostra sempre; a Home mostra só até o usuário dispensar (onDismiss).
  */
 export function Disclaimer({ onDismiss, className, ...props }: DisclaimerProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
 
   return (
     <View className={['gap-2', className].filter(Boolean).join(' ')} {...props}>

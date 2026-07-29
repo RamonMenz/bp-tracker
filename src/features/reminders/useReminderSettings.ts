@@ -30,6 +30,9 @@ export function useReminderSettings(): UseReminderSettingsResult {
 
   useEffect(() => {
     if (user === null) {
+      // Reset ao encerrar a sessão que assina o subscribeReminderSettings abaixo — sincroniza
+      // com o desligamento do listener externo, não deriva estado do render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettings(null);
       return;
     }

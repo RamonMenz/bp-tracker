@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, useColorScheme, type PressableProps } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 import { Text } from './Text';
 
@@ -27,7 +27,7 @@ export function Button({
   className,
   ...props
 }: ButtonProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const palette = colors[scheme];
   const isDisabled = disabled || loading;
 

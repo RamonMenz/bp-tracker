@@ -51,6 +51,10 @@ export function useReadings(): UseReadingsResult {
 
   useEffect(() => {
     if (user === null) {
+      // Reset ao encerrar a sessão que assina o onSnapshot abaixo — não deriva estado do render,
+      // sincroniza com o desligamento do listener externo (react-hooks/set-state-in-effect não
+      // distingue esse caso do de deriving-state-from-props).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setReadings([]);
       setIsLoading(false);
       return;

@@ -1,0 +1,29 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // Só ".native": todo par nativo/web do projeto (firebase, appCheck, file, registerPushToken,
+    // signInWithGoogle, reauthenticateWithGoogle) tem os dois arquivos, então ".native" sempre
+    // resolve. Incluir ".web" aqui também sequestraria o split interno de pacotes de terceiros
+    // que só têm um arquivo bare + um .web.ts (ex.: GoogleSignin.d.ts / GoogleSignin.web.d.ts) —
+    // o bare É a implementação nativa deles, mas o moduleSuffixes global faria o tsc escolher o
+    // shim .web por engano nesses casos.
+    "moduleSuffixes": [".native", ""],
+    "types": ["jest", "node"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["app", "src", "tests", "nativewind-env.d.ts", "app.config.ts"],
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js",
+    "jest.rules.config.js",
+    "android",
+    "ios",
+    "functions",
+    "dist"
+  ]
+}

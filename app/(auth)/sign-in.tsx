@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/Button';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useSession } from '@/features/auth/useSession';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 export default function SignInScreen() {
   const { signIn, isLoading } = useSession();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSignIn(): Promise<void> {

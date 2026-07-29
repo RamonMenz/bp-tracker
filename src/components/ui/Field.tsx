@@ -1,6 +1,6 @@
 import { TextInput, useColorScheme, View, type TextInputProps } from 'react-native';
 
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 import { Text } from './Text';
 
@@ -10,7 +10,7 @@ export interface FieldProps extends TextInputProps {
 }
 
 export function Field({ label, errorMessage, className, ...inputProps }: FieldProps) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const hasError = Boolean(errorMessage);
 
   return (
@@ -18,7 +18,6 @@ export function Field({ label, errorMessage, className, ...inputProps }: FieldPr
       <Text variant="caption">{label}</Text>
       <TextInput
         accessibilityLabel={label}
-        accessibilityState={{ invalid: hasError }}
         placeholderTextColor={colors[scheme].muted}
         className={[
           'min-h-[48px] rounded-xl border bg-light-surface px-4 text-base text-light-text dark:bg-dark-surface dark:text-dark-text',

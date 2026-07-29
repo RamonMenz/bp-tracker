@@ -14,7 +14,7 @@ import { useDeleteReading } from '@/features/readings/useDeleteReading';
 import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 interface HeaderItem {
   type: 'header';
@@ -97,7 +97,7 @@ export default function HistoryScreen() {
   const { deleteReading, error: deleteError } = useDeleteReading();
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
 
   const { items, stickyHeaderIndices } = useMemo(() => buildListItems(readings), [readings]);
 
@@ -164,7 +164,6 @@ export default function HistoryScreen() {
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
         stickyHeaderIndices={stickyHeaderIndices}
-        estimatedItemSize={72}
         ListHeaderComponent={
           <View className="gap-3 px-4 py-3">
             <TrendChart trend7d={trend7d} trend30d={trend30d} isLoading={isTrendLoading} />

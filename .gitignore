@@ -6,3 +6,17 @@
 google-services.json
 GoogleService-Info.plist
 serviceAccountKey.json
+
+# Dependências
+node_modules/
+functions/node_modules/
+
+# Builds e cache
+dist/
+web-build/
+.expo/
+functions/lib/
+*.tsbuildinfo
+
+# Credenciais do EAS
+credentials.json

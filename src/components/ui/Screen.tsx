@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { tokens } from '@/theme/tokens';
 
-export interface ScreenProps extends ScrollViewProps {}
+export type ScreenProps = ScrollViewProps;
 
 export function Screen({ children, contentContainerStyle, ...props }: ScreenProps) {
   return (

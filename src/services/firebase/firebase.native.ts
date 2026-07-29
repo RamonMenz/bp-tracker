@@ -1,7 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+// getReactNativePersistence só existe na build RN de @firebase/auth (condição "react-native" do
+// package.json) — o pacote guarda-chuva 'firebase/auth' não declara essa condição e cairia na
+// build genérica sem persistência nativa.
+import { getAuth, getReactNativePersistence, initializeAuth, type Auth } from '@firebase/auth';
 import { getApp, getApps, initializeApp, type FirebaseApp, type FirebaseOptions } from 'firebase/app';
-import { getAuth, getReactNativePersistence, initializeAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const extra = Constants.expoConfig?.extra as { firebase?: FirebaseOptions } | undefined;

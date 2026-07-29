@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import { TextInput, useColorScheme, View, type TextInputProps } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 export interface BpNumberInputProps {
   label: string;
@@ -19,7 +19,7 @@ export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function 
   { label, value, onChangeText, maxLength, onDigitsComplete, errorMessage, returnKeyType },
   ref,
 ) {
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const hasError = Boolean(errorMessage);
 
   function handleChangeText(text: string): void {
@@ -42,7 +42,6 @@ export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function 
         maxLength={maxLength}
         returnKeyType={returnKeyType}
         accessibilityLabel={label}
-        accessibilityState={{ invalid: hasError }}
         className="min-h-[64px] min-w-[110px] text-center text-[56px] font-bold text-light-text dark:text-dark-text"
         style={{ fontVariant: ['tabular-nums'] }}
       />

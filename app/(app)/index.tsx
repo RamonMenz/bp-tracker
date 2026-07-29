@@ -14,7 +14,7 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { classifyBloodPressure } from '@/domain/bp-classification';
 import { useAddReading } from '@/features/readings/useAddReading';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 const measuredAtFormatter = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -29,7 +29,7 @@ const DISCLAIMER_DISMISSED_KEY = 'bp-tracker:disclaimer-dismissed';
 
 export default function RecordScreen() {
   const { addReading, isSaving, error } = useAddReading();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const { autoFocus } = useLocalSearchParams<{ autoFocus?: string }>();
 
   const [systolic, setSystolic] = useState('');
