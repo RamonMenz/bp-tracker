@@ -1,5 +1,12 @@
 import { computeDailyTrend } from './useReadingsTrend';
 
+// useReadingsTrend.ts também exporta o hook conectado useReadingsTrend, que importa
+// useReadings — e esse, transitivamente, toda a stack de auth/Firebase/Google Sign-In. Este
+// arquivo só testa computeDailyTrend (pura); o mock evita puxar módulos nativos inexistentes no
+// ambiente de teste por causa de um export do mesmo arquivo que não é exercido aqui.
+// babel-plugin-jest-hoist eleva esta chamada para antes dos imports em tempo de build.
+jest.mock('./useReadings', () => ({ useReadings: jest.fn() }));
+
 function reading(measuredAt: string, systolic: number, diastolic: number) {
   return { measuredAt: new Date(measuredAt), systolic, diastolic };
 }
