@@ -1,0 +1,10 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "readings",
+      "queryScope": "COLLECTION",
+      "fields": [{ "fieldPath": "measuredAt", "order": "DESCENDING" }]
+    }
+  ],
+  "fieldOverrides": []
+}

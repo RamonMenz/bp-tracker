@@ -1,8 +1,9 @@
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 import { auth } from '@/services/firebase';
 
+import { ensureUserProfile } from './ensureUserProfile';
 import { signInWithGoogle } from './signInWithGoogle';
 
 export interface UseSessionResult {
@@ -24,14 +25,26 @@ function getErrorCode(error: unknown): string | undefined {
   return undefined;
 }
 
-export function useSession(): UseSessionResult {
+function useSessionState(): UseSessionResult {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser);
-      setIsLoading(false);
+      if (nextUser === null) {
+        setUser(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Falha ao sincronizar o perfil não deve travar o login — o próximo
+      // onAuthStateChanged (próxima abertura do app) tenta de novo.
+      ensureUserProfile(nextUser)
+        .catch(() => undefined)
+        .finally(() => {
+          setUser(nextUser);
+          setIsLoading(false);
+        });
     });
 
     return unsubscribe;
@@ -53,7 +66,8 @@ export function useSession(): UseSessionResult {
     try {
       await firebaseSignOut(auth);
     } catch (error) {
-      const message = getErrorCode(error) === 'auth/network-request-failed' ? NETWORK_MESSAGE : GENERIC_SIGN_OUT_MESSAGE;
+      const message =
+        getErrorCode(error) === 'auth/network-request-failed' ? NETWORK_MESSAGE : GENERIC_SIGN_OUT_MESSAGE;
       throw new Error(message);
     } finally {
       setIsLoading(false);
@@ -61,4 +75,24 @@ export function useSession(): UseSessionResult {
   }
 
   return { user, isLoading, signIn, signOut };
+}
+
+const SessionContext = createContext<UseSessionResult | null>(null);
+
+// Provider único no _layout.tsx: garante um só onAuthStateChanged (e um só ensureUserProfile
+// por transição de estado) mesmo com várias telas consumindo useSession.
+export function SessionProvider({ children }: { children: ReactNode }) {
+  const session = useSessionState();
+
+  return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
+}
+
+export function useSession(): UseSessionResult {
+  const context = useContext(SessionContext);
+
+  if (context === null) {
+    throw new Error('useSession precisa estar dentro de um SessionProvider.');
+  }
+
+  return context;
 }

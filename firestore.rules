@@ -1,0 +1,105 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Google é o provedor único do app. Amarrar o provedor aqui impede que uma conta criada
+    // por outro meio (custom token, anônimo) alcance os dados mesmo se o Auth for reconfigurado.
+    function signedIn() {
+      return request.auth != null
+          && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function intBetween(v, lo, hi) {
+      return v is int && v >= lo && v <= hi;
+    }
+
+    // ---------- PERFIL ----------
+    match /users/{uid} {
+      function validProfile(d) {
+        return d.keys().hasOnly([
+                 'displayName','email','photoURL','timezone',
+                 'reminderTimes','notificationsEnabled','createdAt','updatedAt'
+               ])
+            // createdAt/updatedAt entram no hasAll: a comparação de createdAt no update
+            // erraria (e negaria para sempre) num documento que tivesse sido criado sem eles.
+            && d.keys().hasAll([
+                 'timezone','reminderTimes','notificationsEnabled','createdAt','updatedAt'
+               ])
+            && d.timezone is string && d.timezone.size() <= 64
+            && d.notificationsEnabled is bool
+            && d.reminderTimes is list && d.reminderTimes.size() <= 8
+            && d.createdAt is timestamp
+            && d.updatedAt is timestamp;
+      }
+
+      allow get:    if isOwner(uid);
+      allow list:   if false;                       // ninguém enumera usuários
+      allow create: if isOwner(uid) && validProfile(request.resource.data);
+      allow update: if isOwner(uid) && validProfile(request.resource.data)
+                    && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);                // exclusão de conta (LGPD)
+
+      // ---------- MEDIÇÕES ----------
+      match /readings/{readingId} {
+        function validReading(d) {
+          return d.keys().hasOnly([
+                   'systolic','diastolic','pulse','measuredAt',
+                   'createdAt','note','source'
+                 ])
+              && d.keys().hasAll(['systolic','diastolic','measuredAt','createdAt','source'])
+              && intBetween(d.systolic, 50, 300)
+              && intBetween(d.diastolic, 30, 200)
+              && d.systolic > d.diastolic
+              // pulse e note são opcionais: `d.pulse` erraria (= negaria) se a chave não existisse,
+              // então o acesso passa por get() com default null.
+              && (d.get('pulse', null) == null || intBetween(d.get('pulse', null), 20, 250))
+              && d.measuredAt is timestamp
+              && d.measuredAt <= request.time + duration.value(5, 'm')   // sem futuro
+              && d.createdAt is timestamp
+              && (d.get('note', null) == null
+                  || (d.get('note', null) is string && d.get('note', null).size() <= 280))
+              && d.source == 'manual';
+        }
+
+        allow read:   if isOwner(uid);              // get + list (o export usa list)
+        allow create: if isOwner(uid) && validReading(request.resource.data)
+                      && request.resource.data.createdAt == request.time;
+        allow update: if isOwner(uid) && validReading(request.resource.data)
+                      && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(uid);
+      }
+
+      // ---------- TOKENS DE PUSH ----------
+      match /devices/{tokenId} {
+        function validDevice(d) {
+          return d.keys().hasOnly(['token','platform','lastSeenAt'])
+              && d.keys().hasAll(['token','platform','lastSeenAt'])
+              && d.token is string && d.token.size() <= 512
+              && d.platform in ['android','web','ios']
+              && d.lastSeenAt is timestamp;
+        }
+
+        allow read:           if isOwner(uid);
+        // create/update separados de delete: em delete request.resource é null e validDevice erraria.
+        allow create, update: if isOwner(uid) && validDevice(request.resource.data);
+        allow delete:         if isOwner(uid);
+      }
+    }
+
+    // ---------- ÍNDICE DE DISPARO: exclusivo do Admin SDK ----------
+    // O Admin SDK ignora as rules, então as Functions continuam escrevendo aqui normalmente.
+    match /schedules/{uid} {
+      allow read, write: if false;
+    }
+
+    // ---------- NEGAÇÃO EXPLÍCITA ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
