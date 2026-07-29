@@ -45,4 +45,16 @@ module.exports = defineConfig([
       globals: { jest: 'readonly' },
     },
   },
+  {
+    // public/ é servido cru (copiado para dist/ pelo expo export), fora do bundle do Metro: o
+    // service worker roda em outro contexto e não tem como importar src/lib/logger.ts, então
+    // console é o único canal de diagnóstico disponível ali.
+    files: ['public/**/*.js'],
+    languageOptions: {
+      globals: { self: 'readonly', importScripts: 'readonly', firebase: 'readonly' },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ]);

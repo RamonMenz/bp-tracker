@@ -1,0 +1,25 @@
+# A Vercel hospeda APENAS o front web. Estes caminhos pertencem a outros canais de deploy e
+# só aumentariam o upload//build aqui.
+
+# Cloud Functions — publicadas pelo Firebase CLI (firebase deploy --only functions)
+functions/
+
+# Projetos nativos — publicados pelo EAS (eas build --platform android)
+android/
+ios/
+
+# Regras e índices do Firestore — publicados pelo Firebase CLI
+firestore.rules
+firestore.indexes.json
+firebase.json
+
+# Testes e configuração de teste não entram no bundle de produção
+tests/
+jest.config.js
+jest.rules.config.js
+jest.setup.js
+
+# Documentação
+PLAN.md
+RELEASE_CHECKLIST.md
+CLAUDE.md
