@@ -27,14 +27,27 @@ export const onUserDelete = functionsV1
     const { uid } = user;
     const db = getFirestore();
 
-    // `recursiveDelete` cobre o documento E todas as subcoleções (readings, devices) — um
-    // `delete()` simples no documento deixaria as subcoleções intactas e invisíveis, porque no
-    // Firestore subcoleção não é apagada junto com o pai.
-    await db.recursiveDelete(db.doc(userPath(uid)));
+    try {
+      // `recursiveDelete` cobre o documento E todas as subcoleções (readings, devices) — um
+      // `delete()` simples no documento deixaria as subcoleções intactas e invisíveis, porque no
+      // Firestore subcoleção não é apagada junto com o pai.
+      await db.recursiveDelete(db.doc(userPath(uid)));
 
-    // Fora da árvore de users/, então precisa ser apagado à parte. Sem isso o usuário excluído
-    // continuaria no índice do cron e receberia push de lembrete.
-    await db.doc(schedulePath(uid)).delete();
+      // Fora da árvore de users/, então precisa ser apagado à parte. Sem isso o usuário excluído
+      // continuaria no índice do cron e receberia push de lembrete.
+      await db.doc(schedulePath(uid)).delete();
 
-    logger.info('dados do usuário excluídos', { uid });
+      logger.info('dados do usuário excluídos', { uid });
+    } catch (error) {
+      // Este é o erro mais grave do backend: o usuário JÁ foi informado de que os dados foram
+      // apagados. Falhar aqui deixa dado de saúde órfão — merece severidade ERROR e alerta.
+      logger.error('FALHA AO EXCLUIR DADOS DO USUÁRIO', {
+        uid,
+        message: error instanceof Error ? error.message : 'erro desconhecido',
+      });
+
+      // Relançar é obrigatório aqui: é o que aciona o retry do failurePolicy acima. Engolir o
+      // erro cancelaria a reexecução e o dado ficaria órfão em definitivo.
+      throw error;
+    }
   });

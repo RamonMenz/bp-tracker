@@ -67,56 +67,69 @@ export const onUserSettingsWrite = onDocumentWritten(
   { document: 'users/{uid}', region: REGION },
   async (event) => {
     const { uid } = event.params;
-    const scheduleRef = getFirestore().doc(schedulePath(uid));
 
-    const before = toScheduleSettings(event.data?.before.data());
-    const after = toScheduleSettings(event.data?.after.data());
+    try {
+      const scheduleRef = getFirestore().doc(schedulePath(uid));
 
-    // `ensureUserProfile` reescreve users/{uid} a cada login (updatedAt). Sem esta guarda, todo
-    // login recalcularia nextRunAt — e um lembrete já vencido, ainda não despachado pelo cron,
-    // seria empurrado para o próximo horário e nunca chegaria.
-    if (isSameSchedule(before, after)) {
-      return;
-    }
+      const before = toScheduleSettings(event.data?.before.data());
+      const after = toScheduleSettings(event.data?.after.data());
 
-    if (after === null) {
-      // Desligou notificações, zerou os horários ou apagou a conta: sai do índice.
-      // Apagar (em vez de marcar inativo) mantém a query do cron como filtro de campo único.
-      await scheduleRef.delete();
-      logger.info('schedule removido', { uid });
-      return;
-    }
+      // `ensureUserProfile` reescreve users/{uid} a cada login (updatedAt). Sem esta guarda, todo
+      // login recalcularia nextRunAt — e um lembrete já vencido, ainda não despachado pelo cron,
+      // seria empurrado para o próximo horário e nunca chegaria.
+      if (isSameSchedule(before, after)) {
+        return;
+      }
 
-    const nextRunAt = computeNextRun(after.reminderTimes, after.timezone);
+      if (after === null) {
+        // Desligou notificações, zerou os horários ou apagou a conta: sai do índice.
+        // Apagar (em vez de marcar inativo) mantém a query do cron como filtro de campo único.
+        await scheduleRef.delete();
+        logger.info('schedule removido', { uid });
+        return;
+      }
 
-    if (nextRunAt === null) {
-      // Timezone desconhecida ou todos os horários malformados. Gravar `nextRunAt: null` deixaria
-      // um documento permanentemente inválido no índice, então ele sai da fila.
-      await scheduleRef.delete();
-      logger.warn('sem horário agendável, schedule removido', {
+      const nextRunAt = computeNextRun(after.reminderTimes, after.timezone);
+
+      if (nextRunAt === null) {
+        // Timezone desconhecida ou todos os horários malformados. Gravar `nextRunAt: null` deixaria
+        // um documento permanentemente inválido no índice, então ele sai da fila.
+        await scheduleRef.delete();
+        logger.warn('sem horário agendável, schedule removido', {
+          uid,
+          reminderTimesCount: after.reminderTimes.length,
+        });
+        return;
+      }
+
+      const tokens = await readDeviceTokens(uid);
+
+      await scheduleRef.set(
+        {
+          nextRunAt,
+          timezone: after.timezone,
+          reminderTimes: after.reminderTimes,
+          tokens,
+          lastSentAt: null,
+        },
+        { merge: true },
+      );
+
+      logger.info('schedule atualizado', {
         uid,
+        tokenCount: tokens.length,
         reminderTimesCount: after.reminderTimes.length,
       });
-      return;
+    } catch (error) {
+      // Falha aqui significa lembrete que não vai disparar — sintoma silencioso para o usuário,
+      // por isso precisa de sinal explícito na métrica de erro.
+      logger.error('falha ao sincronizar schedule', {
+        uid,
+        message: error instanceof Error ? error.message : 'erro desconhecido',
+      });
+
+      // Relança de propósito: engolir esconderia a falha do alerta no Cloud Monitoring.
+      throw error;
     }
-
-    const tokens = await readDeviceTokens(uid);
-
-    await scheduleRef.set(
-      {
-        nextRunAt,
-        timezone: after.timezone,
-        reminderTimes: after.reminderTimes,
-        tokens,
-        lastSentAt: null,
-      },
-      { merge: true },
-    );
-
-    logger.info('schedule atualizado', {
-      uid,
-      tokenCount: tokens.length,
-      reminderTimesCount: after.reminderTimes.length,
-    });
   },
 );

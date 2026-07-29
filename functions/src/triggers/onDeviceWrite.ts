@@ -17,19 +17,31 @@ export const onDeviceWrite = onDocumentWritten(
   { document: 'users/{uid}/devices/{tokenId}', region: REGION },
   async (event) => {
     const { uid } = event.params;
-    const scheduleRef = getFirestore().doc(schedulePath(uid));
-    const scheduleSnapshot = await scheduleRef.get();
 
-    // Sem documento no índice = notificações desligadas. Criar um aqui deixaria uma entrada sem
-    // `nextRunAt`, invisível para a query do cron e que só sairia numa mudança de settings.
-    if (!scheduleSnapshot.exists) {
-      return;
+    try {
+      const scheduleRef = getFirestore().doc(schedulePath(uid));
+      const scheduleSnapshot = await scheduleRef.get();
+
+      // Sem documento no índice = notificações desligadas. Criar um aqui deixaria uma entrada sem
+      // `nextRunAt`, invisível para a query do cron e que só sairia numa mudança de settings.
+      if (!scheduleSnapshot.exists) {
+        return;
+      }
+
+      const tokens = await readDeviceTokens(uid);
+
+      await scheduleRef.update({ tokens });
+
+      logger.info('tokens ressincronizados', { uid, tokenCount: tokens.length });
+    } catch (error) {
+      logger.error('falha ao ressincronizar tokens', {
+        uid,
+        message: error instanceof Error ? error.message : 'erro desconhecido',
+      });
+
+      // Relança de propósito: engolir o erro esconderia a falha da métrica de execuções com erro,
+      // que é justamente o sinal que alimenta o alerta no Cloud Monitoring.
+      throw error;
     }
-
-    const tokens = await readDeviceTokens(uid);
-
-    await scheduleRef.update({ tokens });
-
-    logger.info('tokens ressincronizados', { uid, tokenCount: tokens.length });
   },
 );
