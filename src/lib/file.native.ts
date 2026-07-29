@@ -1,4 +1,6 @@
-import * as FileSystem from 'expo-file-system';
+// A API legada (documentDirectory/writeAsStringAsync) foi movida para este subpath no SDK 57 —
+// a raiz 'expo-file-system' agora expõe só a API nova baseada em File/Directory/Paths.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 const WRITE_FAILED_MESSAGE = 'Não foi possível preparar o arquivo para compartilhar. Tente novamente.';

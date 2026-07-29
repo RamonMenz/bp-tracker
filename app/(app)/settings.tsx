@@ -9,7 +9,7 @@ import { Text } from '@/components/ui/Text';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 // Placeholder deliberado — não é uma URL real. Substitua antes de publicar; até lá, o link abre
 // um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
@@ -59,7 +59,7 @@ export default function SettingsScreen() {
   const { signOut, isLoading: isSigningOut } = useSession();
   const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
   const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
 
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [slots, setSlots] = useState<ReminderSlot[]>(DEFAULT_SLOTS);
@@ -68,6 +68,10 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     if (settings !== null && !hasInitializedSlots) {
+      // Semeia o estado local editável na PRIMEIRA chegada do listener assíncrono do Firestore —
+      // a guarda hasInitializedSlots é o que impede reexecutar a cada atualização do settings e
+      // sobrescrever uma edição do usuário ainda não salva.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlots(slotsFromReminderTimes(settings.reminderTimes));
       setHasInitializedSlots(true);
     }

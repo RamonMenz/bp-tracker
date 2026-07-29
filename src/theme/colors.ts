@@ -1,3 +1,5 @@
+import type { ColorSchemeName } from 'react-native';
+
 /**
  * Paleta de marca — calma e clínica. Teal é a cor primária, não vermelho:
  * alarme constante em app de pressão gera ansiedade e abandono (PLAN §4.2).
@@ -32,3 +34,12 @@ export const colors = {
 export type ColorScheme = keyof typeof colors;
 
 export type ColorToken = keyof typeof colors.light;
+
+/**
+ * `useColorScheme()` do react-native@0.86+ pode retornar `'unspecified'` (além de `'light' |
+ * 'dark' | null`), valor que `?? 'light'` não cobre porque não é `null`/`undefined`. Qualquer
+ * coisa que não seja explicitamente `'dark'` cai em `'light'`, a paleta calma padrão do app.
+ */
+export function resolveColorScheme(scheme: ColorSchemeName): ColorScheme {
+  return scheme === 'dark' ? 'dark' : 'light';
+}

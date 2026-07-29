@@ -9,7 +9,7 @@ import { LineChart } from 'react-native-gifted-charts';
 import { Card } from '@/components/ui/Card';
 import { Text } from '@/components/ui/Text';
 import type { TrendPoint, TrendWindow } from '@/features/readings/useReadingsTrend';
-import { colors } from '@/theme/colors';
+import { colors, resolveColorScheme } from '@/theme/colors';
 
 export interface TrendChartProps {
   trend7d: TrendPoint[];
@@ -17,7 +17,7 @@ export interface TrendChartProps {
   isLoading: boolean;
 }
 
-const WINDOW_OPTIONS: ReadonlyArray<{ value: TrendWindow; label: string }> = [
+const WINDOW_OPTIONS: readonly { value: TrendWindow; label: string }[] = [
   { value: 7, label: '7 dias' },
   { value: 30, label: '30 dias' },
 ];
@@ -26,7 +26,7 @@ const CHART_HEIGHT = 160;
 
 export function TrendChart({ trend7d, trend30d, isLoading }: TrendChartProps) {
   const [window, setWindow] = useState<TrendWindow>(7);
-  const scheme = useColorScheme() ?? 'light';
+  const scheme = resolveColorScheme(useColorScheme());
   const palette = colors[scheme];
 
   const points = window === 7 ? trend7d : trend30d;
