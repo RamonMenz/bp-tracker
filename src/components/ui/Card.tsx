@@ -1,6 +1,6 @@
 import { View, type ViewProps } from 'react-native';
 
-export interface CardProps extends ViewProps {}
+export type CardProps = ViewProps;
 
 export function Card({ className, ...props }: CardProps) {
   return (
