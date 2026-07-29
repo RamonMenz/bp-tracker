@@ -60,6 +60,27 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'BP Tracker',
   slug: 'bp-tracker',
   scheme: 'bptracker',
+  // ⚠️ PLACEHOLDER: assets/*.png são quadrados teal sólidos gerados só para destravar a
+  // configuração — troque pela arte real antes de publicar na Play Store.
+  icon: './assets/icon.png',
+  android: {
+    // Não pode mudar depois de publicado na Play Store.
+    package: 'com.ramonmenz.bptracker',
+    adaptiveIcon: {
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#0E7C86',
+    },
+  },
+  ios: {
+    bundleIdentifier: 'com.ramonmenz.bptracker',
+  },
+  web: {
+    // 'single' (SPA) é o padrão quando web.output não é declarado — explicitado aqui porque é
+    // o que torna válido o rewrite catch-all para /index.html no vercel.json.
+    output: 'single',
+    favicon: './assets/favicon.png',
+    bundler: 'metro',
+  },
   extra: {
     ...config.extra,
     firebase,
