@@ -75,25 +75,44 @@ beforeEach(() => {
   useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: false, error: null });
 });
 
+/**
+ * Regressão do bug em que a exclusão não funcionava na web: a confirmação usava `Alert.alert`,
+ * que o react-native-web define como método vazio (`static alert() {}`) — o diálogo nunca
+ * aparecia e o array de botões, que carregava o onPress real, era descartado em silêncio.
+ * Hoje quem confirma é o ConfirmDialog (sobre o Modal), que renderiza nas duas plataformas.
+ */
 describe('HistoryScreen — exclusão de medição', () => {
-  /**
-   * Bug: handleRequestDelete (app/(app)/history.tsx) usa Alert.alert para confirmar a exclusão.
-   * Alert.alert é um no-op na web (react-native-web não implementa diálogo nativo nenhum), então
-   * nenhum diálogo de confirmação aparece e o botão "Excluir" da confirmação nunca existe na
-   * árvore para o usuário tocar — a exclusão simplesmente não acontece.
-   *
-   * Este teste dispara a exclusão do jeito que o usuário real faria (aciona a ação da linha,
-   * depois confirma no diálogo) e falha porque esse diálogo nunca é renderizado.
-   */
-  it('exclui a medição ao confirmar a exclusão pela linha do histórico', async () => {
+  it('exclui a medição ao confirmar no diálogo aberto pela linha do histórico', async () => {
     await render(<HistoryScreen />);
 
     fireEvent.press(screen.getByLabelText('Excluir medição'));
 
-    const confirmButton = await screen.findByRole('button', { name: 'Excluir' });
-    fireEvent.press(confirmButton);
+    // O diálogo precisa existir de fato — é exatamente o que faltava na web.
+    expect(await screen.findByText('Excluir medição?')).toBeTruthy();
+    expect(screen.getByText('Essa ação não pode ser desfeita.')).toBeTruthy();
+
+    // Abrir o diálogo não pode, sozinho, apagar nada.
+    expect(deleteReadingMock).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Excluir' }));
 
     expect(deleteReadingMock).toHaveBeenCalledTimes(1);
     expect(deleteReadingMock).toHaveBeenCalledWith(READING.id);
+  });
+
+  it('não exclui nada ao cancelar a confirmação', async () => {
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByLabelText('Excluir medição'));
+    // Confirma que o diálogo abriu de fato — sem isto o teste passaria mesmo se o "Cancelar"
+    // nunca tivesse chegado a existir.
+    expect(await screen.findByText('Excluir medição?')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+
+    // A asserção é sobre o efeito, não sobre a saída do diálogo da árvore: o Modal do RN mantém
+    // o conteúdo montado depois de exibido uma vez no iOS (`_shouldShowModal`), então procurar
+    // pelo título aqui testaria o interno do RN, não o nosso comportamento.
+    expect(deleteReadingMock).not.toHaveBeenCalled();
   });
 });

@@ -1,9 +1,10 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, Switch, useColorScheme, View } from 'react-native';
+import { Linking, Platform, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -30,6 +31,17 @@ interface ReminderSlot {
   enabled: boolean;
   time: string;
 }
+
+/**
+ * Qual diálogo está aberto. Um estado só, e não um booleano por diálogo, porque eles são
+ * mutuamente exclusivos por natureza — inclusive os dois passos da exclusão de conta.
+ */
+type OpenDialog =
+  | 'deleteAccount'
+  | 'deleteAccountConfirm'
+  | 'accountDeleted'
+  | 'privacyPolicyFailed'
+  | null;
 
 const DEFAULT_SLOTS: ReminderSlot[] = [
   { enabled: true, time: '08:00' },
@@ -77,6 +89,7 @@ export default function SettingsScreen() {
   const [slots, setSlots] = useState<ReminderSlot[]>(DEFAULT_SLOTS);
   const [hasInitializedSlots, setHasInitializedSlots] = useState(false);
   const [openSlotIndex, setOpenSlotIndex] = useState<number | null>(null);
+  const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
 
   useEffect(() => {
     if (settings !== null && !hasInitializedSlots) {
@@ -101,50 +114,33 @@ export default function SettingsScreen() {
   /**
    * Dupla confirmação deliberada: o primeiro diálogo explica o que será apagado, o segundo exige
    * um "sim" para a ação irreversível em si. Excluir dado de saúde não pode acontecer por um
-   * toque acidental num botão vermelho.
+   * toque acidental num botão vermelho. Os dois passos seguem em sequência — `deleteAccount`
+   * (abaixo) só roda depois do segundo.
    */
   function handleDeleteAccount(): void {
-    Alert.alert(
-      'Excluir minha conta?',
-      'Serão apagados definitivamente: todas as suas medições, os horários de lembrete, os aparelhos registrados e sua conta de acesso.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Continuar',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Tem certeza?', 'Esta ação é irreversível. Seus dados não poderão ser recuperados.', [
-              { text: 'Cancelar', style: 'cancel' },
-              {
-                text: 'Excluir definitivamente',
-                style: 'destructive',
-                onPress: () => {
-                  void (async () => {
-                    const success = await deleteAccount();
+    setOpenDialog('deleteAccount');
+  }
 
-                    if (success) {
-                      // O auth gate leva para a tela de login assim que a sessão cai; o alerta
-                      // fica por cima confirmando exatamente o que saiu do ar.
-                      Alert.alert(
-                        'Conta excluída',
-                        'Suas medições, lembretes, aparelhos registrados e conta de acesso foram apagados.',
-                      );
-                    }
-                  })();
-                },
-              },
-            ]);
-          },
-        },
-      ],
-    );
+  async function handleConfirmDeleteAccount(): Promise<void> {
+    setOpenDialog(null);
+
+    const success = await deleteAccount();
+
+    if (success) {
+      setOpenDialog('accountDeleted');
+      // Diferença conhecida em relação ao Alert nativo que existia aqui: aquele era um diálogo do
+      // sistema e sobrevivia à saída da tela; este vive na árvore desta tela, e o auth gate
+      // (useAuthRedirect) faz `router.replace` para o login assim que a sessão cai. O aviso pode,
+      // portanto, sair junto com a tela. Mantê-lo depois disso exigiria um host de diálogo no
+      // layout raiz — mudança maior, fora do escopo desta correção.
+    }
   }
 
   async function handleOpenPrivacyPolicy(): Promise<void> {
     try {
       await Linking.openURL(PRIVACY_POLICY_URL);
     } catch {
-      Alert.alert('Não foi possível abrir', 'Tente novamente mais tarde.');
+      setOpenDialog('privacyPolicyFailed');
     }
   }
 
@@ -309,6 +305,45 @@ export default function SettingsScreen() {
           <ChevronRightIcon size={18} color={palette.primary} strokeWidth={2.25} />
         </Pressable>
       </Card>
+
+      {/* Passo 1 da exclusão de conta: explica o que será apagado e só encaminha para o passo 2. */}
+      <ConfirmDialog
+        visible={openDialog === 'deleteAccount'}
+        title="Excluir minha conta?"
+        message="Serão apagados definitivamente: todas as suas medições, os horários de lembrete, os aparelhos registrados e sua conta de acesso."
+        confirmLabel="Continuar"
+        isDestructive
+        onConfirm={() => setOpenDialog('deleteAccountConfirm')}
+        onCancel={() => setOpenDialog(null)}
+      />
+
+      {/* Passo 2: o "sim" para a ação irreversível em si — é este que dispara deleteAccount. */}
+      <ConfirmDialog
+        visible={openDialog === 'deleteAccountConfirm'}
+        title="Tem certeza?"
+        message="Esta ação é irreversível. Seus dados não poderão ser recuperados."
+        confirmLabel="Excluir definitivamente"
+        isDestructive
+        onConfirm={() => void handleConfirmDeleteAccount()}
+        onCancel={() => setOpenDialog(null)}
+      />
+
+      {/* Avisos: sem onCancel, um botão só, equivalente ao Alert de mensagem única. */}
+      <ConfirmDialog
+        visible={openDialog === 'accountDeleted'}
+        title="Conta excluída"
+        message="Suas medições, lembretes, aparelhos registrados e conta de acesso foram apagados."
+        confirmLabel="OK"
+        onConfirm={() => setOpenDialog(null)}
+      />
+
+      <ConfirmDialog
+        visible={openDialog === 'privacyPolicyFailed'}
+        title="Não foi possível abrir"
+        message="Tente novamente mais tarde."
+        confirmLabel="OK"
+        onConfirm={() => setOpenDialog(null)}
+      />
     </Screen>
   );
 }
