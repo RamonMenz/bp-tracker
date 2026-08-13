@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, Switch, useColorScheme, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -168,6 +168,15 @@ export default function SettingsScreen() {
   }
 
   const switchTrackColor = { false: palette.border, true: palette.primary };
+  // O thumb padrão do react-native-web é verde (#009688) e destoa da trilha azul; fixar em branco
+  // (claro) e no tom de superfície (escuro) mantém o controle dentro da paleta.
+  const switchThumbColor = scheme === 'light' ? '#FFFFFF' : palette.text;
+
+  // `thumbColor` sozinho só pinta o estado DESLIGADO na web: o react-native-web tem uma prop
+  // separada, `activeThumbColor`, para o ligado — e ela não existe na tipagem do RN porque no
+  // nativo `thumbColor` já cobre os dois estados. Daí o spread condicional por plataforma.
+  const switchThumbProps: Record<string, string> =
+    Platform.OS === 'web' ? { activeThumbColor: switchThumbColor } : {};
 
   return (
     <Screen>
@@ -186,6 +195,9 @@ export default function SettingsScreen() {
             onValueChange={(value) => void toggleNotifications(value)}
             disabled={isSaving}
             trackColor={switchTrackColor}
+            thumbColor={switchThumbColor}
+            ios_backgroundColor={palette.border}
+            {...switchThumbProps}
             accessibilityLabel="Ativar notificações de lembrete"
           />
         </View>
@@ -217,6 +229,9 @@ export default function SettingsScreen() {
                 value={slot.enabled}
                 onValueChange={(value) => handleToggleSlot(index, value)}
                 trackColor={switchTrackColor}
+                thumbColor={switchThumbColor}
+                ios_backgroundColor={palette.border}
+                {...switchThumbProps}
                 accessibilityLabel={`Ativar horário ${index + 1}`}
               />
             </View>
@@ -263,7 +278,7 @@ export default function SettingsScreen() {
           </Text>
           <Button
             label="Excluir minha conta"
-            variant="destructive"
+            variant="destructiveOutline"
             icon={TrashIcon}
             onPress={handleDeleteAccount}
             loading={isDeleting}

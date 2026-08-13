@@ -64,7 +64,10 @@ export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function 
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           placeholder="—"
-          placeholderTextColor={palette.border}
+          // slate-300 e não a cor da borda: no tom da borda o traço sumia contra o fundo e a
+          // caixa lia como quebrada em vez de vazia. Aqui ele aparece como marca d'água sem
+          // chegar a parecer um valor já preenchido.
+          placeholderTextColor={scheme === 'light' ? '#CBD5E1' : '#475569'}
           accessibilityLabel={label}
           selectionColor={palette.primary}
           className="w-full text-center text-[44px] font-bold text-light-text dark:text-dark-text"

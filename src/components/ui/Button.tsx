@@ -6,7 +6,7 @@ import { colors, resolveColorScheme } from '@/theme/colors';
 import { Text } from './Text';
 import type { LucideIcon } from './icons';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'destructiveOutline';
 export type ButtonSize = 'md' | 'lg';
 
 export interface ButtonProps extends Omit<PressableProps, 'disabled' | 'children' | 'style'> {
@@ -24,6 +24,11 @@ const CONTAINER_CLASSNAME: Record<ButtonVariant, string> = {
   secondary: 'bg-light-surface border border-light-border dark:bg-dark-surface dark:border-dark-border',
   ghost: 'bg-transparent',
   destructive: 'bg-light-danger dark:bg-dark-danger',
+  // Contorno em vez de preenchimento: a ação irreversível continua alcançável e sinalizada em
+  // vermelho, mas para de competir em peso visual com a ação primária da tela. O CLAUDE.md §4.3
+  // pede exatamente isso — excluir dado de saúde não pode acontecer por um toque acidental num
+  // botão vermelho grande.
+  destructiveOutline: 'bg-transparent border border-light-danger dark:border-dark-danger',
 };
 
 // 56dp na ação principal (Salvar) e 48dp nas secundárias — ambos acima do mínimo de 48 do
@@ -50,14 +55,18 @@ export function Button({
   const [isPressed, setIsPressed] = useState(false);
   const isDisabled = disabled || loading;
 
-  const foreground =
+  const enabledForeground =
     variant === 'primary'
       ? palette.primaryFg
       : variant === 'destructive'
         ? '#FFFFFF'
         : variant === 'ghost'
           ? palette.primary
-          : palette.text;
+          : variant === 'destructiveOutline'
+            ? palette.danger
+            : palette.text;
+
+  const foreground = isDisabled ? palette.disabledFg : enabledForeground;
 
   return (
     <Pressable
@@ -81,9 +90,13 @@ export function Button({
       ]
         .filter(Boolean)
         .join(' ')}
-      // Opacidade em `style` e não numa variante `active:` do NativeWind: o feedback de toque é
-      // requisito de affordance, não pode depender de a variante estar habilitada no preset.
-      style={{ opacity: isDisabled ? 0.45 : isPressed ? 0.75 : 1 }}
+      // Desabilitado troca de COR, não de opacidade: esmaecer a primária derrubaria o texto
+      // branco para ~2:1. A opacidade fica só para o press, onde é momentânea.
+      style={
+        isDisabled
+          ? { backgroundColor: palette.disabledBg, borderColor: 'transparent' }
+          : { opacity: isPressed ? 0.75 : 1 }
+      }
       {...props}
     >
       {loading ? (
