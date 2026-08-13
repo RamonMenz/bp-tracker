@@ -3,9 +3,20 @@ import { useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
+import {
+  BellIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  LogOutIcon,
+  ShieldCheckIcon,
+  TrashIcon,
+  UserRoundIcon,
+} from '@/components/ui/icons';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
@@ -60,6 +71,7 @@ export default function SettingsScreen() {
   const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
   const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
   const scheme = resolveColorScheme(useColorScheme());
+  const palette = colors[scheme];
 
   const [signOutError, setSignOutError] = useState<string | null>(null);
   const [slots, setSlots] = useState<ReminderSlot[]>(DEFAULT_SLOTS);
@@ -155,113 +167,133 @@ export default function SettingsScreen() {
     await updateReminderTimes(reminderTimes);
   }
 
+  const switchTrackColor = { false: palette.border, true: palette.primary };
+
   return (
     <Screen>
       <Text variant="title">Ajustes</Text>
 
-      <Text variant="sectionHeader" className="mt-6">
-        Lembretes
-      </Text>
+      <Card className="gap-4">
+        <SectionHeader title="Lembretes" icon={BellIcon} />
 
-      <View className="mt-2 flex-row items-center justify-between">
-        <Text variant="body">Notificações</Text>
-        <Switch
-          value={settings?.notificationsEnabled ?? false}
-          onValueChange={(value) => void toggleNotifications(value)}
-          disabled={isSaving}
-          accessibilityLabel="Ativar notificações de lembrete"
-        />
-      </View>
-
-      <View className="mt-4 gap-3">
-        {slots.map((slot, index) => (
-          <View key={index} className="flex-row items-center justify-between">
-            <Switch
-              value={slot.enabled}
-              onValueChange={(value) => handleToggleSlot(index, value)}
-              accessibilityLabel={`Ativar horário ${index + 1}`}
-            />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Horário ${index + 1}: ${slot.time}. Toque para editar.`}
-              onPress={() => setOpenSlotIndex(index)}
-              className="min-h-[48px] flex-1 items-center justify-center"
-            >
-              <Text variant="body">{slot.time}</Text>
-            </Pressable>
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1">
+            <Text variant="body">Notificações</Text>
+            <Text variant="caption">Avisos nos horários abaixo, para não esquecer de medir.</Text>
           </View>
-        ))}
-      </View>
+          <Switch
+            value={settings?.notificationsEnabled ?? false}
+            onValueChange={(value) => void toggleNotifications(value)}
+            disabled={isSaving}
+            trackColor={switchTrackColor}
+            accessibilityLabel="Ativar notificações de lembrete"
+          />
+        </View>
 
-      {openSlotIndex !== null ? (
-        <DateTimePicker
-          value={timeStringToDate(slots[openSlotIndex].time)}
-          mode="time"
-          minuteInterval={15}
-          onChange={(_event, date) => {
-            setOpenSlotIndex(null);
-            if (date) {
-              handleChangeSlotTime(openSlotIndex, date);
-            }
-          }}
-        />
-      ) : null}
+        <View className="gap-2">
+          {slots.map((slot, index) => (
+            <View
+              key={index}
+              className="flex-row items-center justify-between gap-3 rounded-2xl bg-light-bg px-3 py-2 dark:bg-dark-bg"
+            >
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Horário ${index + 1}: ${slot.time}. Toque para editar.`}
+                onPress={() => setOpenSlotIndex(index)}
+                className="min-h-[48px] flex-1 flex-row items-center gap-2.5"
+              >
+                <ClockIcon size={18} color={slot.enabled ? palette.primary : palette.muted} strokeWidth={2.25} />
+                <Text
+                  variant="sectionHeader"
+                  color={slot.enabled ? undefined : palette.muted}
+                  style={{ fontVariant: ['tabular-nums'] }}
+                >
+                  {slot.time}
+                </Text>
+                <ChevronRightIcon size={16} color={palette.muted} strokeWidth={2} />
+              </Pressable>
 
-      <Button label="Salvar horários" onPress={handleSaveTimes} loading={isSaving} className="mt-4" />
+              <Switch
+                value={slot.enabled}
+                onValueChange={(value) => handleToggleSlot(index, value)}
+                trackColor={switchTrackColor}
+                accessibilityLabel={`Ativar horário ${index + 1}`}
+              />
+            </View>
+          ))}
+        </View>
 
-      {error ? (
-        <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger} className="mt-2">
-          {error}
-        </Text>
-      ) : null}
+        {openSlotIndex !== null ? (
+          <DateTimePicker
+            value={timeStringToDate(slots[openSlotIndex].time)}
+            mode="time"
+            minuteInterval={15}
+            onChange={(_event, date) => {
+              setOpenSlotIndex(null);
+              if (date) {
+                handleChangeSlotTime(openSlotIndex, date);
+              }
+            }}
+          />
+        ) : null}
 
-      <Button
-        label="Sair"
-        variant="destructive"
-        onPress={handleSignOut}
-        loading={isSigningOut}
-        className="mt-8"
-      />
-      {signOutError ? (
-        <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger} className="mt-2">
-          {signOutError}
-        </Text>
-      ) : null}
+        <Button label="Salvar horários" onPress={handleSaveTimes} loading={isSaving} />
 
-      <Text variant="sectionHeader" className="mt-10">
-        Conta
-      </Text>
-      <Text variant="caption" className="mt-1">
-        Excluir a conta apaga definitivamente todas as suas medições, lembretes e aparelhos registrados.
-      </Text>
+        {error ? (
+          <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
+            {error}
+          </Text>
+        ) : null}
+      </Card>
 
-      <Button
-        label="Excluir minha conta"
-        variant="destructive"
-        onPress={handleDeleteAccount}
-        loading={isDeleting}
-        className="mt-3"
-      />
-      {deleteError ? (
-        <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger} className="mt-2">
-          {deleteError}
-        </Text>
-      ) : null}
+      <Card className="gap-4">
+        <SectionHeader title="Conta" icon={UserRoundIcon} />
 
-      <Text variant="sectionHeader" className="mt-10">
-        Privacidade
-      </Text>
-      <Disclaimer className="mt-2" />
-      <Pressable
-        accessibilityRole="link"
-        accessibilityLabel="Abrir política de privacidade"
-        onPress={() => void handleOpenPrivacyPolicy()}
-        className="mt-3 min-h-[48px] items-start justify-center"
-      >
-        <Text variant="body" color={colors[scheme].primary} style={{ textDecorationLine: 'underline' }}>
-          Política de privacidade
-        </Text>
-      </Pressable>
+        <Button label="Sair" variant="secondary" icon={LogOutIcon} onPress={handleSignOut} loading={isSigningOut} />
+
+        {signOutError ? (
+          <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
+            {signOutError}
+          </Text>
+        ) : null}
+
+        <View className="gap-2">
+          <Text variant="caption">
+            Excluir a conta apaga definitivamente todas as suas medições, lembretes e aparelhos registrados.
+          </Text>
+          <Button
+            label="Excluir minha conta"
+            variant="destructive"
+            icon={TrashIcon}
+            onPress={handleDeleteAccount}
+            loading={isDeleting}
+          />
+        </View>
+
+        {deleteError ? (
+          <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
+            {deleteError}
+          </Text>
+        ) : null}
+      </Card>
+
+      <Card className="gap-4">
+        <SectionHeader title="Privacidade" icon={ShieldCheckIcon} />
+
+        <Disclaimer />
+
+        <Pressable
+          accessibilityRole="link"
+          accessibilityLabel="Abrir política de privacidade"
+          onPress={() => void handleOpenPrivacyPolicy()}
+          className="min-h-[48px] flex-row items-center justify-between gap-2"
+        >
+          <Text variant="body" color={palette.primary} style={{ fontWeight: '600' }}>
+            Política de privacidade
+          </Text>
+          <ChevronRightIcon size={18} color={palette.primary} strokeWidth={2.25} />
+        </Pressable>
+      </Card>
     </Screen>
   );
 }
