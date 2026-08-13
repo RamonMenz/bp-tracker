@@ -4,16 +4,19 @@ import { useMemo } from 'react';
 import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ReadingRow } from '@/components/bp/ReadingRow';
+import { ReadingRow, type ReadingRowPosition } from '@/components/bp/ReadingRow';
 import { TrendChart } from '@/components/bp/TrendChart';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
+import { ClipboardListIcon, DownloadIcon, HeartPulseIcon, TriangleAlertIcon } from '@/components/ui/icons';
 import { useExportCsv } from '@/features/export/useExportCsv';
 import { useDeleteReading } from '@/features/readings/useDeleteReading';
 import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
+import { dayKey, dayLabel } from '@/lib/datetime';
 import { colors, resolveColorScheme } from '@/theme/colors';
 
 interface HeaderItem {
@@ -28,34 +31,25 @@ interface RowItem {
   type: 'reading';
   key: string;
   reading: ReadingListItem;
+  position: ReadingRowPosition;
 }
 
 type ListItem = HeaderItem | RowItem;
 
-function dayKey(date: Date): string {
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-const dayLabelFormatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long' });
-
-function dayLabel(date: Date): string {
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-
-  if (dayKey(date) === dayKey(today)) {
-    return 'Hoje';
-  }
-
-  if (dayKey(date) === dayKey(yesterday)) {
-    return 'Ontem';
-  }
-
-  return dayLabelFormatter.format(date);
-}
-
 function average(values: number[]): number {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+}
+
+function positionInGroup(index: number, groupSize: number): ReadingRowPosition {
+  if (groupSize === 1) {
+    return 'only';
+  }
+
+  if (index === 0) {
+    return 'first';
+  }
+
+  return index === groupSize - 1 ? 'last' : 'middle';
 }
 
 /** Assume readings já ordenado por measuredAt desc (vem assim de useReadings). */
@@ -83,9 +77,14 @@ function buildListItems(readings: ReadingListItem[]): { items: ListItem[]; stick
       averageDiastolic: average(group.map((reading) => reading.diastolic)),
     });
 
-    for (const reading of group) {
-      items.push({ type: 'reading', key: reading.id, reading });
-    }
+    group.forEach((reading, indexInGroup) => {
+      items.push({
+        type: 'reading',
+        key: reading.id,
+        reading,
+        position: positionInGroup(indexInGroup, group.length),
+      });
+    });
   }
 
   return { items, stickyHeaderIndices };
@@ -98,6 +97,7 @@ export default function HistoryScreen() {
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
   const scheme = resolveColorScheme(useColorScheme());
+  const palette = colors[scheme];
 
   const { items, stickyHeaderIndices } = useMemo(() => buildListItems(readings), [readings]);
 
@@ -116,77 +116,91 @@ export default function HistoryScreen() {
 
   if (isLoading) {
     return (
-      <Screen contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator accessibilityLabel="Carregando histórico" />
+      <Screen contentContainerStyle={{ alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator accessibilityLabel="Carregando histórico" color={palette.primary} />
       </Screen>
     );
   }
 
   if (error) {
     return (
-      <Screen contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <Text variant="body" accessibilityRole="alert" color={colors[scheme].danger} className="text-center">
-          {error}
-        </Text>
+      <Screen contentContainerStyle={{ justifyContent: 'center' }}>
+        <Card className="items-center gap-3">
+          <TriangleAlertIcon size={28} color={palette.danger} strokeWidth={2} />
+          <Text variant="body" accessibilityRole="alert" color={palette.danger} className="text-center">
+            {error}
+          </Text>
+        </Card>
       </Screen>
     );
   }
 
   if (readings.length === 0) {
     return (
-      <Screen contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <Text variant="sectionHeader" className="text-center">
-          Nenhuma medição ainda
-        </Text>
-        <Text variant="body" className="text-center">
-          Registre sua primeira pressão para começar seu histórico.
-        </Text>
-        <Button label="Registrar agora" onPress={() => router.push('/(app)')} />
+      <Screen contentContainerStyle={{ justifyContent: 'center' }}>
+        <Card className="items-center gap-3 py-8">
+          <View className="h-14 w-14 items-center justify-center rounded-2xl bg-light-primaryTint dark:bg-dark-primaryTint">
+            <ClipboardListIcon size={26} color={palette.primary} strokeWidth={2} />
+          </View>
+          <Text variant="sectionHeader" className="text-center">
+            Nenhuma medição ainda
+          </Text>
+          <Text variant="body" className="text-center">
+            Registre sua primeira pressão para começar seu histórico.
+          </Text>
+          <Button
+            label="Registrar agora"
+            icon={HeartPulseIcon}
+            size="lg"
+            className="mt-1 self-stretch"
+            onPress={() => router.push('/(app)')}
+          />
+        </Card>
       </Screen>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-light-bg dark:bg-dark-bg">
-      {deleteError ? (
-        <Text
-          variant="caption"
-          accessibilityRole="alert"
-          color={colors[scheme].danger}
-          className="px-4 py-2 text-center"
-        >
-          {deleteError}
-        </Text>
-      ) : null}
-
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
       <FlashList
         data={items}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
         stickyHeaderIndices={stickyHeaderIndices}
+        contentContainerStyle={{ paddingBottom: 24 }}
         ListHeaderComponent={
-          <View className="gap-3 px-4 py-3">
+          <View className="gap-4 px-4 pb-1 pt-4">
+            <Text variant="title">Histórico</Text>
+
             <TrendChart trend7d={trend7d} trend30d={trend30d} isLoading={isTrendLoading} />
 
             <Button
               label="Exportar CSV"
               variant="secondary"
+              icon={DownloadIcon}
               onPress={() => void exportCsv()}
               loading={isExporting}
             />
+
             {exportError ? (
-              <Text variant="caption" accessibilityRole="alert" color={colors[scheme].danger}>
+              <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
                 {exportError}
+              </Text>
+            ) : null}
+
+            {deleteError ? (
+              <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
+                {deleteError}
               </Text>
             ) : null}
           </View>
         }
         renderItem={({ item }) =>
           item.type === 'header' ? (
-            <View className="bg-light-bg px-4 py-2 dark:bg-dark-bg">
-              <Text variant="sectionHeader">{item.label}</Text>
+            <View className="flex-row items-baseline justify-between gap-3 bg-light-bg px-4 pb-2 pt-5 dark:bg-dark-bg">
+              <Text variant="label">{item.label}</Text>
               <Text variant="caption">
-                Média do dia: {item.averageSystolic} / {item.averageDiastolic}
+                Média {item.averageSystolic}/{item.averageDiastolic}
               </Text>
             </View>
           ) : (
@@ -194,6 +208,7 @@ export default function HistoryScreen() {
               id={item.reading.id}
               reading={item.reading}
               hasPendingWrites={item.reading.hasPendingWrites}
+              position={item.position}
               onRequestDelete={handleRequestDelete}
             />
           )
