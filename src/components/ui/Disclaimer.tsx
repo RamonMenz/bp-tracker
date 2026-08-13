@@ -3,6 +3,7 @@ import { Pressable, useColorScheme, View, type ViewProps } from 'react-native';
 import { colors, resolveColorScheme } from '@/theme/colors';
 
 import { Text } from './Text';
+import { InfoIcon } from './icons';
 
 export interface DisclaimerProps extends ViewProps {
   /** Quando presente, mostra um "Entendi" para o usuário dispensar o aviso. */
@@ -19,12 +20,18 @@ const DISCLAIMER_TEXT =
  */
 export function Disclaimer({ onDismiss, className, ...props }: DisclaimerProps) {
   const scheme = resolveColorScheme(useColorScheme());
+  const palette = colors[scheme];
 
   return (
     <View className={['gap-2', className].filter(Boolean).join(' ')} {...props}>
-      <Text variant="caption" accessibilityRole="text">
-        {DISCLAIMER_TEXT}
-      </Text>
+      <View className="flex-row gap-2.5">
+        <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="pt-0.5">
+          <InfoIcon size={16} color={palette.muted} strokeWidth={2} />
+        </View>
+        <Text variant="caption" accessibilityRole="text" className="flex-1">
+          {DISCLAIMER_TEXT}
+        </Text>
+      </View>
 
       {onDismiss ? (
         <Pressable
@@ -33,7 +40,7 @@ export function Disclaimer({ onDismiss, className, ...props }: DisclaimerProps) 
           onPress={onDismiss}
           className="min-h-[48px] items-start justify-center self-start"
         >
-          <Text variant="caption" color={colors[scheme].primary} style={{ fontWeight: '600' }}>
+          <Text variant="caption" color={palette.primary} style={{ fontWeight: '700' }}>
             Entendi
           </Text>
         </Pressable>

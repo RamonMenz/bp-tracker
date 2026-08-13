@@ -14,13 +14,13 @@ export function Field({ label, errorMessage, className, ...inputProps }: FieldPr
   const hasError = Boolean(errorMessage);
 
   return (
-    <View className="gap-1">
-      <Text variant="caption">{label}</Text>
+    <View className="gap-1.5">
+      <Text variant="label">{label}</Text>
       <TextInput
         accessibilityLabel={label}
         placeholderTextColor={colors[scheme].muted}
         className={[
-          'min-h-[48px] rounded-xl border bg-light-surface px-4 text-base text-light-text dark:bg-dark-surface dark:text-dark-text',
+          'min-h-[52px] rounded-2xl border bg-light-surface px-4 text-base text-light-text dark:bg-dark-surface dark:text-dark-text',
           hasError ? 'border-light-danger dark:border-dark-danger' : 'border-light-border dark:border-dark-border',
           className,
         ]

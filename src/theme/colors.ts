@@ -1,39 +1,84 @@
 import type { ColorSchemeName } from 'react-native';
 
 /**
- * Paleta de marca — calma e clínica. Teal é a cor primária, não vermelho:
- * alarme constante em app de pressão gera ansiedade e abandono (PLAN §4.2).
- * Vermelho fica reservado ao badge de classificação, adicionado junto do BpCategoryBadge.
+ * Paleta de marca "Medical Clean" — calma e clínica. Azul é a cor primária, não vermelho:
+ * alarme constante em app de pressão gera ansiedade e abandono (PLAN §4.2). Vermelho fica
+ * reservado ao badge de classificação (ver `categoryColors`) e à ação destrutiva.
+ *
+ * Os neutros são a rampa slate: fundo slate-50, superfície branca, texto slate-800.
+ *
+ * `primary` é o blue-600 (#2563EB), não o blue-500: o 500 com texto branco por cima dá 3.1:1 e
+ * reprova no mínimo AA de 4.5:1 exigido pelo CLAUDE.md §4.7. O 600 dá 5.17:1 no mesmo tom de azul.
  */
 export const colors = {
   light: {
-    primary: '#0E7C86',
+    primary: '#2563EB',
     primaryFg: '#FFFFFF',
-    bg: '#F7F9FA',
+    /** Tom de apoio do azul — fundo de ícone/realce informativo sobre superfície branca. */
+    primaryTint: '#EFF6FF',
+    bg: '#F8FAFC',
     surface: '#FFFFFF',
-    border: '#E3E8EC',
-    text: '#0F1A1C',
-    muted: '#5A6B70',
-    // Ação destrutiva genérica (botão, erro de campo) — distinta da paleta AHA do badge de classificação.
-    danger: '#B3261E',
+    border: '#E2E8F0',
+    text: '#1E293B',
+    // slate-500: 4.58:1 sobre o fundo slate-50 — passa em AA, mas é o piso da rampa.
+    // Não escureça o fundo nem clareie este token sem refazer a conta.
+    muted: '#64748B',
+    // Ação destrutiva genérica (botão, erro de campo). rose-700, não rose-500: precisa carregar
+    // texto branco por cima (6.28:1). Distinta da paleta de classificação abaixo.
+    danger: '#BE123C',
   },
   dark: {
-    // Teal clareado para manter contraste sobre fundo escuro.
-    primary: '#3FB6C0',
-    // Texto escuro sobre o teal claro: branco daria ~2.3:1 e reprovaria no WCAG AA.
-    primaryFg: '#0D1416',
-    bg: '#0D1416',
-    surface: '#141F22',
-    border: '#26343A',
-    text: '#E8F0F2',
-    muted: '#9BAAB0',
-    danger: '#E5484D',
+    // Blue-400: o 600 sobre fundo escuro cai para ~2.9:1.
+    primary: '#60A5FA',
+    // Texto escuro sobre o azul claro: branco daria ~2.2:1 e reprovaria no WCAG AA.
+    primaryFg: '#0B1220',
+    primaryTint: '#152238',
+    bg: '#0B1220',
+    surface: '#172033',
+    border: '#2A3852',
+    text: '#E2E8F0',
+    muted: '#94A3B8',
+    danger: '#FB7185',
   },
 } as const;
 
 export type ColorScheme = keyof typeof colors;
 
 export type ColorToken = keyof typeof colors.light;
+
+/**
+ * Cores da classificação de pressão, uma entrada por categoria do domínio.
+ *
+ * `fg` é texto/ícone e passa em AA sobre `surface`; `tint` é fundo do badge; `border` fecha a
+ * forma. Cor NUNCA é o único portador do significado (CLAUDE.md §4.7) — o label textual da
+ * categoria acompanha sempre.
+ *
+ * As três famílias (emerald / amber / rose) são as pedidas no redesign; os três níveis de
+ * hipertensão se separam por profundidade dentro do rose, não por matizes diferentes, para
+ * manterem a leitura de "mesma família, gravidade crescente".
+ */
+export const categoryColors = {
+  light: {
+    normal: { fg: '#047857', tint: '#ECFDF5', border: '#A7F3D0' },
+    elevated: { fg: '#B45309', tint: '#FFFBEB', border: '#FDE68A' },
+    stage1: { fg: '#BE123C', tint: '#FFF1F2', border: '#FECDD3' },
+    stage2: { fg: '#9F1239', tint: '#FFE4E6', border: '#FDA4AF' },
+    crisis: { fg: '#881337', tint: '#FECDD3', border: '#FB7185' },
+  },
+  dark: {
+    normal: { fg: '#34D399', tint: '#0C2B22', border: '#115E4A' },
+    elevated: { fg: '#FBBF24', tint: '#2E2310', border: '#78500B' },
+    stage1: { fg: '#FB7185', tint: '#33141C', border: '#7F1D33' },
+    stage2: { fg: '#FDA4AF', tint: '#3B1620', border: '#9F1239' },
+    crisis: { fg: '#FECDD3', tint: '#45182A', border: '#BE123C' },
+  },
+} as const;
+
+export interface CategoryPalette {
+  fg: string;
+  tint: string;
+  border: string;
+}
 
 /**
  * `useColorScheme()` do react-native@0.86+ pode retornar `'unspecified'` (além de `'light' |

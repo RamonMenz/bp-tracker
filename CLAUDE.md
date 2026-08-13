@@ -16,13 +16,16 @@
 | Banco de dados | **Cloud Firestore** (offline-first, `onSnapshot` para realtime) |
 | Backend serverless | **Cloud Functions v2** + **Cloud Scheduler** + **FCM** |
 | Estilo | **NativeWind v4** (tokens compartilhados entre nativo e web) |
+| Ícones | **Lucide** (`lucide-react-native`), importados um a um em `src/components/ui/icons.ts` |
 
 **Princípio de arquitetura:** o cliente fala **direto** com o Firestore — não existe API intermediária. O backend serverless existe para **uma única coisa**: disparar lembretes push. Todo o resto (CRUD, histórico, export CSV) é client-side, protegido por Security Rules.
 
 **Objetivo de UX (norteia toda decisão de interface):**
 - Registrar uma medição em **≤ 10 segundos e 4 toques**. A home **é** o formulário — nunca introduza um passo "toque no + para adicionar".
 - A notificação abre direto no formulário via deep link (`bptracker://record`).
-- Interface calma e clínica. **Teal é a cor primária, não vermelho** — alarme constante em app de pressão gera ansiedade e abandono. Vermelho fica reservado ao badge de classificação.
+- Interface calma e clínica ("Medical Clean"): fundo slate-50, superfícies brancas, texto slate-800. **Azul é a cor primária, não vermelho** — alarme constante em app de pressão gera ansiedade e abandono. Vermelho fica reservado ao badge de classificação e à ação destrutiva.
+- A primária é o **blue-600 (`#2563EB`)**, não o blue-500: o 500 com texto branco por cima dá 3.1:1 e reprova o mínimo AA de 4.5:1 exigido no §4.7. Qualquer troca de tom da primária refaz essa conta antes.
+- Classificação de pressão usa três famílias semânticas — emerald (normal), amber (elevada) e rose em três profundidades (estágio 1, estágio 2, crise). Os tons de texto são os 700/800 da rampa: os 500 não passam em contraste sobre superfície branca. Tudo em `src/theme/colors.ts` → `categoryColors`.
 - O app **registra**, não diagnostica. Nunca gere linguagem alarmista automatizada nem texto que soe como orientação médica.
 
 ---

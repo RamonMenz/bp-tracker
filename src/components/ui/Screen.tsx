@@ -7,9 +7,17 @@ export type ScreenProps = ScrollViewProps;
 
 export function Screen({ children, contentContainerStyle, ...props }: ScreenProps) {
   return (
-    <SafeAreaView className="flex-1 bg-light-bg dark:bg-dark-bg">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
       <ScrollView
-        contentContainerStyle={[{ flexGrow: 1, padding: tokens.spacing.lg }, contentContainerStyle]}
+        // "handled": sem isso, com o teclado aberto o primeiro toque em "Salvar" só fecha o
+        // teclado e o botão precisa de um segundo toque — um toque a mais no caminho que o
+        // CLAUDE.md §1 limita a 4.
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        contentContainerStyle={[
+          { flexGrow: 1, padding: tokens.spacing.lg, gap: tokens.spacing.lg },
+          contentContainerStyle,
+        ]}
         {...props}
       >
         {children}
