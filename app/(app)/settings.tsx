@@ -1,10 +1,10 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, Switch, useColorScheme, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -235,16 +235,13 @@ export default function SettingsScreen() {
         </View>
 
         {openSlotIndex !== null ? (
-          <DateTimePicker
+          <DateTimeField
             value={timeStringToDate(slots[openSlotIndex].time)}
             mode="time"
             minuteInterval={15}
-            onChange={(_event, date) => {
-              setOpenSlotIndex(null);
-              if (date) {
-                handleChangeSlotTime(openSlotIndex, date);
-              }
-            }}
+            accessibilityLabel={`Horário ${openSlotIndex + 1}`}
+            onChange={(date) => handleChangeSlotTime(openSlotIndex, date)}
+            onClose={() => setOpenSlotIndex(null)}
           />
         ) : null}
 
