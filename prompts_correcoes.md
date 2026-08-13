@@ -14,7 +14,32 @@
 
 ---
 
+## Modelo recomendado por prompt
+
+Critério: **Opus** onde o custo de um erro sutil é alto (o bug relatado em si, conversão de
+data entre plataformas, API do Firestore sensível a versão) — vale pagar o raciocínio extra.
+**Haiku** onde a tarefa é mecânica e de baixo risco (split de arquivo, refactor trivial,
+documentação sem tocar em runtime). **Sonnet** no meio: mudanças de UI/estado de complexidade
+média, sem ambiguidade arquitetural.
+
+| # | Prompt | Bug | Modelo | Por quê |
+|---|---|---|---|---|
+| 1 | Teste de regressão da exclusão | — | **Sonnet 5** | Monta mocks de RNTL corretamente; mecânico, mas exige atenção a detalhe. |
+| 2 | `Alert.alert` não funciona na web | BUG-01 | **Opus 5** | O bug relatado pelo usuário. Componente de UI + acessibilidade novo, usado em 5 lugares — maior exigência de correção. |
+| 3 | `DateTimePicker` não funciona na web | BUG-02 | **Opus 5** | Conversão Date ↔ string entre nativo e web é fonte clássica de bug sutil de fuso/formato. |
+| 4 | Horários de lembrete reportam erro falso na web | BUG-09 | **Haiku 4.5** | Puro split de arquivo por plataforma (`.native`/`.web`), mesmo padrão já existente no repo. |
+| 5 | Feedback de exclusão e de salvar horários | BUG-06/07/10 | **Sonnet 5** | Três bugs relacionados, estado por linha na lista — complexidade média, não arquitetural. |
+| 6 | App Check nunca é inicializado | BUG-05 | **Sonnet 5** | Um ponto de chamada, mas precisa avaliar ordem de import/circularidade com cuidado. |
+| 7 | `logError` descarta tudo em produção | BUG-04 | **Haiku 4.5** | Só documentação — nenhuma mudança de comportamento em runtime. |
+| 8 | Sem persistência offline do Firestore na web | BUG-08 | **Opus 5** | API do SDK sensível à versão instalada; erro aqui quebra o offline-first silenciosamente. |
+| 9 | Chave de lista por índice em settings | BUG-11 | **Haiku 4.5** | Refactor trivial e isolado, sem ambiguidade. |
+| 10 | Exclusão inalcançável sem gesto de swipe | BUG-03 | **Sonnet 5** | Adiciona UI de acessibilidade num componente já auditado — precisa de cuidado de layout, não de arquitetura nova. |
+
+---
+
 ## Prompt 1 — Teste de regressão da exclusão (vai antes da correção)
+
+**Modelo recomendado:** Sonnet 5 — teste com mocks é mecânico, mas precisa isolar os hooks certos sem raciocínio arquitetural extra.
 
 ```
 Contexto: no BP Tracker (React Native/Expo), o botão "Excluir" de uma medição no histórico
@@ -46,6 +71,8 @@ test(readings): cobrir exclusão de medição na confirmação
 ---
 
 ## Prompt 2 — BUG-01: `Alert.alert` não funciona na web (o bug relatado)
+
+**Modelo recomendado:** Opus 5 — é o bug relatado pelo usuário; componente novo de UI + acessibilidade usado em 5 pontos, vale o raciocínio extra para não introduzir uma regressão na correção.
 
 ```
 Contexto: no BP Tracker, Alert.alert é usado em 5 lugares para confirmar ações destrutivas e
@@ -95,6 +122,8 @@ fix(ui): substituir Alert.alert por diálogo próprio compatível com a web
 
 ## Prompt 3 — BUG-02: `DateTimePicker` não funciona na web
 
+**Modelo recomendado:** Opus 5 — conversão de Date entre `<input>` web e o picker nativo é fonte clássica de bug sutil de fuso/formato; dois pontos de consumo dependem de acertar essa fronteira.
+
 ```
 Contexto: no BP Tracker, @react-native-community/datetimepicker não tem implementação web — o
 arquivo padrão usado fora de Android/iOS (src/datetimepicker.js do pacote) renderiza `null` e
@@ -138,6 +167,8 @@ fix(ui): tornar seleção de data e hora funcional na web
 
 ## Prompt 4 — BUG-09: horários de lembrete reportam erro falso na web
 
+**Modelo recomendado:** Haiku 4.5 — puro split de arquivo por plataforma (`.native`/`.web`), repetindo um padrão que já existe no repositório (`registerPushToken`).
+
 ```
 Contexto: no BP Tracker, src/features/reminders/localReminders.ts chama
 Notifications.getAllScheduledNotificationsAsync() (expo-notifications) para reagendar
@@ -173,6 +204,8 @@ fix(reminders): não reportar erro falso ao salvar horários na web
 ---
 
 ## Prompt 5 — BUG-06 + BUG-07 + BUG-10: feedback de exclusão e de salvar horários
+
+**Modelo recomendado:** Sonnet 5 — três bugs relacionados e estado por linha na lista; complexidade média de UI/estado, sem decisão arquitetural nova.
 
 ```
 Contexto: três problemas relacionados de feedback ao usuário no BP Tracker:
@@ -220,6 +253,8 @@ certo.)*
 
 ## Prompt 6 — BUG-05: App Check nunca é inicializado
 
+**Modelo recomendado:** Sonnet 5 — um único ponto de chamada, mas exige avaliar ordem de inicialização/import circular com cuidado antes de escolher onde encaixar.
+
 ```
 Contexto: no BP Tracker, src/services/firebase/appCheck.web.ts e appCheck.native.ts exportam
 initAppCheck(), mas a função não é importada nem chamada em NENHUM lugar do projeto (confirmado
@@ -251,6 +286,8 @@ fix(security): inicializar App Check no bootstrap do app
 ---
 
 ## Prompt 7 — BUG-04: `logError` descarta tudo em produção (decisão: documentar por ora)
+
+**Modelo recomendado:** Haiku 4.5 — só documentação, nenhuma mudança de comportamento em runtime.
 
 ```
 Contexto: no BP Tracker, src/lib/logger.ts define setCrashReporter() para conectar um coletor
@@ -288,6 +325,8 @@ docs(logger): registrar pendência de conectar coletor de erro em produção
 
 ## Prompt 8 — BUG-08: sem persistência offline do Firestore na web
 
+**Modelo recomendado:** Opus 5 — API do SDK do Firestore sensível à versão instalada; um erro aqui quebra o offline-first de forma silenciosa, difícil de notar em revisão superficial.
+
 ```
 Contexto: no BP Tracker, src/services/firebase/firebase.web.ts inicializa o Firestore com
 getFirestore(app), sem cache persistente. O SDK web só ativa cache em IndexedDB quando pedido
@@ -322,6 +361,8 @@ fix(firebase): ativar cache persistente do Firestore na web
 
 ## Prompt 9 — BUG-11: chave de lista por índice em settings
 
+**Modelo recomendado:** Haiku 4.5 — refactor trivial e isolado, sem ambiguidade de design.
+
 ```
 Contexto: no BP Tracker, app/(app)/settings.tsx:208 usa `key={index}` ao mapear os 3 slots de
 horário de lembrete (slots.map((slot, index) => ...)). CLAUDE.md §3.4 proíbe key por índice em
@@ -347,6 +388,8 @@ refactor(reminders): usar chave estável nos slots de horário
 ---
 
 ## Prompt 10 — BUG-03: exclusão inalcançável sem gesto de swipe (decisão: botão persistente)
+
+**Modelo recomendado:** Sonnet 5 — adiciona UI de acessibilidade num componente já auditado; precisa de cuidado de layout, não de arquitetura nova.
 
 ```
 Contexto: no BP Tracker, src/components/bp/ReadingRow.tsx só expõe a ação de excluir dentro de
@@ -397,3 +440,7 @@ fix(a11y): tornar exclusão alcançável sem gesto de swipe
 - Se quiser paralelizar em sessões/agentes separados, os únicos pares seguros para rodar em
   paralelo (sem conflito de arquivo) são: {Prompt 4, Prompt 6, Prompt 8, Prompt 9} entre si — os
   demais tocam em `history.tsx`, `settings.tsx` ou `ReadingRow.tsx` e devem ser sequenciais.
+- O modelo indicado em cada prompt (tabela em "Modelo recomendado por prompt") é o ponto de
+  partida ao abrir a sessão — troque com `/model` no Claude Code CLI antes de colar o prompt.
+  São recomendações, não requisitos: se preferir rodar tudo num único modelo por simplicidade,
+  Sonnet 5 é o piso seguro para qualquer um dos dez.
