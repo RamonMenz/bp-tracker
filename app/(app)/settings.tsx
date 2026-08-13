@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Disclaimer } from '@/components/ui/Disclaimer';
+import { InlineFeedback } from '@/components/ui/InlineFeedback';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
@@ -42,6 +43,11 @@ type OpenDialog =
   | 'accountDeleted'
   | 'privacyPolicyFailed'
   | null;
+
+const SAVE_TIMES_SUCCESS_MESSAGE = 'Horários salvos.';
+/** Some sozinho depois de um tempo — confirmação é feedback de passagem, não um estado que fica
+ *  preso na tela até a próxima ação do usuário. */
+const SAVE_TIMES_SUCCESS_TIMEOUT_MS = 4000;
 
 const DEFAULT_SLOTS: ReminderSlot[] = [
   { enabled: true, time: '08:00' },
@@ -90,6 +96,16 @@ export default function SettingsScreen() {
   const [hasInitializedSlots, setHasInitializedSlots] = useState(false);
   const [openSlotIndex, setOpenSlotIndex] = useState<number | null>(null);
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const [showSaveTimesSuccess, setShowSaveTimesSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!showSaveTimesSuccess) {
+      return;
+    }
+
+    const timeout = setTimeout(() => setShowSaveTimesSuccess(false), SAVE_TIMES_SUCCESS_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [showSaveTimesSuccess]);
 
   useEffect(() => {
     if (settings !== null && !hasInitializedSlots) {
@@ -160,7 +176,13 @@ export default function SettingsScreen() {
       .map((slot) => slot.time)
       .sort();
 
-    await updateReminderTimes(reminderTimes);
+    setShowSaveTimesSuccess(false);
+
+    const success = await updateReminderTimes(reminderTimes);
+
+    if (success) {
+      setShowSaveTimesSuccess(true);
+    }
   }
 
   const switchTrackColor = { false: palette.border, true: palette.primary };
@@ -248,9 +270,9 @@ export default function SettingsScreen() {
         <Button label="Salvar horários" onPress={handleSaveTimes} loading={isSaving} />
 
         {error ? (
-          <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
-            {error}
-          </Text>
+          <InlineFeedback tone="danger" message={error} />
+        ) : showSaveTimesSuccess ? (
+          <InlineFeedback tone="success" message={SAVE_TIMES_SUCCESS_MESSAGE} />
         ) : null}
       </Card>
 

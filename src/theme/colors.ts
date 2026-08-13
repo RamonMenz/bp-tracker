@@ -26,6 +26,10 @@ export const colors = {
     // Ação destrutiva genérica (botão, erro de campo). rose-700, não rose-500: precisa carregar
     // texto branco por cima (6.28:1). Distinta da paleta de classificação abaixo.
     danger: '#BE123C',
+    // Feedback de sucesso genérico (fora da classificação de pressão — ver categoryColors). Mesmo
+    // tom de categoryColors.normal.fg, que já passa em AA sobre superfície branca: reaproveita a
+    // conta de contraste em vez de introduzir um verde novo.
+    success: '#047857',
     // Botão desabilitado. Par próprio em vez de baixar a opacidade do botão habilitado: a
     // primária a 45% deixa o texto branco em 1.96:1 — ilegível justamente no estado em que a
     // tela abre. Este par dá 6.15:1 e continua lendo como "indisponível".
@@ -44,6 +48,8 @@ export const colors = {
     text: '#E2E8F0',
     muted: '#94A3B8',
     danger: '#FB7185',
+    // Mesmo tom de categoryColors.normal.fg no escuro — mesma razão do par claro acima.
+    success: '#34D399',
     // 4.59:1 — mesmo critério do par claro.
     disabledBg: '#2A3852',
     disabledFg: '#94A3B8',

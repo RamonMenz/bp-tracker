@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, useColorScheme, View } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 
 import { Text } from '@/components/ui/Text';
@@ -19,6 +19,9 @@ export interface ReadingRowProps {
   reading: Reading;
   hasPendingWrites: boolean;
   position?: ReadingRowPosition;
+  /** Exclusão desta linha em voo — troca o badge por um indicador e trava o swipe, para não dar
+   *  para pedir uma segunda exclusão da mesma linha enquanto a primeira ainda não terminou. */
+  isDeleting?: boolean;
   onRequestDelete: (id: string) => void;
 }
 
@@ -37,6 +40,7 @@ export function ReadingRow({
   reading,
   hasPendingWrites,
   position = 'middle',
+  isDeleting = false,
   onRequestDelete,
 }: ReadingRowProps) {
   const swipeableRef = useRef<Swipeable>(null);
@@ -48,7 +52,8 @@ export function ReadingRow({
   // "por", não "/" — leitor de tela deve anunciar "120 por 80", não "120 barra 80" (CLAUDE.md §4.7).
   const pulsePhrase = reading.pulse !== null ? `, pulso ${reading.pulse}` : '';
   const pendingPhrase = hasPendingWrites ? ', pendente de sincronização' : '';
-  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${pendingPhrase}`;
+  const deletingPhrase = isDeleting ? ', excluindo' : '';
+  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${pendingPhrase}${deletingPhrase}`;
 
   function handleDeletePress(): void {
     swipeableRef.current?.close();
@@ -76,11 +81,16 @@ export function ReadingRow({
       ref={swipeableRef}
       renderRightActions={renderRightActions}
       overshootRight={false}
+      // Trava o swipe (e, com ele, um segundo toque em "Excluir") enquanto esta linha já está
+      // sendo excluída — a exclusão em voo é sinalizada abaixo, no lugar do badge de categoria.
+      enabled={!isDeleting}
       containerStyle={{ marginHorizontal: GROUP_HORIZONTAL_MARGIN }}
     >
       <View
         accessible
         accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ busy: isDeleting }}
+        style={isDeleting ? { opacity: 0.6 } : undefined}
         className={[
           // overflow-hidden é o que faz a faixa lateral colorida acompanhar o canto arredondado
           // em vez de vazar para fora dele.
@@ -109,7 +119,11 @@ export function ReadingRow({
             </View>
           </View>
 
-          <BpCategoryBadge category={category} size="sm" />
+          {isDeleting ? (
+            <ActivityIndicator accessibilityLabel="Excluindo medição" color={palette.danger} />
+          ) : (
+            <BpCategoryBadge category={category} size="sm" />
+          )}
         </View>
       </View>
     </Swipeable>

@@ -9,6 +9,7 @@ import { TrendChart } from '@/components/bp/TrendChart';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { InlineFeedback } from '@/components/ui/InlineFeedback';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { ClipboardListIcon, DownloadIcon, HeartPulseIcon, TriangleAlertIcon } from '@/components/ui/icons';
@@ -19,6 +20,7 @@ import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
 import { dayKey, dayLabel } from '@/lib/datetime';
 import { colors, resolveColorScheme } from '@/theme/colors';
+import { tokens } from '@/theme/tokens';
 
 interface HeaderItem {
   type: 'header';
@@ -94,7 +96,7 @@ function buildListItems(readings: ReadingListItem[]): { items: ListItem[]; stick
 export default function HistoryScreen() {
   const { readings, isLoading, error } = useReadings();
   const { trend7d, trend30d, isLoading: isTrendLoading } = useReadingsTrend();
-  const { deleteReading, error: deleteError } = useDeleteReading();
+  const { deleteReading, isDeleting, error: deleteError } = useDeleteReading();
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
   const scheme = resolveColorScheme(useColorScheme());
@@ -104,18 +106,32 @@ export default function HistoryScreen() {
 
   /** id da medição aguardando confirmação — null enquanto não há diálogo aberto. */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  /** id da medição sendo excluída agora — é o que diz a QUAL linha o indicador de progresso
+   *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function handleRequestDelete(readingId: string): void {
+    // Trava de duplo toque: com uma exclusão já em voo, useDeleteReading não tem como rastrear
+    // duas ao mesmo tempo (é um único par isDeleting/error para a tela toda).
+    if (deletingId !== null) {
+      return;
+    }
+
     setPendingDeleteId(readingId);
   }
 
-  function handleConfirmDelete(): void {
+  async function handleConfirmDelete(): Promise<void> {
     if (pendingDeleteId === null) {
       return;
     }
 
-    void deleteReading(pendingDeleteId);
+    const readingId = pendingDeleteId;
     setPendingDeleteId(null);
+    setDeletingId(readingId);
+
+    await deleteReading(readingId);
+
+    setDeletingId(null);
   }
 
   if (isLoading) {
@@ -185,18 +201,6 @@ export default function HistoryScreen() {
               onPress={() => void exportCsv()}
               loading={isExporting}
             />
-
-            {exportError ? (
-              <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
-                {exportError}
-              </Text>
-            ) : null}
-
-            {deleteError ? (
-              <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
-                {deleteError}
-              </Text>
-            ) : null}
           </View>
         }
         renderItem={({ item }) =>
@@ -213,11 +217,22 @@ export default function HistoryScreen() {
               reading={item.reading}
               hasPendingWrites={item.reading.hasPendingWrites}
               position={item.position}
+              isDeleting={isDeleting && deletingId === item.reading.id}
               onRequestDelete={handleRequestDelete}
             />
           )
         }
       />
+
+      {/* Fora da FlashList de propósito (BUG-07): dentro do ListHeaderComponent, o erro nascia no
+          topo absoluto da lista — quem excluía uma linha várias rolagens abaixo nunca via a
+          mensagem. Ancorado aqui, ela fica visível não importa até onde a lista tenha rolado. */}
+      {exportError || deleteError ? (
+        <View pointerEvents="box-none" className="absolute inset-x-4 bottom-4 gap-2">
+          {exportError ? <InlineFeedback tone="danger" message={exportError} style={tokens.shadow.raised} /> : null}
+          {deleteError ? <InlineFeedback tone="danger" message={deleteError} style={tokens.shadow.raised} /> : null}
+        </View>
+      ) : null}
 
       <ConfirmDialog
         visible={pendingDeleteId !== null}
@@ -225,7 +240,7 @@ export default function HistoryScreen() {
         message="Essa ação não pode ser desfeita."
         confirmLabel="Excluir"
         isDestructive
-        onConfirm={handleConfirmDelete}
+        onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDeleteId(null)}
       />
     </SafeAreaView>
