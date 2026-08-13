@@ -1,13 +1,14 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
-import { ActivityIndicator, Alert, useColorScheme, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReadingRow, type ReadingRowPosition } from '@/components/bp/ReadingRow';
 import { TrendChart } from '@/components/bp/TrendChart';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { ClipboardListIcon, DownloadIcon, HeartPulseIcon, TriangleAlertIcon } from '@/components/ui/icons';
@@ -101,17 +102,20 @@ export default function HistoryScreen() {
 
   const { items, stickyHeaderIndices } = useMemo(() => buildListItems(readings), [readings]);
 
+  /** id da medição aguardando confirmação — null enquanto não há diálogo aberto. */
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
   function handleRequestDelete(readingId: string): void {
-    Alert.alert('Excluir medição?', 'Essa ação não pode ser desfeita.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Excluir',
-        style: 'destructive',
-        onPress: () => {
-          void deleteReading(readingId);
-        },
-      },
-    ]);
+    setPendingDeleteId(readingId);
+  }
+
+  function handleConfirmDelete(): void {
+    if (pendingDeleteId === null) {
+      return;
+    }
+
+    void deleteReading(pendingDeleteId);
+    setPendingDeleteId(null);
   }
 
   if (isLoading) {
@@ -213,6 +217,16 @@ export default function HistoryScreen() {
             />
           )
         }
+      />
+
+      <ConfirmDialog
+        visible={pendingDeleteId !== null}
+        title="Excluir medição?"
+        message="Essa ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        isDestructive
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
       />
     </SafeAreaView>
   );
