@@ -1,13 +1,22 @@
-import { View } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import type { BpCategory } from '@/domain/bp-classification';
+import { categoryColors, resolveColorScheme } from '@/theme/colors';
+
+export type BpCategoryBadgeSize = 'sm' | 'md';
 
 export interface BpCategoryBadgeProps {
   category: BpCategory;
+  size?: BpCategoryBadgeSize;
 }
 
-const LABEL: Record<BpCategory, string> = {
+/**
+ * Nome de exibição de cada categoria. Fonte única: quem precisa da versão falada pelo leitor de
+ * tela usa `.toLowerCase()` sobre estes mesmos rótulos, para o texto na tela e o texto anunciado
+ * nunca divergirem.
+ */
+export const CATEGORY_LABEL: Record<BpCategory, string> = {
   normal: 'Normal',
   elevated: 'Elevada',
   stage1: 'Estágio 1',
@@ -15,28 +24,39 @@ const LABEL: Record<BpCategory, string> = {
   crisis: 'Crise',
 };
 
-// Cores de referência AHA — só aqui, nunca como fundo de tela inteira (PLAN §4.2).
-// O texto do label é sempre exibido junto: cor nunca é o único portador de significado (§4.7).
-const COLOR: Record<BpCategory, string> = {
-  normal: '#1B8A5A',
-  elevated: '#B8860B',
-  stage1: '#C2610E',
-  stage2: '#C0392B',
-  crisis: '#7D1F1F',
+const SIZE_CLASSNAME: Record<BpCategoryBadgeSize, string> = {
+  sm: 'gap-1.5 px-2.5 py-1',
+  md: 'gap-2 px-3 py-1.5',
 };
 
-export function BpCategoryBadge({ category }: BpCategoryBadgeProps) {
-  const color = COLOR[category];
+const DOT_SIZE: Record<BpCategoryBadgeSize, number> = { sm: 7, md: 9 };
+
+/**
+ * Pastilha da classificação: fundo `tint` + borda + ponto, todos na família da categoria.
+ *
+ * O label textual está sempre presente — cor nunca é o único portador do significado
+ * (CLAUDE.md §4.7). O rótulo é só descritivo: o app registra, não diagnostica.
+ */
+export function BpCategoryBadge({ category, size = 'md' }: BpCategoryBadgeProps) {
+  const scheme = resolveColorScheme(useColorScheme());
+  const palette = categoryColors[scheme][category];
 
   return (
     <View
-      className="w-min flex-row items-center gap-1.5 self-center rounded-full border px-3 py-1.5"
-      style={{ borderColor: color }}
-      accessibilityLabel={`Categoria: ${LABEL[category]}`}
+      className={['flex-row items-center self-start rounded-full border', SIZE_CLASSNAME[size]].join(' ')}
+      style={{ backgroundColor: palette.tint, borderColor: palette.border }}
+      accessibilityLabel={`Categoria: ${CATEGORY_LABEL[category]}`}
     >
-      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-      <Text variant="caption" color={color} style={{ fontWeight: '600' }}>
-        {LABEL[category]}
+      <View
+        style={{
+          width: DOT_SIZE[size],
+          height: DOT_SIZE[size],
+          borderRadius: DOT_SIZE[size] / 2,
+          backgroundColor: palette.fg,
+        }}
+      />
+      <Text variant="caption" color={palette.fg} style={{ fontWeight: '700' }}>
+        {CATEGORY_LABEL[category]}
       </Text>
     </View>
   );
