@@ -1,14 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, TextInput, useColorScheme, View } from 'react-native';
+import { Pressable, TextInput, useColorScheme, View } from 'react-native';
 
 import { BpCategoryBadge } from '@/components/bp/BpCategoryBadge';
 import { BpNumberInput } from '@/components/bp/BpNumberInput';
 import { LastReadingCard } from '@/components/bp/LastReadingCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -62,14 +62,6 @@ export default function RecordScreen() {
       return () => clearTimeout(timeout);
     }
   }, [autoFocus]);
-
-  function handleDateChange(_event: unknown, selectedDate?: Date): void {
-    setIsPickerOpen(Platform.OS === 'ios');
-
-    if (selectedDate) {
-      form.setMeasuredAt(selectedDate);
-    }
-  }
 
   return (
     <Screen>
@@ -145,11 +137,13 @@ export default function RecordScreen() {
         </Pressable>
 
         {isPickerOpen ? (
-          <DateTimePicker
+          <DateTimeField
             value={form.measuredAt}
             mode="datetime"
             maximumDate={new Date()}
-            onChange={handleDateChange}
+            accessibilityLabel="Horário da medição"
+            onChange={form.setMeasuredAt}
+            onClose={() => setIsPickerOpen(false)}
           />
         ) : null}
 
