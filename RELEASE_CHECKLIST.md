@@ -73,6 +73,22 @@ Nenhum desses é motivo pra pular a Fase 7 — são exatamente o tipo de coisa q
 
 ---
 
+## Observabilidade — coletor de erro em produção
+
+- [ ] ⚠️ **`logError` (`src/lib/logger.ts`) não envia nada em produção hoje.** Verificado no
+      código, não é suposição: `setCrashReporter()` existe mas não é chamada em NENHUMA parte do
+      app — o `crashReporter` que `logError` usa fora de `__DEV__` é sempre `null`, então todo
+      erro de produção do app é descartado em silêncio hoje, apesar de o resto do código seguir
+      "todo catch faz algo" (CLAUDE.md §4.5). Em dev continua indo pro `console.error` normalmente
+      — é só depois do primeiro build de produção que isso vira um ponto cego de verdade.
+- [ ] 🔴 **Decisão em aberto, à parte deste checklist:** conectar um coletor real (ex.:
+      `@react-native-firebase/crashlytics`) chamando `setCrashReporter(...)` no bootstrap do app,
+      antes do lançamento. É dependência nativa nova — CLAUDE.md §4.1 pede justificar peso de
+      bundle e compatibilidade com Expo antes de adicionar, então essa integração é decisão própria,
+      não algo pra embutir de passagem numa correção de bug.
+
+---
+
 ## 2. `eas build --profile production --platform android`
 
 - [ ] 🔴 `eas login` (conta Expo/EAS sua).
