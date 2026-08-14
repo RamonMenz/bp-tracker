@@ -72,7 +72,7 @@ export function ConfirmDialog({
               em meia linha. Cancelar vem PRIMEIRO por segurança: o trap de foco do
               react-native-web foca o primeiro descendente focável ao abrir, então a ação neutra
               é a que recebe o foco inicial — e a ordem de leitura bate com a ordem visual. */}
-          <View className="mt-2 gap-2">
+          <View className="mt-2 gap-3">
             {onCancel ? <Button label={cancelLabel} variant="secondary" onPress={onCancel} /> : null}
             <Button
               label={confirmLabel}
