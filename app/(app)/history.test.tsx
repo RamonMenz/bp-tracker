@@ -80,6 +80,12 @@ beforeEach(() => {
  * que o react-native-web define como método vazio (`static alert() {}`) — o diálogo nunca
  * aparecia e o array de botões, que carregava o onPress real, era descartado em silêncio.
  * Hoje quem confirma é o ConfirmDialog (sobre o Modal), que renderiza nas duas plataformas.
+ *
+ * `getByLabelText('Excluir medição')` resolve para o botão PERSISTENTE de ReadingRow — o botão
+ * revelado pelo swipe tem o mesmo rótulo, mas fica escondido da árvore de acessibilidade de
+ * propósito (só um dos dois pode ser alcançável, senão o rótulo vira ambíguo). A cobertura dos
+ * dois caminhos (botão persistente e a accessibilityAction "delete") mora em ReadingRow.test.tsx,
+ * mais perto do componente que decide qual deles fica exposto.
  */
 describe('HistoryScreen — exclusão de medição', () => {
   it('exclui a medição ao confirmar no diálogo aberto pela linha do histórico', async () => {
@@ -114,5 +120,58 @@ describe('HistoryScreen — exclusão de medição', () => {
     // o conteúdo montado depois de exibido uma vez no iOS (`_shouldShowModal`), então procurar
     // pelo título aqui testaria o interno do RN, não o nosso comportamento.
     expect(deleteReadingMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * BUG-06: useDeleteReading é um hook só, compartilhado pela lista inteira — sem identificar QUAL
+ * linha está em exclusão, ou o indicador acende na lista toda, ou não acende em lugar nenhum.
+ */
+describe('HistoryScreen — progresso da exclusão', () => {
+  it('mostra o indicador só na linha em exclusão e trava um novo pedido enquanto ela está em voo', async () => {
+    // Nunca resolve nesta suíte: é o que mantém a exclusão "em voo" pelo tempo da asserção — sem
+    // isso o `await` de handleConfirmDelete seguiria adiante já no próximo microtask.
+    deleteReadingMock.mockReturnValue(new Promise<boolean>(() => {}));
+    useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: true, error: null });
+
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByLabelText('Excluir medição'));
+    expect(await screen.findByText('Excluir medição?')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Excluir' }));
+
+    expect(await screen.findByLabelText('Excluindo medição')).toBeTruthy();
+
+    // Trava de duplo toque: pedir a exclusão de novo enquanto a primeira está em voo não pode
+    // reabrir o diálogo de confirmação.
+    fireEvent.press(screen.getByLabelText('Excluir medição'));
+    expect(screen.queryByText('Excluir medição?')).toBeNull();
+  });
+});
+
+/**
+ * BUG-07: deleteError/exportError nasciam dentro do ListHeaderComponent da FlashList — o topo
+ * absoluto da lista. Excluir uma linha várias rolagens abaixo deixava o erro fora da área visível.
+ * Aqui eles vivem fora da lista (irmãos da FlashList na árvore), então aparecem qualquer que seja
+ * a posição da rolagem.
+ */
+describe('HistoryScreen — feedback ancorado fora da lista', () => {
+  it('exibe o erro de exclusão', async () => {
+    const message = 'Não foi possível excluir a medição. Tente novamente.';
+    useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: false, error: message });
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByText(message)).toBeTruthy();
+  });
+
+  it('exibe o erro de exportação', async () => {
+    const message = 'Não foi possível exportar o arquivo. Tente novamente.';
+    useExportCsv.mockReturnValue({ exportCsv: jest.fn(), isExporting: false, error: message });
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByText(message)).toBeTruthy();
   });
 });

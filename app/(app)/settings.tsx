@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Disclaimer } from '@/components/ui/Disclaimer';
+import { InlineFeedback } from '@/components/ui/InlineFeedback';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
@@ -27,7 +28,16 @@ import { colors, resolveColorScheme } from '@/theme/colors';
 // um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
 const PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo';
 
+/**
+ * Identificador estável do slot, não a posição na lista (CLAUDE.md §3.4 proíbe key por índice).
+ * DEFAULT_SLOTS é fixa e nunca reordena hoje, mas o índice quebraria silenciosamente no dia em
+ * que isso deixasse de ser verdade — o nome descreve o horário fixo de cada slot (08:00/14:00/
+ * 20:00), então também documenta a si mesmo.
+ */
+type ReminderSlotId = 'morning' | 'afternoon' | 'evening';
+
 interface ReminderSlot {
+  id: ReminderSlotId;
   enabled: boolean;
   time: string;
 }
@@ -43,10 +53,15 @@ type OpenDialog =
   | 'privacyPolicyFailed'
   | null;
 
+const SAVE_TIMES_SUCCESS_MESSAGE = 'Horários salvos.';
+/** Some sozinho depois de um tempo — confirmação é feedback de passagem, não um estado que fica
+ *  preso na tela até a próxima ação do usuário. */
+const SAVE_TIMES_SUCCESS_TIMEOUT_MS = 4000;
+
 const DEFAULT_SLOTS: ReminderSlot[] = [
-  { enabled: true, time: '08:00' },
-  { enabled: true, time: '14:00' },
-  { enabled: true, time: '20:00' },
+  { id: 'morning', enabled: true, time: '08:00' },
+  { id: 'afternoon', enabled: true, time: '14:00' },
+  { id: 'evening', enabled: true, time: '20:00' },
 ];
 
 function slotsFromReminderTimes(times: string[]): ReminderSlot[] {
@@ -61,7 +76,9 @@ function slotsFromReminderTimes(times: string[]): ReminderSlot[] {
 
   return DEFAULT_SLOTS.map((defaultSlot, index) => {
     const time = sorted[index];
-    return time !== undefined ? { enabled: true, time } : { enabled: false, time: defaultSlot.time };
+    // Spread preserva o `id` do default — a posição na lista continua definindo qual slot é qual
+    // (a ordenação por horário garante isso), só a key de React deixa de vir do índice.
+    return time !== undefined ? { ...defaultSlot, enabled: true, time } : { ...defaultSlot, enabled: false };
   });
 }
 
@@ -90,6 +107,16 @@ export default function SettingsScreen() {
   const [hasInitializedSlots, setHasInitializedSlots] = useState(false);
   const [openSlotIndex, setOpenSlotIndex] = useState<number | null>(null);
   const [openDialog, setOpenDialog] = useState<OpenDialog>(null);
+  const [showSaveTimesSuccess, setShowSaveTimesSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!showSaveTimesSuccess) {
+      return;
+    }
+
+    const timeout = setTimeout(() => setShowSaveTimesSuccess(false), SAVE_TIMES_SUCCESS_TIMEOUT_MS);
+    return () => clearTimeout(timeout);
+  }, [showSaveTimesSuccess]);
 
   useEffect(() => {
     if (settings !== null && !hasInitializedSlots) {
@@ -160,7 +187,13 @@ export default function SettingsScreen() {
       .map((slot) => slot.time)
       .sort();
 
-    await updateReminderTimes(reminderTimes);
+    setShowSaveTimesSuccess(false);
+
+    const success = await updateReminderTimes(reminderTimes);
+
+    if (success) {
+      setShowSaveTimesSuccess(true);
+    }
   }
 
   const switchTrackColor = { false: palette.border, true: palette.primary };
@@ -201,7 +234,7 @@ export default function SettingsScreen() {
         <View className="gap-2">
           {slots.map((slot, index) => (
             <View
-              key={index}
+              key={slot.id}
               className="flex-row items-center justify-between gap-3 rounded-2xl bg-light-bg px-3 py-2 dark:bg-dark-bg"
             >
               <Pressable
@@ -248,9 +281,9 @@ export default function SettingsScreen() {
         <Button label="Salvar horários" onPress={handleSaveTimes} loading={isSaving} />
 
         {error ? (
-          <Text variant="caption" accessibilityRole="alert" color={palette.danger}>
-            {error}
-          </Text>
+          <InlineFeedback tone="danger" message={error} />
+        ) : showSaveTimesSuccess ? (
+          <InlineFeedback tone="success" message={SAVE_TIMES_SUCCESS_MESSAGE} />
         ) : null}
       </Card>
 
