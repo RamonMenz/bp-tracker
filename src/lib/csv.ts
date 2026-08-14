@@ -9,6 +9,16 @@ const LINE_BREAK = '\r\n';
 // que ç/ã virem lixo ao abrir o arquivo (PLAN §3.4/§5, tabela de riscos).
 const BOM = '﻿';
 
+// Ao ver o BOM, o Excel assume vírgula como separador e ignora o separador de lista da
+// localidade do sistema (pt-BR usa `;`) — o resultado é a linha inteira caindo numa única
+// célula, com números, `;` e texto acentuado misturados, o que o usuário lê como "os
+// caracteres não aparecem direito". A diretiva `sep=;` como primeira linha do arquivo é o
+// mecanismo que o próprio Excel expõe para sobrepor essa heurística.
+// Custo aceito: quem abrir o CSV num editor de texto puro ou importar programaticamente sem
+// tratamento especial vê essa linha como uma linha de dados a mais (por isso ela não entra em
+// CSV_HEADER nem é tratada como linha de leitura).
+const SEP_DIRECTIVE = 'sep=;';
+
 const CATEGORY_LABEL: Record<BpCategory, string> = {
   normal: 'Normal',
   elevated: 'Elevada',
@@ -49,5 +59,5 @@ function readingToRow(reading: Reading): string {
 
 export function readingsToCsv(readings: Reading[]): string {
   const rows = readings.map(readingToRow);
-  return BOM + [CSV_HEADER, ...rows].join(LINE_BREAK);
+  return BOM + [SEP_DIRECTIVE, CSV_HEADER, ...rows].join(LINE_BREAK);
 }
