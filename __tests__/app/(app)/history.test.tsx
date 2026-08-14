@@ -2,8 +2,15 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { ReadingListItem } from '@/features/readings/useReadings';
 
-import { FlashListStub as mockFlashListStub } from './__mocks__/flash-list-stub';
-import HistoryScreen from './history';
+// Nenhum dos dois é elegível para o alias @/ (fora de src/) — aponta para o arquivo de rota real
+// em app/(app)/history.tsx. Este teste vive em __tests__/ (fora da árvore que o Expo Router
+// varre) porque um .test.tsx dentro de app/(app)/ vira rota de verdade e aparece como item extra
+// na barra de abas — ver commit que moveu este arquivo para cá. O stub, por sua vez, mora em
+// test-mocks/ (não em __tests__/__mocks__/): qualquer arquivo dentro de uma pasta __tests__/ é
+// tratado pelo Jest como sua própria suíte — sem isso o build falha com "must contain at least
+// one test".
+import { FlashListStub as mockFlashListStub } from '../../../test-mocks/flash-list-stub';
+import HistoryScreen from '../../../app/(app)/history';
 
 const deleteReadingMock = jest.fn<Promise<boolean>, [string]>();
 
@@ -14,7 +21,7 @@ jest.mock('expo-router', () => ({
 // FlashList real depende de import ESM que o transformIgnorePatterns do projeto não cobre (só
 // firebase/lucide-react-native têm exceção — ver jest.config.js). Não é o alvo deste teste, então
 // troca por uma lista simples que respeita o mesmo contrato (data/renderItem/ListHeaderComponent).
-// Implementação em arquivo à parte: ver app/(app)/__mocks__/flash-list-stub.tsx.
+// Implementação em arquivo à parte: ver test-mocks/flash-list-stub.tsx.
 jest.mock('@shopify/flash-list', () => ({
   FlashList: mockFlashListStub,
 }));

@@ -1,6 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
-import SettingsScreen from './settings';
+// Fora de src/ (não elegível para o alias @/) — aponta para o arquivo de rota real em
+// app/(app)/settings.tsx. Este teste vive em __tests__/ (fora da árvore que o Expo Router varre)
+// porque um .test.tsx dentro de app/(app)/ vira rota de verdade e aparece como item extra na
+// barra de abas — ver commit que moveu este arquivo para cá.
+import SettingsScreen from '../../../app/(app)/settings';
 
 const toggleNotificationsMock = jest.fn<Promise<boolean>, [boolean]>();
 const updateReminderTimesMock = jest.fn<Promise<boolean>, [string[]]>();
