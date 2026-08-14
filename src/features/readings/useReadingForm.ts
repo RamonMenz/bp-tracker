@@ -6,6 +6,7 @@ import { classifyBloodPressure, type BpCategory } from '@/domain/bp-classificati
 import {
   DIASTOLIC_MAX,
   DIASTOLIC_MIN,
+  NOTE_MAX_LENGTH,
   PULSE_MAX,
   PULSE_MIN,
   SYSTOLIC_MAX,
@@ -17,16 +18,19 @@ export interface ReadingFieldErrors {
   systolic: string | null;
   diastolic: string | null;
   pulse: string | null;
+  note: string | null;
 }
 
 export interface UseReadingFormResult {
   systolic: string;
   diastolic: string;
   pulse: string;
+  note: string;
   measuredAt: Date;
   setSystolic: (value: string) => void;
   setDiastolic: (value: string) => void;
   setPulse: (value: string) => void;
+  setNote: (value: string) => void;
   setMeasuredAt: (value: Date) => void;
   fieldErrors: ReadingFieldErrors;
   /**
@@ -55,6 +59,16 @@ function rangeError(value: string, min: number, max: number): string | null {
   return null;
 }
 
+// Mesma regra dos campos numéricos: só acusa erro quando o conteúdo já ultrapassa o limite, nunca
+// num campo vazio (a observação é opcional).
+function noteError(value: string, maxLength: number): string | null {
+  if (value.length <= maxLength) {
+    return null;
+  }
+
+  return `A observação deve ter no máximo ${maxLength} caracteres.`;
+}
+
 /**
  * Estado e validação do formulário de nova medição.
  *
@@ -72,6 +86,7 @@ export function useReadingForm(): UseReadingFormResult {
   const [systolic, setSystolic] = useState('');
   const [diastolic, setDiastolic] = useState('');
   const [pulse, setPulse] = useState('');
+  const [note, setNote] = useState('');
   const [measuredAt, setMeasuredAt] = useState(() => new Date());
 
   const fieldErrors = useMemo<ReadingFieldErrors>(() => {
@@ -87,8 +102,9 @@ export function useReadingForm(): UseReadingFormResult {
       systolic: systolicRange,
       diastolic: diastolicRange ?? (isPairInverted ? 'Deve ser menor que a sistólica.' : null),
       pulse: rangeError(pulse, PULSE_MIN, PULSE_MAX),
+      note: noteError(note, NOTE_MAX_LENGTH),
     };
-  }, [systolic, diastolic, pulse]);
+  }, [systolic, diastolic, pulse, note]);
 
   // O par é classificável assim que os dois campos estão válidos entre si — o pulso, que é
   // opcional, não entra na conta: um pulso fora de faixa não deve apagar a classificação da
@@ -98,10 +114,14 @@ export function useReadingForm(): UseReadingFormResult {
 
   const previewCategory = isPairValid ? classifyBloodPressure(Number(systolic), Number(diastolic)) : null;
 
-  const canSubmit = isPairValid && fieldErrors.pulse === null;
+  // O pulso e a observação são opcionais, mas, uma vez preenchidos, um erro neles trava o Salvar
+  // do mesmo jeito que um erro de faixa nos campos obrigatórios — o texto além do limite seria
+  // rejeitado pelo schema Zod de qualquer forma, e é melhor barrar aqui, com a mensagem amigável
+  // já visível no campo, do que deixar o submit falhar e mostrar o erro genérico do repositório.
+  const canSubmit = isPairValid && fieldErrors.pulse === null && fieldErrors.note === null;
 
   async function submit(): Promise<boolean> {
-    const success = await addReading({ systolic, diastolic, pulse, note: '', measuredAt });
+    const success = await addReading({ systolic, diastolic, pulse, note, measuredAt });
 
     if (success) {
       // Falha de háptico (aparelho sem motor, web) não pode derrubar um salvamento que deu certo.
@@ -109,6 +129,7 @@ export function useReadingForm(): UseReadingFormResult {
       setSystolic('');
       setDiastolic('');
       setPulse('');
+      setNote('');
       setMeasuredAt(new Date());
     }
 
@@ -119,10 +140,12 @@ export function useReadingForm(): UseReadingFormResult {
     systolic,
     diastolic,
     pulse,
+    note,
     measuredAt,
     setSystolic,
     setDiastolic,
     setPulse,
+    setNote,
     setMeasuredAt,
     fieldErrors,
     previewCategory,
