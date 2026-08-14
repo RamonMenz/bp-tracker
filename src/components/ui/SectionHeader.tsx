@@ -1,6 +1,7 @@
-import { useColorScheme, View, type ViewProps } from 'react-native';
+import { View, type ViewProps } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { Text } from './Text';
 import type { LucideIcon } from './icons';
@@ -19,7 +20,7 @@ export interface SectionHeaderProps extends ViewProps {
  * logo ao lado, e leitor de tela lendo "ícone de coração, Última medição" é ruído, não ajuda.
  */
 export function SectionHeader({ title, icon: Icon, trailing, className, ...props }: SectionHeaderProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   return (

@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ChangeEvent, type CSSProperties, type KeyboardEvent } from 'react';
-import { useColorScheme } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 /**
  * Intervalo de minutos aceito pelo seletor. O @react-native-community/datetimepicker não exporta
@@ -103,7 +103,7 @@ export function DateTimeField({
   minuteInterval,
   accessibilityLabel,
 }: DateTimeFieldProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const inputRef = useRef<HTMLInputElement>(null);
 

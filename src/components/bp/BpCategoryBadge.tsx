@@ -1,8 +1,9 @@
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
 import type { BpCategory } from '@/domain/bp-classification';
-import { categoryColors, resolveColorScheme } from '@/theme/colors';
+import { categoryColors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 export type BpCategoryBadgeSize = 'sm' | 'md';
 
@@ -38,7 +39,7 @@ const DOT_SIZE: Record<BpCategoryBadgeSize, number> = { sm: 7, md: 9 };
  * (CLAUDE.md §4.7). O rótulo é só descritivo: o app registra, não diagnostica.
  */
 export function BpCategoryBadge({ category, size = 'md' }: BpCategoryBadgeProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = categoryColors[scheme][category];
 
   return (

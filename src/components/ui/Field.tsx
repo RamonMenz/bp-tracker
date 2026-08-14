@@ -1,6 +1,7 @@
-import { TextInput, useColorScheme, View, type TextInputProps } from 'react-native';
+import { TextInput, View, type TextInputProps } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { Text } from './Text';
 
@@ -10,7 +11,7 @@ export interface FieldProps extends TextInputProps {
 }
 
 export function Field({ label, errorMessage, className, ...inputProps }: FieldProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const hasError = Boolean(errorMessage);
 
   return (

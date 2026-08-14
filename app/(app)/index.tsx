@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, TextInput, useColorScheme, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 
 import { BpCategoryBadge } from '@/components/bp/BpCategoryBadge';
 import { BpNumberInput } from '@/components/bp/BpNumberInput';
@@ -19,7 +19,8 @@ import { NOTE_MAX_LENGTH } from '@/features/readings/reading.schema';
 import { useLastReading } from '@/features/readings/useLastReading';
 import { useReadingForm } from '@/features/readings/useReadingForm';
 import { formatShortDateTime } from '@/lib/datetime';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 // Onboarding simples: o aviso aparece uma vez (no primeiro uso deste aparelho) e some ao ser
 // dispensado — nunca mais bloqueia o caminho de registrar em ≤10s (CLAUDE.md §1).
@@ -28,7 +29,7 @@ const DISCLAIMER_DISMISSED_KEY = 'bp-tracker:disclaimer-dismissed';
 export default function RecordScreen() {
   const form = useReadingForm();
   const { lastReading, isLoading: isLastReadingLoading } = useLastReading();
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const { autoFocus } = useLocalSearchParams<{ autoFocus?: string }>();
 
