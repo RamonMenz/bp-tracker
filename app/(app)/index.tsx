@@ -10,10 +10,12 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Disclaimer } from '@/components/ui/Disclaimer';
+import { Field } from '@/components/ui/Field';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
 import { ActivityIcon, CalendarDaysIcon, CheckIcon, TriangleAlertIcon } from '@/components/ui/icons';
+import { NOTE_MAX_LENGTH } from '@/features/readings/reading.schema';
 import { useLastReading } from '@/features/readings/useLastReading';
 import { useReadingForm } from '@/features/readings/useReadingForm';
 import { formatShortDateTime } from '@/lib/datetime';
@@ -146,6 +148,23 @@ export default function RecordScreen() {
             onClose={() => setIsPickerOpen(false)}
           />
         ) : null}
+
+        <View className="gap-1">
+          <Field
+            label="Observação (opcional)"
+            value={form.note}
+            onChangeText={form.setNote}
+            maxLength={NOTE_MAX_LENGTH}
+            errorMessage={form.fieldErrors.note ?? undefined}
+            multiline
+            numberOfLines={3}
+            className="min-h-[80px] py-3"
+            textAlignVertical="top"
+          />
+          <Text variant="caption" className="text-right">
+            {form.note.length}/{NOTE_MAX_LENGTH}
+          </Text>
+        </View>
 
         <Button
           label="Salvar medição"

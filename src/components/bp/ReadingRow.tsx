@@ -51,9 +51,10 @@ export function ReadingRow({
 
   // "por", não "/" — leitor de tela deve anunciar "120 por 80", não "120 barra 80" (CLAUDE.md §4.7).
   const pulsePhrase = reading.pulse !== null ? `, pulso ${reading.pulse}` : '';
+  const notePhrase = reading.note !== null && reading.note !== '' ? `, observação: ${reading.note}` : '';
   const pendingPhrase = hasPendingWrites ? ', pendente de sincronização' : '';
   const deletingPhrase = isDeleting ? ', excluindo' : '';
-  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${pendingPhrase}${deletingPhrase}`;
+  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${notePhrase}${pendingPhrase}${deletingPhrase}`;
 
   function handleDeletePress(): void {
     swipeableRef.current?.close();
@@ -138,6 +139,12 @@ export function ReadingRow({
                 <Text variant="caption">{formatTime(reading.measuredAt)}</Text>
                 {hasPendingWrites ? <Text variant="caption">· Pendente de sincronização</Text> : null}
               </View>
+
+              {reading.note !== null && reading.note !== '' ? (
+                <Text variant="caption" numberOfLines={1}>
+                  {reading.note}
+                </Text>
+              ) : null}
             </View>
 
             {isDeleting ? (

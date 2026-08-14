@@ -93,3 +93,44 @@ describe('ReadingRow — exclusão acessível', () => {
     expect(handleRequestDelete).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Antes desta linha, `note` era um campo só de escrita: salvo no Firestore e exportado no CSV,
+ * mas sem lugar nenhum no app onde reaparecesse depois de gravado. Esta é a primeira exibição.
+ */
+describe('ReadingRow — observação', () => {
+  it('mostra a observação salva junto da linha', async () => {
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading({ note: 'Medi após caminhada.' })}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Medi após caminhada.')).toBeTruthy();
+  });
+
+  it('não mostra nada quando a medição não tem observação', async () => {
+    await render(
+      <ReadingRow id="reading-1" reading={makeReading({ note: null })} hasPendingWrites={false} onRequestDelete={jest.fn()} />,
+    );
+
+    // 128/80, "mmHg" e o horário continuam lá — só a linha extra da observação não existe.
+    expect(screen.getByText('128/82')).toBeTruthy();
+  });
+
+  it('inclui a observação no accessibilityLabel da linha', async () => {
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading({ note: 'Medi após caminhada.' })}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText(/observação: Medi após caminhada\./)).toBeTruthy();
+  });
+});
