@@ -23,6 +23,32 @@ module.exports = defineConfig([
     rules: {
       // CLAUDE.md §4.5: nenhum console.* fora de src/lib/logger.ts, único ponto autorizado.
       'no-console': 'error',
+      // O tema do app tem preferência manual (claro/escuro/automático) desde src/features/theme:
+      // o useColorScheme do react-native enxerga SÓ o sistema operacional e ignora essa escolha.
+      // Usá-lo para pintar algo faria a trilha JS (`colors[scheme]`) divergir das classes `dark:`
+      // do NativeWind — exatamente o bug que a fonte única resolveu. Exceção só em
+      // src/features/theme/, onde ler o SO é o objetivo (ver override abaixo).
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['useColorScheme'],
+              message:
+                "Use `useColorScheme` de '@/theme/useColorScheme' — o do react-native ignora a preferência manual de tema do usuário.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // A feature de tema é quem PRECISA da preferência crua do SO: é a partir dela que a opção
+    // "Automático" é resolvida na web (ver useApplyThemePreference.web.ts).
+    files: ['src/features/theme/**'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {

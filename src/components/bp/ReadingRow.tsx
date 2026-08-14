@@ -1,12 +1,13 @@
 import { useRef } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 
 import { Text } from '@/components/ui/Text';
 import { ClockIcon, TrashIcon } from '@/components/ui/icons';
 import { classifyBloodPressure } from '@/domain/bp-classification';
 import { formatTime } from '@/lib/datetime';
-import { categoryColors, colors, resolveColorScheme } from '@/theme/colors';
+import { categoryColors, colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 import type { Reading } from '@/types/models';
 
 import { BpCategoryBadge, CATEGORY_LABEL } from './BpCategoryBadge';
@@ -44,7 +45,7 @@ export function ReadingRow({
   onRequestDelete,
 }: ReadingRowProps) {
   const swipeableRef = useRef<Swipeable>(null);
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const category = classifyBloodPressure(reading.systolic, reading.diastolic);
   const categoryPalette = categoryColors[scheme][category];

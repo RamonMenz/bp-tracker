@@ -1,7 +1,7 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ReadingRow, type ReadingRowPosition } from '@/components/bp/ReadingRow';
@@ -19,7 +19,8 @@ import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
 import { dayKey, dayLabel } from '@/lib/datetime';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 import { tokens } from '@/theme/tokens';
 
 interface HeaderItem {
@@ -99,7 +100,7 @@ export default function HistoryScreen() {
   const { deleteReading, isDeleting, error: deleteError } = useDeleteReading();
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const router = useRouter();
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   const { items, stickyHeaderIndices } = useMemo(() => buildListItems(readings), [readings]);

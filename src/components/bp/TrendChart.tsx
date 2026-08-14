@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 // react-native-gifted-charts, não victory-native: para uma linha dupla simples (sistólica +
 // diastólica) ela pede só SVG + gradiente (ambos padrão em projeto Expo, via expo-linear-gradient
 // + react-native-svg). victory-native (XL) exige @shopify/react-native-skia como peer — um runtime
@@ -11,7 +11,8 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
 import { TrendingUpIcon } from '@/components/ui/icons';
 import type { TrendPoint, TrendWindow } from '@/features/readings/useReadingsTrend';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 export interface TrendChartProps {
   trend7d: TrendPoint[];
@@ -62,7 +63,7 @@ function computeAxisRange(points: TrendPoint[]): { yAxisOffset: number; maxValue
 export function TrendChart({ trend7d, trend30d, isLoading }: TrendChartProps) {
   const [window, setWindow] = useState<TrendWindow>(7);
   const [plotWidth, setPlotWidth] = useState(0);
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   const points = window === 7 ? trend7d : trend30d;

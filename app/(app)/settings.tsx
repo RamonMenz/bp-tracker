@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, Switch, useColorScheme, View } from 'react-native';
+import { Linking, Platform, Pressable, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -12,17 +12,26 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
 import {
   BellIcon,
+  CheckIcon,
   ChevronRightIcon,
   ClockIcon,
   LogOutIcon,
+  MoonIcon,
   ShieldCheckIcon,
+  SmartphoneIcon,
+  SunIcon,
+  SunMoonIcon,
   TrashIcon,
   UserRoundIcon,
+  type LucideIcon,
 } from '@/components/ui/icons';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { useThemePreference } from '@/features/theme/useThemePreference';
+import type { ThemePreference } from '@/features/theme/theme-preference.storage';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 // Placeholder deliberado — não é uma URL real. Substitua antes de publicar; até lá, o link abre
 // um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
@@ -57,6 +66,22 @@ const SAVE_TIMES_SUCCESS_MESSAGE = 'Horários salvos.';
 /** Some sozinho depois de um tempo — confirmação é feedback de passagem, não um estado que fica
  *  preso na tela até a próxima ação do usuário. */
 const SAVE_TIMES_SUCCESS_TIMEOUT_MS = 4000;
+
+interface ThemeOption {
+  value: ThemePreference;
+  label: string;
+  icon: LucideIcon;
+}
+
+/**
+ * "Automático" em vez de "Sistema": é o vocabulário que o público do app (que inclui pessoas
+ * idosas, CLAUDE.md §4.7) entende sem precisar saber o que é "o sistema".
+ */
+const THEME_OPTIONS: ThemeOption[] = [
+  { value: 'light', label: 'Claro', icon: SunIcon },
+  { value: 'dark', label: 'Escuro', icon: MoonIcon },
+  { value: 'system', label: 'Automático', icon: SmartphoneIcon },
+];
 
 const DEFAULT_SLOTS: ReminderSlot[] = [
   { id: 'morning', enabled: true, time: '08:00' },
@@ -99,7 +124,8 @@ export default function SettingsScreen() {
   const { signOut, isLoading: isSigningOut } = useSession();
   const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
   const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
-  const scheme = resolveColorScheme(useColorScheme());
+  const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   const [signOutError, setSignOutError] = useState<string | null>(null);
@@ -306,6 +332,57 @@ export default function SettingsScreen() {
         ) : showSaveTimesSuccess ? (
           <InlineFeedback tone="success" message={SAVE_TIMES_SUCCESS_MESSAGE} />
         ) : null}
+      </Card>
+
+      <Card className="gap-4">
+        <SectionHeader title="Aparência" icon={SunMoonIcon} />
+
+        <Text variant="caption">Escolha o tema do app neste aparelho.</Text>
+
+        {/* radiogroup + radio é a semântica correta para "escolha uma entre três": o leitor de
+            tela anuncia "opção 2 de 3, marcada", em vez de tratar cada botão como isolado. */}
+        <View className="flex-row gap-2" accessibilityRole="radiogroup">
+          {THEME_OPTIONS.map((option) => {
+            const isActive = themePreference === option.value;
+            const OptionIcon = option.icon;
+
+            return (
+              <Pressable
+                key={option.value}
+                accessibilityRole="radio"
+                accessibilityLabel={option.label}
+                accessibilityState={{ checked: isActive, selected: isActive }}
+                onPress={() => setThemePreference(option.value)}
+                // min-h-[48px] + py-3 garantem o alvo de toque de 48dp do CLAUDE.md §4.7 mesmo com
+                // a fonte no menor tamanho; flex-1 divide a largura igualmente entre as três.
+                className="min-h-[48px] flex-1 items-center justify-center gap-1.5 rounded-2xl border py-3"
+                style={{
+                  backgroundColor: isActive ? palette.primaryTint : palette.bg,
+                  borderColor: isActive ? palette.primary : palette.border,
+                }}
+              >
+                <OptionIcon
+                  size={20}
+                  color={isActive ? palette.primary : palette.muted}
+                  strokeWidth={2.25}
+                />
+                <Text
+                  variant="caption"
+                  color={isActive ? palette.primary : palette.muted}
+                  style={{ fontWeight: isActive ? '700' : '500' }}
+                >
+                  {option.label}
+                </Text>
+                {/* O estado marcado NÃO pode se distinguir só por cor (CLAUDE.md §4.7): o ícone de
+                    check é a forma que carrega a mesma informação para quem não diferencia os tons.
+                    A altura fica reservada nas três opções para o texto não pular ao trocar. */}
+                <View className="h-4 justify-center">
+                  {isActive ? <CheckIcon size={14} color={palette.primary} strokeWidth={2.5} /> : null}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
       </Card>
 
       <Card className="gap-4">

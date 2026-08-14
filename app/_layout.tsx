@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthRedirect } from '@/features/auth/useAuthRedirect';
 import { SessionProvider, useSession } from '@/features/auth/useSession';
 import { useNotificationRedirect } from '@/features/reminders/useNotificationRedirect';
+import { ThemePreferenceProvider } from '@/features/theme/useThemePreference';
 
 function RootNavigator() {
   const { user, isLoading } = useSession();
@@ -31,9 +32,14 @@ function RootNavigator() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SessionProvider>
-        <RootNavigator />
-      </SessionProvider>
+      {/* Por fora do SessionProvider: a preferência de tema é do APARELHO, não da conta, e precisa
+          valer também nas telas de login e no indicador de carregamento abaixo — todos anteriores
+          a existir um usuário. */}
+      <ThemePreferenceProvider>
+        <SessionProvider>
+          <RootNavigator />
+        </SessionProvider>
+      </ThemePreferenceProvider>
     </GestureHandlerRootView>
   );
 }

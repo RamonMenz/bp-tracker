@@ -1,8 +1,9 @@
 import { forwardRef, useState } from 'react';
-import { TextInput, useColorScheme, View, type TextInputProps } from 'react-native';
+import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { Text } from '@/components/ui/Text';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 export interface BpNumberInputProps {
   label: string;
@@ -29,7 +30,7 @@ export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function 
   { label, value, onChangeText, maxLength, unit, onDigitsComplete, errorMessage, returnKeyType, onSubmitEditing },
   ref,
 ) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);

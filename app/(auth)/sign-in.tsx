@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -8,11 +8,12 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { HeartPulseIcon, TriangleAlertIcon } from '@/components/ui/icons';
 import { useSession } from '@/features/auth/useSession';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 export default function SignInScreen() {
   const { signIn, isLoading } = useSession();
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 

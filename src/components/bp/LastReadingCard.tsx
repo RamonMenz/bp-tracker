@@ -1,4 +1,4 @@
-import { ActivityIndicator, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { Card } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -7,7 +7,8 @@ import { ClockIcon, HeartPulseIcon } from '@/components/ui/icons';
 import { classifyBloodPressure } from '@/domain/bp-classification';
 import type { ReadingListItem } from '@/features/readings/useReadings';
 import { formatDayAndTime } from '@/lib/datetime';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { BpCategoryBadge, CATEGORY_LABEL } from './BpCategoryBadge';
 
@@ -23,7 +24,7 @@ export interface LastReadingCardProps {
  * empurrar os campos para fora da primeira dobra custaria rolagem no caminho de ≤10s.
  */
 export function LastReadingCard({ lastReading, isLoading }: LastReadingCardProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   return (

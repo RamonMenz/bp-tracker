@@ -98,6 +98,12 @@ export interface CategoryPalette {
  * `useColorScheme()` do react-native@0.86+ pode retornar `'unspecified'` (além de `'light' |
  * 'dark' | null`), valor que `?? 'light'` não cobre porque não é `null`/`undefined`. Qualquer
  * coisa que não seja explicitamente `'dark'` cai em `'light'`, a paleta calma padrão do app.
+ *
+ * ATENÇÃO — isto normaliza a preferência do SISTEMA OPERACIONAL, não o tema do app. Depois que o
+ * app ganhou preferência manual de tema, os dois deixaram de ser sinônimos. Para pintar qualquer
+ * coisa, use `useColorScheme()` de `@/theme/useColorScheme`; o único uso legítimo desta função
+ * está em `src/features/theme/useApplyThemePreference.web.ts`, que precisa mesmo saber o que o SO
+ * pede para resolver a opção "Automático" na web.
  */
 export function resolveColorScheme(scheme: ColorSchemeName): ColorScheme {
   return scheme === 'dark' ? 'dark' : 'light';

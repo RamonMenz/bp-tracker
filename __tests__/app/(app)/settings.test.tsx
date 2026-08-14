@@ -21,6 +21,13 @@ jest.mock('@/features/auth/useDeleteAccount', () => ({
   useDeleteAccount: jest.fn(),
 }));
 
+// Mesmo motivo dos mocks acima: a tela consome o contexto de tema, e estes testes são sobre os
+// switches de lembrete — não sobre o tema. O seletor de tema tem cobertura própria em
+// __tests__/features/theme/, com o provider de verdade.
+jest.mock('@/features/theme/useThemePreference', () => ({
+  useThemePreference: jest.fn(),
+}));
+
 const { useSession } = jest.requireMock('@/features/auth/useSession') as {
   useSession: jest.Mock;
 };
@@ -29,6 +36,9 @@ const { useReminderSettings } = jest.requireMock('@/features/reminders/useRemind
 };
 const { useDeleteAccount } = jest.requireMock('@/features/auth/useDeleteAccount') as {
   useDeleteAccount: jest.Mock;
+};
+const { useThemePreference } = jest.requireMock('@/features/theme/useThemePreference') as {
+  useThemePreference: jest.Mock;
 };
 
 beforeEach(() => {
@@ -43,6 +53,7 @@ beforeEach(() => {
     error: null,
   });
   useDeleteAccount.mockReturnValue({ deleteAccount: jest.fn(), isDeleting: false, error: null });
+  useThemePreference.mockReturnValue({ preference: 'system', setPreference: jest.fn() });
 });
 
 /**

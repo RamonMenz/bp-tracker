@@ -1,6 +1,7 @@
-import { Pressable, useColorScheme, View, type ViewProps } from 'react-native';
+import { Pressable, View, type ViewProps } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { Text } from './Text';
 import { InfoIcon } from './icons';
@@ -19,7 +20,7 @@ const DISCLAIMER_TEXT =
  * qualquer tela — Ajustes mostra sempre; a Home mostra só até o usuário dispensar (onDismiss).
  */
 export function Disclaimer({ onDismiss, className, ...props }: DisclaimerProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
 
   return (

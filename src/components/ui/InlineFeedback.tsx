@@ -1,6 +1,7 @@
-import { View, useColorScheme, type ViewProps } from 'react-native';
+import { View, type ViewProps } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { CheckIcon, TriangleAlertIcon } from './icons';
 import { Text } from './Text';
@@ -23,7 +24,7 @@ export interface InlineFeedbackProps extends Omit<ViewProps, 'children'> {
  * o tom, nunca só a borda/fundo.
  */
 export function InlineFeedback({ tone, message, className, style, ...props }: InlineFeedbackProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const isDanger = tone === 'danger';
   const color = isDanger ? palette.danger : palette.success;

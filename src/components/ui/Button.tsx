@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, useColorScheme, View, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
 
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 import { Text } from './Text';
 import type { LucideIcon } from './icons';
@@ -50,7 +51,7 @@ export function Button({
   onPressOut,
   ...props
 }: ButtonProps) {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   const [isPressed, setIsPressed] = useState(false);
   const isDisabled = disabled || loading;

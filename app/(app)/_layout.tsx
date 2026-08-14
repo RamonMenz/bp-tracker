@@ -1,9 +1,9 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ClipboardListIcon, HeartPulseIcon, SettingsIcon } from '@/components/ui/icons';
-import { colors, resolveColorScheme } from '@/theme/colors';
+import { colors } from '@/theme/colors';
+import { useColorScheme } from '@/theme/useColorScheme';
 
 /**
  * Altura da barra sem contar a área segura. 68dp ainda cortava a base do rótulo (medido: caixa do
@@ -19,7 +19,7 @@ const TAB_BAR_CONTENT_HEIGHT = 76;
 const TAB_BAR_LABEL_LINE_HEIGHT = 16;
 
 export default function AppLayout() {
-  const scheme = resolveColorScheme(useColorScheme());
+  const scheme = useColorScheme();
   const palette = colors[scheme];
   // A área segura entra na altura em vez de virar padding do item: assim o conteúdo da barra
   // sobe inteiro acima do indicador de home, sem espremer o rótulo de novo.
