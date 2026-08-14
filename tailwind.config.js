@@ -2,6 +2,11 @@ const { colors } = require('./src/theme/colors');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  // 'class' em vez do padrão 'media': com 'media' as classes `dark:` só respondem ao
+  // prefers-color-scheme do SO e ignoram qualquer estado JS — o NativeWind chega a lançar
+  // "Cannot manually set color scheme, as dark mode is type 'media'" ao tentar forçar o esquema.
+  // A preferência manual de tema (src/features/theme) depende desta linha para existir.
+  darkMode: 'class',
   content: ['./app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
   theme: {
