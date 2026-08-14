@@ -28,7 +28,16 @@ import { colors, resolveColorScheme } from '@/theme/colors';
 // um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
 const PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo';
 
+/**
+ * Identificador estável do slot, não a posição na lista (CLAUDE.md §3.4 proíbe key por índice).
+ * DEFAULT_SLOTS é fixa e nunca reordena hoje, mas o índice quebraria silenciosamente no dia em
+ * que isso deixasse de ser verdade — o nome descreve o horário fixo de cada slot (08:00/14:00/
+ * 20:00), então também documenta a si mesmo.
+ */
+type ReminderSlotId = 'morning' | 'afternoon' | 'evening';
+
 interface ReminderSlot {
+  id: ReminderSlotId;
   enabled: boolean;
   time: string;
 }
@@ -50,9 +59,9 @@ const SAVE_TIMES_SUCCESS_MESSAGE = 'Horários salvos.';
 const SAVE_TIMES_SUCCESS_TIMEOUT_MS = 4000;
 
 const DEFAULT_SLOTS: ReminderSlot[] = [
-  { enabled: true, time: '08:00' },
-  { enabled: true, time: '14:00' },
-  { enabled: true, time: '20:00' },
+  { id: 'morning', enabled: true, time: '08:00' },
+  { id: 'afternoon', enabled: true, time: '14:00' },
+  { id: 'evening', enabled: true, time: '20:00' },
 ];
 
 function slotsFromReminderTimes(times: string[]): ReminderSlot[] {
@@ -67,7 +76,9 @@ function slotsFromReminderTimes(times: string[]): ReminderSlot[] {
 
   return DEFAULT_SLOTS.map((defaultSlot, index) => {
     const time = sorted[index];
-    return time !== undefined ? { enabled: true, time } : { enabled: false, time: defaultSlot.time };
+    // Spread preserva o `id` do default — a posição na lista continua definindo qual slot é qual
+    // (a ordenação por horário garante isso), só a key de React deixa de vir do índice.
+    return time !== undefined ? { ...defaultSlot, enabled: true, time } : { ...defaultSlot, enabled: false };
   });
 }
 
@@ -223,7 +234,7 @@ export default function SettingsScreen() {
         <View className="gap-2">
           {slots.map((slot, index) => (
             <View
-              key={index}
+              key={slot.id}
               className="flex-row items-center justify-between gap-3 rounded-2xl bg-light-bg px-3 py-2 dark:bg-dark-bg"
             >
               <Pressable
