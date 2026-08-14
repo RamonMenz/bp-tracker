@@ -219,16 +219,29 @@ export default function SettingsScreen() {
             <Text variant="body">Notificações</Text>
             <Text variant="caption">Avisos nos horários abaixo, para não esquecer de medir.</Text>
           </View>
-          <Switch
-            value={settings?.notificationsEnabled ?? false}
-            onValueChange={(value) => void toggleNotifications(value)}
-            disabled={isSaving}
-            trackColor={switchTrackColor}
-            thumbColor={switchThumbColor}
-            ios_backgroundColor={palette.border}
-            {...switchThumbProps}
+          {/* O Switch nativo mede ~34×20dp (Android) / ~51×31dp (iOS) — abaixo do alvo de toque
+              mínimo de 48×48dp do CLAUDE.md §4.7. Este Pressable é quem recebe o toque e a
+              semântica de acessibilidade; o Switch por dentro só desenha o estado visual (ver
+              pointerEvents/importantForAccessibility abaixo). */}
+          <Pressable
+            accessibilityRole="switch"
             accessibilityLabel="Ativar notificações de lembrete"
-          />
+            accessibilityState={{ disabled: isSaving, checked: settings?.notificationsEnabled ?? false }}
+            disabled={isSaving}
+            onPress={() => void toggleNotifications(!(settings?.notificationsEnabled ?? false))}
+            className="h-12 w-12 items-center justify-center"
+          >
+            <Switch
+              value={settings?.notificationsEnabled ?? false}
+              disabled={isSaving}
+              trackColor={switchTrackColor}
+              thumbColor={switchThumbColor}
+              ios_backgroundColor={palette.border}
+              {...switchThumbProps}
+              pointerEvents="none"
+              importantForAccessibility="no-hide-descendants"
+            />
+          </Pressable>
         </View>
 
         <View className="gap-2">
@@ -254,15 +267,23 @@ export default function SettingsScreen() {
                 <ChevronRightIcon size={16} color={palette.muted} strokeWidth={2} />
               </Pressable>
 
-              <Switch
-                value={slot.enabled}
-                onValueChange={(value) => handleToggleSlot(index, value)}
-                trackColor={switchTrackColor}
-                thumbColor={switchThumbColor}
-                ios_backgroundColor={palette.border}
-                {...switchThumbProps}
+              <Pressable
+                accessibilityRole="switch"
                 accessibilityLabel={`Ativar horário ${index + 1}`}
-              />
+                accessibilityState={{ checked: slot.enabled }}
+                onPress={() => handleToggleSlot(index, !slot.enabled)}
+                className="h-12 w-12 items-center justify-center"
+              >
+                <Switch
+                  value={slot.enabled}
+                  trackColor={switchTrackColor}
+                  thumbColor={switchThumbColor}
+                  ios_backgroundColor={palette.border}
+                  {...switchThumbProps}
+                  pointerEvents="none"
+                  importantForAccessibility="no-hide-descendants"
+                />
+              </Pressable>
             </View>
           ))}
         </View>

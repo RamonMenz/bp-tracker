@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <!-- Sem maximum-scale nem user-scalable=no de propósito: desabilitar zoom quebraria o WCAG
+         1.4.4 (Resize Text) e prejudicaria diretamente o público idoso do app (CLAUDE.md §4.7). O
+         auto-zoom do Safari ao focar um campo — motivo mais comum para alguém adicionar essas
+         restrições — já é resolvido por outro caminho: fonte ≥16px em todo input (BpNumberInput,
+         Field, DateTimeField.web), que impede o Safari de disparar o zoom automático.
+
+         Este arquivo versiona o template HTML que a build web ('single' output) de fato usa —
+         `expo export -p web` prioriza public/index.html sobre o template embutido no @expo/cli
+         instalado quando ele existe (ver createTemplateHtmlAsync em
+         @expo/cli/build/src/start/server/webTemplate.js). Sem ele, o comportamento correto de
+         hoje dependeria de um default não versionado, que uma atualização futura do Expo poderia
+         mudar sem que ninguém notasse. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>

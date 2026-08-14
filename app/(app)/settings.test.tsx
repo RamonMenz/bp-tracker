@@ -1,0 +1,94 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+
+import SettingsScreen from './settings';
+
+const toggleNotificationsMock = jest.fn<Promise<boolean>, [boolean]>();
+const updateReminderTimesMock = jest.fn<Promise<boolean>, [string[]]>();
+
+jest.mock('@/features/auth/useSession', () => ({
+  useSession: jest.fn(),
+}));
+
+jest.mock('@/features/reminders/useReminderSettings', () => ({
+  useReminderSettings: jest.fn(),
+}));
+
+jest.mock('@/features/auth/useDeleteAccount', () => ({
+  useDeleteAccount: jest.fn(),
+}));
+
+const { useSession } = jest.requireMock('@/features/auth/useSession') as {
+  useSession: jest.Mock;
+};
+const { useReminderSettings } = jest.requireMock('@/features/reminders/useReminderSettings') as {
+  useReminderSettings: jest.Mock;
+};
+const { useDeleteAccount } = jest.requireMock('@/features/auth/useDeleteAccount') as {
+  useDeleteAccount: jest.Mock;
+};
+
+beforeEach(() => {
+  jest.clearAllMocks();
+
+  useSession.mockReturnValue({ signOut: jest.fn(), isLoading: false });
+  useReminderSettings.mockReturnValue({
+    settings: { notificationsEnabled: false, reminderTimes: ['08:00', '14:00', '20:00'] },
+    updateReminderTimes: updateReminderTimesMock,
+    toggleNotifications: toggleNotificationsMock,
+    isSaving: false,
+    error: null,
+  });
+  useDeleteAccount.mockReturnValue({ deleteAccount: jest.fn(), isDeleting: false, error: null });
+});
+
+/**
+ * O Switch nativo do RN mede menos que o alvo de toque mínimo de 48×48dp exigido pelo CLAUDE.md
+ * §4.7 — quem responde ao toque e é anunciado pelo leitor de tela passou a ser um Pressable de
+ * 48dp por fora, com o Switch dentro dele só desenhando o estado visual
+ * (pointerEvents="none"/importantForAccessibility="no-hide-descendants"). Os testes abaixo cobrem
+ * exatamente essa migração: o controle é localizado pelo rótulo/role "switch" — não pelo tipo do
+ * Switch — e o toque nele precisa disparar a mesma lógica que antes vivia em onValueChange.
+ */
+describe('SettingsScreen — alvo de toque dos switches', () => {
+  it('chama toggleNotifications ao tocar no controle de notificações', async () => {
+    await render(<SettingsScreen />);
+
+    const toggle = screen.getByRole('switch', { name: 'Ativar notificações de lembrete' });
+    fireEvent.press(toggle);
+
+    expect(toggleNotificationsMock).toHaveBeenCalledTimes(1);
+    expect(toggleNotificationsMock).toHaveBeenCalledWith(true);
+  });
+
+  it('chama o toggle do slot ao tocar no controle de um horário', async () => {
+    await render(<SettingsScreen />);
+
+    fireEvent.press(screen.getByRole('switch', { name: 'Ativar horário 1' }));
+
+    // handleToggleSlot é estado local (não sai para um mock) — o efeito observável é o
+    // accessibilityState refletindo o novo valor após o toque, já que o slot 1 nasce habilitado.
+    // setSlots reflete no accessibilityState só depois do próximo flush, daí o findByRole no lugar
+    // de getByRole — reconsultar sincronamente pegaria o nó antes do re-render.
+    const toggleAfter = await screen.findByRole('switch', { name: 'Ativar horário 1' });
+    await waitFor(() => expect(toggleAfter.props.accessibilityState?.checked).toBe(false));
+  });
+
+  it('não chama toggleNotifications ao tocar no controle desabilitado durante o salvamento', async () => {
+    useReminderSettings.mockReturnValue({
+      settings: { notificationsEnabled: false, reminderTimes: ['08:00', '14:00', '20:00'] },
+      updateReminderTimes: updateReminderTimesMock,
+      toggleNotifications: toggleNotificationsMock,
+      isSaving: true,
+      error: null,
+    });
+
+    await render(<SettingsScreen />);
+
+    const toggle = screen.getByRole('switch', { name: 'Ativar notificações de lembrete' });
+    expect(toggle.props.accessibilityState?.disabled).toBe(true);
+
+    fireEvent.press(toggle);
+
+    expect(toggleNotificationsMock).not.toHaveBeenCalled();
+  });
+});
