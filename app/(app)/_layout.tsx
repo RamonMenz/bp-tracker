@@ -6,10 +6,14 @@ import { ClipboardListIcon, HeartPulseIcon, SettingsIcon } from '@/components/ui
 import { colors, resolveColorScheme } from '@/theme/colors';
 
 /**
- * Altura da barra sem contar a área segura. Os 49dp padrão do react-navigation não comportam
- * ícone de 25dp + rótulo de 12dp: o rótulo era espremido até 2dp de altura e sumia da tela.
+ * Altura da barra sem contar a área segura. 68dp ainda cortava a base do rótulo (medido: caixa do
+ * texto comprimida a 9dp em vez dos 16dp de lineHeight): o wrapper do ícone do react-navigation é
+ * FIXO em 28dp (ICON_SIZE_TALL, não escala com o `size` que passamos) e o próprio BottomTabItem
+ * soma seus 5dp de padding em cada ponta por cima do padding daqui — a conta completa é
+ * paddingTop(8) + padding interno(5) + ícone(28) + rótulo(16) + padding interno(5) +
+ * paddingBottom(12) = 74dp; 76dp deixa uma folga de 2dp em vez do mínimo exato.
  */
-const TAB_BAR_CONTENT_HEIGHT = 68;
+const TAB_BAR_CONTENT_HEIGHT = 76;
 
 /** Altura de linha explícita do rótulo: sem ela o texto sai da caixa e é cortado pela borda da tela. */
 const TAB_BAR_LABEL_LINE_HEIGHT = 16;
