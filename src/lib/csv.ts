@@ -9,6 +9,26 @@ const LINE_BREAK = '\r\n';
 // que ç/ã virem lixo ao abrir o arquivo (PLAN §3.4/§5, tabela de riscos).
 const BOM = '﻿';
 
+/**
+ * Diretiva oficial do Excel (Microsoft KB) para forçar o separador de campo ao abrir um CSV por
+ * duplo clique, IGNORANDO a configuração regional do Windows. Investigação do bug "acentuação
+ * quebrada": com BOM + `;` mas SEM esta linha, o Excel decide o separador pela config regional do
+ * SO — se ela não for `;` (padrão fora de pt-BR/de-DE/fr-FR...), o Excel cai na rota de
+ * abertura "heurística", que em builds e locales variados não é a mesma que respeita o BOM de
+ * forma confiável; o sintoma relatado (ç/ã virando lixo) bate com esse caminho, não com um erro
+ * nos bytes gerados aqui — o pipeline desde `readingsToCsv` até o Blob/`FileSystem.writeAsStringAsync`
+ * já escreve UTF-8 correto (conferido byte a byte; ver notas do commit). `sep=;` faz o Excel tomar
+ * o separador do próprio arquivo, o que estabiliza esse caminho e resolve o relato mais provável.
+ *
+ * Trade-off aceito: quem abre o CSV num editor de texto puro, ou importa programaticamente sem
+ * pular a primeira linha, vê "sep=;" como se fosse uma linha de dados a mais. Não há como ter os
+ * dois de graça — plataformas fora do Excel (Sheets, Numbers, `csv-parse`) ignoram ou respeitam
+ * a diretiva sem problema, mas um `readFileSync().split('\n')[0]` ingênuo passa a pegar "sep=;" em
+ * vez do cabeçalho. Aceito porque o público-alvo do export (CLAUDE.md §1) abre no Excel/Sheets, não
+ * em parser próprio; qualquer consumidor programático deste CSV precisa pular a primeira linha.
+ */
+const SEP_DIRECTIVE = 'sep=;';
+
 const CATEGORY_LABEL: Record<BpCategory, string> = {
   normal: 'Normal',
   elevated: 'Elevada',
@@ -49,5 +69,7 @@ function readingToRow(reading: Reading): string {
 
 export function readingsToCsv(readings: Reading[]): string {
   const rows = readings.map(readingToRow);
-  return BOM + [CSV_HEADER, ...rows].join(LINE_BREAK);
+  // BOM continua sendo os 3 primeiros BYTES do arquivo (nenhum texto antes dele) — só depois vem
+  // a linha sep=;, que por sua vez precisa vir antes do cabeçalho para o Excel lê-la como diretiva.
+  return BOM + [SEP_DIRECTIVE, CSV_HEADER, ...rows].join(LINE_BREAK);
 }
