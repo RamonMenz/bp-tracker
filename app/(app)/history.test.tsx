@@ -80,6 +80,12 @@ beforeEach(() => {
  * que o react-native-web define como método vazio (`static alert() {}`) — o diálogo nunca
  * aparecia e o array de botões, que carregava o onPress real, era descartado em silêncio.
  * Hoje quem confirma é o ConfirmDialog (sobre o Modal), que renderiza nas duas plataformas.
+ *
+ * `getByLabelText('Excluir medição')` resolve para o botão PERSISTENTE de ReadingRow — o botão
+ * revelado pelo swipe tem o mesmo rótulo, mas fica escondido da árvore de acessibilidade de
+ * propósito (só um dos dois pode ser alcançável, senão o rótulo vira ambíguo). A cobertura dos
+ * dois caminhos (botão persistente e a accessibilityAction "delete") mora em ReadingRow.test.tsx,
+ * mais perto do componente que decide qual deles fica exposto.
  */
 describe('HistoryScreen — exclusão de medição', () => {
   it('exclui a medição ao confirmar no diálogo aberto pela linha do histórico', async () => {

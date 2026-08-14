@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { ActivityIndicator, StyleSheet, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 
 import { Text } from '@/components/ui/Text';
@@ -65,8 +65,14 @@ export function ReadingRow({
       <RectButton
         onPress={handleDeletePress}
         style={styles.deleteAction}
-        accessibilityRole="button"
-        accessibilityLabel="Excluir medição"
+        // Escondido de leitor de tela de propósito: é o mesmo `handleDeletePress` do botão
+        // persistente abaixo, e só é alcançável arrastando a linha — um gesto que TalkBack/
+        // VoiceOver e teclado na web não fazem. Expor os dois com o mesmo rótulo duplicaria o
+        // anúncio ("Excluir medição, botão" duas vezes na mesma linha); o botão persistente e a
+        // accessibilityAction da linha são os caminhos garantidos, este é só o atalho visual do
+        // gesto de arrastar, para quem consegue usá-lo.
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
       >
         <TrashIcon size={20} color="#FFFFFF" strokeWidth={2.25} />
         <Text variant="caption" color="#FFFFFF" style={{ fontWeight: '700' }}>
@@ -87,9 +93,6 @@ export function ReadingRow({
       containerStyle={{ marginHorizontal: GROUP_HORIZONTAL_MARGIN }}
     >
       <View
-        accessible
-        accessibilityLabel={accessibilityLabel}
-        accessibilityState={{ busy: isDeleting }}
         style={isDeleting ? { opacity: 0.6 } : undefined}
         className={[
           // overflow-hidden é o que faz a faixa lateral colorida acompanhar o canto arredondado
@@ -102,28 +105,63 @@ export function ReadingRow({
             lista, sem que a cor carregue sozinha a informação — o badge nomeia a categoria. */}
         <View style={{ width: 4, backgroundColor: categoryPalette.fg }} />
 
-        <View className="flex-1 flex-row items-center justify-between gap-3 px-4 py-3.5">
-          <View className="flex-1 gap-1">
-            <View className="flex-row items-baseline gap-1.5">
-              <Text variant="sectionHeader" style={{ fontVariant: ['tabular-nums'] }}>
-                {reading.systolic}/{reading.diastolic}
-              </Text>
-              <Text variant="caption">mmHg</Text>
-              {reading.pulse !== null ? <Text variant="caption">· {reading.pulse} bpm</Text> : null}
+        <View className="flex-1 flex-row items-center gap-1 py-3.5 pl-4 pr-1">
+          {/* `accessible` funde este bloco (e só ele) num nó só de acessibilidade — o botão de
+              excluir abaixo fica DE FORA de propósito. Um View `accessible` "engole" os filhos:
+              qualquer coisa tocável lá dentro deixaria de ser alcançável por TalkBack/VoiceOver
+              como controle próprio, exatamente o problema que este componente está corrigindo. */}
+          <View
+            accessible
+            accessibilityLabel={accessibilityLabel}
+            accessibilityState={{ busy: isDeleting }}
+            // Caminho alternativo para quem prefere a rotor de ações do leitor de tela a navegar
+            // até o botão persistente — mesma ação, mesmo handleDeletePress.
+            accessibilityActions={[{ name: 'delete', label: 'Excluir medição' }]}
+            onAccessibilityAction={(event) => {
+              if (event.nativeEvent.actionName === 'delete') {
+                handleDeletePress();
+              }
+            }}
+            className="flex-1 flex-row items-center justify-between gap-3"
+          >
+            <View className="flex-1 gap-1">
+              <View className="flex-row items-baseline gap-1.5">
+                <Text variant="sectionHeader" style={{ fontVariant: ['tabular-nums'] }}>
+                  {reading.systolic}/{reading.diastolic}
+                </Text>
+                <Text variant="caption">mmHg</Text>
+                {reading.pulse !== null ? <Text variant="caption">· {reading.pulse} bpm</Text> : null}
+              </View>
+
+              <View className="flex-row items-center gap-1.5">
+                <ClockIcon size={13} color={palette.muted} strokeWidth={2} />
+                <Text variant="caption">{formatTime(reading.measuredAt)}</Text>
+                {hasPendingWrites ? <Text variant="caption">· Pendente de sincronização</Text> : null}
+              </View>
             </View>
 
-            <View className="flex-row items-center gap-1.5">
-              <ClockIcon size={13} color={palette.muted} strokeWidth={2} />
-              <Text variant="caption">{formatTime(reading.measuredAt)}</Text>
-              {hasPendingWrites ? <Text variant="caption">· Pendente de sincronização</Text> : null}
-            </View>
+            {isDeleting ? (
+              <ActivityIndicator accessibilityLabel="Excluindo medição" color={palette.danger} />
+            ) : (
+              <BpCategoryBadge category={category} size="sm" />
+            )}
           </View>
 
-          {isDeleting ? (
-            <ActivityIndicator accessibilityLabel="Excluindo medição" color={palette.danger} />
-          ) : (
-            <BpCategoryBadge category={category} size="sm" />
-          )}
+          {/* Botão persistente, sempre visível — não só dentro do swipe (CLAUDE.md §4.7). É o
+              caminho garantido de exclusão pra quem navega por teclado na web ou não consegue (ou
+              não sabe que dá pra) arrastar a linha; o swipe acima continua funcionando como atalho
+              a mais, não substituído. 48×48dp mínimo, mesmo handleDeletePress dos outros dois
+              caminhos. */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Excluir medição"
+            accessibilityState={{ disabled: isDeleting }}
+            disabled={isDeleting}
+            onPress={handleDeletePress}
+            className="h-12 w-12 items-center justify-center rounded-full"
+          >
+            <TrashIcon size={18} color={palette.muted} strokeWidth={2} />
+          </Pressable>
         </View>
       </View>
     </Swipeable>
