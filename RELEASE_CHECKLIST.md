@@ -75,17 +75,22 @@ Nenhum desses é motivo pra pular a Fase 7 — são exatamente o tipo de coisa q
 
 ## Observabilidade — coletor de erro em produção
 
-- [ ] ⚠️ **`logError` (`src/lib/logger.ts`) não envia nada em produção hoje.** Verificado no
-      código, não é suposição: `setCrashReporter()` existe mas não é chamada em NENHUMA parte do
-      app — o `crashReporter` que `logError` usa fora de `__DEV__` é sempre `null`, então todo
-      erro de produção do app é descartado em silêncio hoje, apesar de o resto do código seguir
-      "todo catch faz algo" (CLAUDE.md §4.5). Em dev continua indo pro `console.error` normalmente
-      — é só depois do primeiro build de produção que isso vira um ponto cego de verdade.
-- [ ] 🔴 **Decisão em aberto, à parte deste checklist:** conectar um coletor real (ex.:
-      `@react-native-firebase/crashlytics`) chamando `setCrashReporter(...)` no bootstrap do app,
-      antes do lançamento. É dependência nativa nova — CLAUDE.md §4.1 pede justificar peso de
-      bundle e compatibilidade com Expo antes de adicionar, então essa integração é decisão própria,
-      não algo pra embutir de passagem numa correção de bug.
+- [x] ✅ **Nativo: resolvido.** `src/services/firebase/index.ts` chama `setCrashReporter(...)` no
+      bootstrap (fora de `__DEV__`, antes de `initAppCheck()`) com o adapter
+      `src/services/crashReporter.native.ts`, que usa `@react-native-firebase/crashlytics`. Erro de
+      produção no Android agora vira não-fatal no Crashlytics, agrupado pelo `scope` do `logError`,
+      com o contexto já sanitizado como breadcrumb. Coberto por `src/lib/logger.test.ts`.
+- [ ] 🔴 **Depende de você antes do primeiro build:** o Crashlytics nativo só inicializa com o
+      `google-services.json` no lugar (gitignored por design — ver seção 0). `app.config.ts` já
+      declara os config plugins `@react-native-firebase/app` e `.../crashlytics` e aponta
+      `android.googleServicesFile`; sem o arquivo, o `prebuild`/`eas build` falha com mensagem
+      explícita, que é o comportamento desejado (melhor falhar do que buildar sem coletor).
+- [ ] ⚠️ **Web: gap conhecido, permanece aberto.** `src/services/crashReporter.web.ts` é um no-op
+      DECLARADO (não silencioso): não existe SDK web do Crashlytics, e o Firebase JS SDK não expõe
+      esse produto. Na versão web, `logError` continua descartando erro de produção. Fechar isso
+      significa adotar Sentry ou equivalente — dependência nova + mais um processador de dados
+      recebendo stack trace de app de saúde (LGPD), então é decisão à parte, com a mesma
+      justificativa por escrito que o CLAUDE.md §4.1 exigiu para o Crashlytics.
 
 ---
 

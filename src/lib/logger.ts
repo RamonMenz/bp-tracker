@@ -57,14 +57,14 @@ let crashReporter: CrashReporter | null = null;
  * equivalente na web. Manter a dependência invertida deixa `logger.ts` puro, testável e igual nas
  * duas plataformas; quem conhece a plataforma injeta o coletor no bootstrap.
  *
- * PENDÊNCIA (verificada no código, não hipótese): até hoje NENHUMA parte do app chama esta
- * função. `crashReporter` fica sempre `null`, e o `crashReporter?.recordError(...)` de `logError`
- * em produção é, na prática, um no-op silencioso — todo erro de produção do app é descartado sem
- * ir a lugar nenhum, apesar de o resto do código seguir "todo catch faz algo" (CLAUDE.md §4.5).
- * Este É o ponto de extensão para resolver isso: alguém precisa chamar `setCrashReporter(...)` no
- * bootstrap do app com um coletor real (ex.: `@react-native-firebase/crashlytics`) antes do
- * lançamento — decisão registrada em RELEASE_CHECKLIST.md, não tomada aqui (é dependência nativa
- * nova, que CLAUDE.md §4.1 pede para justificar à parte antes de adicionar).
+ * ESTADO ATUAL (verificado no código, não hipótese):
+ *   - NATIVO: conectado. `src/services/firebase/index.ts` chama `setCrashReporter(...)` no
+ *     bootstrap, fora de `__DEV__`, com o adapter de `src/services/crashReporter.native.ts`
+ *     (`@react-native-firebase/crashlytics`). Erro de produção no Android chega ao Crashlytics.
+ *   - WEB: gap conhecido e declarado. O mesmo bootstrap injeta `crashReporter.web.ts`, que é um
+ *     no-op EXPLÍCITO — não existe SDK web do Crashlytics, e adotar Sentry (ou outro coletor de
+ *     terceiros) é decisão à parte, pelo mesmo critério do CLAUDE.md §4.1. Na web, `logError`
+ *     ainda descarta erro de produção. Registrado em RELEASE_CHECKLIST.md.
  */
 export function setCrashReporter(reporter: CrashReporter | null): void {
   crashReporter = reporter;
@@ -163,8 +163,8 @@ export function logError<T extends Record<string, unknown>>(
     return;
   }
 
-  // Hoje isto é um no-op silencioso: nada no app chama setCrashReporter (ver o comentário dela
-  // acima), então crashReporter é sempre null e este `?.` nunca dispara. Pendência aberta em
-  // RELEASE_CHECKLIST.md.
+  // No nativo isto entrega ao Crashlytics; na web o reporter injetado é um no-op declarado (ver
+  // `setCrashReporter` acima). O `?.` cobre o intervalo antes do bootstrap rodar e o caso de
+  // alguém ter chamado `setCrashReporter(null)`.
   crashReporter?.recordError(scope, error, safeContext ?? {});
 }
