@@ -33,6 +33,7 @@ describe('ReadingRow — exclusão acessível', () => {
         reading={makeReading()}
         hasPendingWrites={false}
         onRequestDelete={handleRequestDelete}
+        onRequestEdit={jest.fn()}
       />,
     );
 
@@ -50,7 +51,13 @@ describe('ReadingRow — exclusão acessível', () => {
    */
   it('expõe só um controle acessível chamado "Excluir medição" por linha', async () => {
     await render(
-      <ReadingRow id="reading-1" reading={makeReading()} hasPendingWrites={false} onRequestDelete={jest.fn()} />,
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
+      />,
     );
 
     expect(screen.getAllByLabelText('Excluir medição')).toHaveLength(1);
@@ -65,6 +72,7 @@ describe('ReadingRow — exclusão acessível', () => {
         reading={makeReading()}
         hasPendingWrites={false}
         onRequestDelete={handleRequestDelete}
+        onRequestEdit={jest.fn()}
       />,
     );
 
@@ -85,12 +93,115 @@ describe('ReadingRow — exclusão acessível', () => {
         hasPendingWrites={false}
         isDeleting
         onRequestDelete={handleRequestDelete}
+        onRequestEdit={jest.fn()}
       />,
     );
 
     fireEvent.press(screen.getByLabelText('Excluir medição'));
 
     expect(handleRequestDelete).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A linha era, até aqui, um bloco só de leitura com um único caminho de ação (excluir). O toque
+ * para editar mora no MESMO nó acessível que já carrega a leitura da medição — e o botão de
+ * excluir segue fora dele, o que é justamente o que impede um de capturar o toque do outro.
+ */
+describe('ReadingRow — edição', () => {
+  it('pede a edição ao tocar no corpo da linha, com o id da medição', async () => {
+    const handleRequestEdit = jest.fn();
+
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+        onRequestEdit={handleRequestEdit}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText(/128 por 82/));
+
+    expect(handleRequestEdit).toHaveBeenCalledTimes(1);
+    expect(handleRequestEdit).toHaveBeenCalledWith('reading-1');
+  });
+
+  it('anuncia o corpo da linha como botão, sem mexer no rótulo que já lê a medição', async () => {
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
+      />,
+    );
+
+    const row = screen.getByLabelText(/128 por 82/);
+
+    expect(row.props.accessibilityRole).toBe('button');
+    expect(row.props.accessibilityHint).toBe('Toque para editar esta medição.');
+  });
+
+  /** O toque de editar não pode "roubar" o do excluir — são dois alvos irmãos, não aninhados. */
+  it('não pede edição ao tocar no botão de excluir', async () => {
+    const handleRequestEdit = jest.fn();
+    const handleRequestDelete = jest.fn();
+
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        onRequestDelete={handleRequestDelete}
+        onRequestEdit={handleRequestEdit}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText('Excluir medição'));
+
+    expect(handleRequestDelete).toHaveBeenCalledWith('reading-1');
+    expect(handleRequestEdit).not.toHaveBeenCalled();
+  });
+
+  /** Mesma lógica no sentido inverso: editar não dispara a exclusão. */
+  it('não exclui ao tocar no corpo da linha', async () => {
+    const handleRequestDelete = jest.fn();
+
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        onRequestDelete={handleRequestDelete}
+        onRequestEdit={jest.fn()}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText(/128 por 82/));
+
+    expect(handleRequestDelete).not.toHaveBeenCalled();
+  });
+
+  it('não abre a edição de uma linha que já está sendo excluída', async () => {
+    const handleRequestEdit = jest.fn();
+
+    await render(
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading()}
+        hasPendingWrites={false}
+        isDeleting
+        onRequestDelete={jest.fn()}
+        onRequestEdit={handleRequestEdit}
+      />,
+    );
+
+    fireEvent.press(screen.getByLabelText(/128 por 82/));
+
+    expect(handleRequestEdit).not.toHaveBeenCalled();
   });
 });
 
@@ -106,6 +217,7 @@ describe('ReadingRow — observação', () => {
         reading={makeReading({ note: 'Medi após caminhada.' })}
         hasPendingWrites={false}
         onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
       />,
     );
 
@@ -114,7 +226,13 @@ describe('ReadingRow — observação', () => {
 
   it('não mostra nada quando a medição não tem observação', async () => {
     await render(
-      <ReadingRow id="reading-1" reading={makeReading({ note: null })} hasPendingWrites={false} onRequestDelete={jest.fn()} />,
+      <ReadingRow
+        id="reading-1"
+        reading={makeReading({ note: null })}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
+      />,
     );
 
     // 128/80, "mmHg" e o horário continuam lá — só a linha extra da observação não existe.
@@ -128,6 +246,7 @@ describe('ReadingRow — observação', () => {
         reading={makeReading({ note: 'Medi após caminhada.' })}
         hasPendingWrites={false}
         onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
       />,
     );
 

@@ -24,6 +24,8 @@ export interface ReadingRowProps {
    *  para pedir uma segunda exclusão da mesma linha enquanto a primeira ainda não terminou. */
   isDeleting?: boolean;
   onRequestDelete: (id: string) => void;
+  /** Toque no corpo da linha. Quem navega é a tela — este componente continua sem saber de rotas. */
+  onRequestEdit: (id: string) => void;
 }
 
 const POSITION_CLASSNAME: Record<ReadingRowPosition, string> = {
@@ -43,6 +45,7 @@ export function ReadingRow({
   position = 'middle',
   isDeleting = false,
   onRequestDelete,
+  onRequestEdit,
 }: ReadingRowProps) {
   const swipeableRef = useRef<Swipeable>(null);
   const scheme = useColorScheme();
@@ -60,6 +63,11 @@ export function ReadingRow({
   function handleDeletePress(): void {
     swipeableRef.current?.close();
     onRequestDelete(id);
+  }
+
+  function handleEditPress(): void {
+    swipeableRef.current?.close();
+    onRequestEdit(id);
   }
 
   function renderRightActions() {
@@ -111,11 +119,21 @@ export function ReadingRow({
           {/* `accessible` funde este bloco (e só ele) num nó só de acessibilidade — o botão de
               excluir abaixo fica DE FORA de propósito. Um View `accessible` "engole" os filhos:
               qualquer coisa tocável lá dentro deixaria de ser alcançável por TalkBack/VoiceOver
-              como controle próprio, exatamente o problema que este componente está corrigindo. */}
-          <View
+              como controle próprio, exatamente o problema que este componente está corrigindo.
+              É também o alvo do toque para editar — e só ele: o botão de excluir, por estar fora,
+              continua com o toque próprio, sem que um capture o do outro. O rótulo segue sendo a
+              leitura da medição; o que ele passou a ser tocável vai na `accessibilityHint`, não
+              grudado no rótulo, que já é longo. */}
+          <Pressable
             accessible
+            accessibilityRole="button"
             accessibilityLabel={accessibilityLabel}
-            accessibilityState={{ busy: isDeleting }}
+            accessibilityHint="Toque para editar esta medição."
+            accessibilityState={{ busy: isDeleting, disabled: isDeleting }}
+            // Enquanto a exclusão desta linha está em voo, abrir a edição do documento que está
+            // sendo apagado só levaria a uma tela de "medição não disponível".
+            disabled={isDeleting}
+            onPress={handleEditPress}
             // Caminho alternativo para quem prefere a rotor de ações do leitor de tela a navegar
             // até o botão persistente — mesma ação, mesmo handleDeletePress.
             accessibilityActions={[{ name: 'delete', label: 'Excluir medição' }]}
@@ -153,7 +171,7 @@ export function ReadingRow({
             ) : (
               <BpCategoryBadge category={category} size="sm" />
             )}
-          </View>
+          </Pressable>
 
           {/* Botão persistente, sempre visível — não só dentro do swipe (CLAUDE.md §4.7). É o
               caminho garantido de exclusão pra quem navega por teclado na web ou não consegue (ou

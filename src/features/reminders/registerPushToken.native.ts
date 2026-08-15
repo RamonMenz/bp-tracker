@@ -3,26 +3,13 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
 import { devicesCollectionPath } from '@/lib/firestore-paths';
+import { hashToken } from '@/lib/hash-token';
 import { firestore } from '@/services/firebase';
 
 const PERMISSION_DENIED_MESSAGE = 'Permita notificações nas configurações do aparelho para receber lembretes.';
 const GENERIC_MESSAGE = 'Não foi possível ativar as notificações. Tente novamente.';
 
 const ANDROID_CHANNEL_ID = 'reminders';
-
-/**
- * Hash não criptográfico (djb2) só para um ID de documento curto e estável — não é um limite de
- * segurança, é o que o PLAN §2.1 pede para evitar duplicar/inflar o caminho do doc por token.
- */
-function hashToken(token: string): string {
-  let hash = 5381;
-
-  for (let index = 0; index < token.length; index += 1) {
-    hash = (hash * 33) ^ token.charCodeAt(index);
-  }
-
-  return (hash >>> 0).toString(16);
-}
 
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') {

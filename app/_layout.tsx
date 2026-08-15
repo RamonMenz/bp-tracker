@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAuthRedirect } from '@/features/auth/useAuthRedirect';
 import { SessionProvider, useSession } from '@/features/auth/useSession';
+import { useForegroundPush } from '@/features/reminders/useForegroundPush';
 import { useNotificationRedirect } from '@/features/reminders/useNotificationRedirect';
 import { ThemePreferenceProvider } from '@/features/theme/useThemePreference';
 
@@ -14,6 +15,7 @@ function RootNavigator() {
 
   useAuthRedirect(user, isLoading);
   useNotificationRedirect();
+  useForegroundPush();
 
   if (isLoading) {
     return (

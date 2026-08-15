@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   serverTimestamp,
+  updateDoc,
   type FieldValue,
 } from 'firebase/firestore';
 
@@ -44,6 +45,26 @@ export async function addReading(uid: string, input: ReadingInput): Promise<void
 
     await addDoc(collection(firestore, readingsCollectionPath(uid)), payload);
   } catch (error) {
+    const code = getErrorCode(error);
+
+    if (code === 'permission-denied') {
+      throw new Error(PERMISSION_MESSAGE);
+    }
+
+    if (code === 'unavailable') {
+      throw new Error(NETWORK_MESSAGE);
+    }
+
+    throw new Error(GENERIC_MESSAGE);
+  }
+}
+
+export async function updateReading(uid: string, readingId: string, input: ReadingInput): Promise<void> {
+  try {
+    await updateDoc(doc(firestore, readingDocPath(uid, readingId)), input);
+  } catch (error) {
+    logError('readings.update', error, { uid });
+
     const code = getErrorCode(error);
 
     if (code === 'permission-denied') {

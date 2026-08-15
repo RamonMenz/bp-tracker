@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   setDoc,
   Timestamp,
+  updateDoc,
 } from 'firebase/firestore';
 
 const ALICE = 'alice-uid';
@@ -132,6 +133,15 @@ describe('caminho feliz — as rules não são apenas "negue tudo"', () => {
     const db = asGoogleUser(ALICE).firestore();
     await assertSucceeds(deleteDoc(doc(db, `users/${ALICE}/readings/reading-1`)));
   });
+
+  // updateDoc (não setDoc): é o método que readings.repo.ts realmente usa (updateReading), e é
+  // um merge — só o campo passado muda, o resto do documento (createdAt incluso) vem do que já
+  // estava salvo. A rule de update compara request.resource.data.createdAt (o resultado do merge)
+  // com resource.data.createdAt (o valor já salvo); os dois batem porque nenhum dos dois mudou.
+  it('permite que o dono corrija um campo válido da própria medição (note)', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(updateDoc(doc(db, `users/${ALICE}/readings/reading-1`), { note: 'Corrigido.' }));
+  });
 });
 
 describe('isolamento por uid', () => {
@@ -153,6 +163,11 @@ describe('isolamento por uid', () => {
   it('nega que o usuário B apague uma medição de A', async () => {
     const db = asGoogleUser(BOB).firestore();
     await assertFails(deleteDoc(doc(db, `users/${ALICE}/readings/reading-1`)));
+  });
+
+  it('nega que o usuário B dê update numa medição de A', async () => {
+    const db = asGoogleUser(BOB).firestore();
+    await assertFails(updateDoc(doc(db, `users/${ALICE}/readings/reading-1`), { note: 'Invadido.' }));
   });
 
   it('nega que o usuário B leia o perfil de A', async () => {

@@ -11,16 +11,14 @@
 // (duplicando valores que já vivem no .env.local) ou passá-la no register(). A segunda mantém
 // UMA fonte de verdade e é a usada aqui:
 //
-//   const params = new URLSearchParams({ apiKey, projectId, appId, messagingSenderId });
+//   const params = new URLSearchParams({ apiKey, authDomain, projectId, appId, messagingSenderId });
 //   navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params}`);
 //
 // Nada aqui é segredo: a config web do Firebase é pública por design (CLAUDE.md §4.4) — o que
 // protege os dados são as Security Rules + App Check.
 //
-// ⚠️ ESTE ARQUIVO ESTÁ INERTE HOJE: nenhum código do app chama
-// navigator.serviceWorker.register(). src/features/reminders/registerPushToken.web.ts recusa
-// ativar push na web de propósito. Enquanto ele não for implementado, este SW nunca é
-// registrado e push na web não funciona — ver o resumo da tarefa.
+// Quem registra de fato: src/features/reminders/registerPushToken.web.ts, chamado ao ativar o
+// switch de notificações em Ajustes (nunca no primeiro launch do app).
 
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/12.16.0/firebase-messaging-compat.js');

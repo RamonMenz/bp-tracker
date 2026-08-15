@@ -1,4 +1,4 @@
-import type { DocumentData, DocumentReference, QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import type { DocumentData, DocumentReference } from 'firebase-admin/firestore';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getMessaging } from 'firebase-admin/messaging';
 import { logger } from 'firebase-functions/v2';

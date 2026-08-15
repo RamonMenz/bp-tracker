@@ -18,5 +18,10 @@ web-build/
 functions/lib/
 *.tsbuildinfo
 
+# Logs do emulador do Firebase (gerados a cada `emulators:start`/`emulators:exec`)
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
 # Credenciais do EAS
 credentials.json
