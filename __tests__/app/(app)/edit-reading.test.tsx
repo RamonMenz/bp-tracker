@@ -60,8 +60,8 @@ describe('EditReadingScreen — formulário pré-preenchido', () => {
 
     expect(screen.getByLabelText('Sistólica').props.value).toBe('210');
     expect(screen.getByLabelText('Diastólica').props.value).toBe('90');
-    expect(screen.getByLabelText('Pulso (opcional)').props.value).toBe('70');
-    expect(screen.getByLabelText('Observação (opcional)').props.value).toBe('Antes do café.');
+    expect(screen.getByLabelText('Pulso').props.value).toBe('70');
+    expect(screen.getByLabelText('Observação').props.value).toBe('Antes do café.');
   });
 
   it('anuncia que a tela é de edição, e não de registro', async () => {

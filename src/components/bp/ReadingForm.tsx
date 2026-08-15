@@ -9,7 +9,7 @@ import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Field } from '@/components/ui/Field';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
-import { ActivityIcon, CalendarDaysIcon, CheckIcon, TriangleAlertIcon } from '@/components/ui/icons';
+import { ActivityIcon, CalendarDaysIcon, CheckIcon, PlusIcon, TriangleAlertIcon } from '@/components/ui/icons';
 import { NOTE_MAX_LENGTH } from '@/features/readings/reading.schema';
 import type { UseReadingFormResult } from '@/features/readings/useReadingForm';
 import { formatShortDateTime } from '@/lib/datetime';
@@ -44,6 +44,11 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
   const palette = colors[scheme];
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // Fechados por padrão para o formulário de registro caber numa dobra só — mas, na edição de uma
+  // medição que já tem pulso e/ou observação, nascem abertos: esconder dado já preenchido seria
+  // pior do que a dobra extra. Semente de useState (calculada uma vez), não estado derivado: o
+  // usuário pode fechar de novo sem o valor recalculado forçar a reabrir a cada tecla.
+  const [areOptionalFieldsOpen, setAreOptionalFieldsOpen] = useState(() => form.pulse !== '' || form.note !== '');
 
   const fallbackSystolicRef = useRef<TextInput>(null);
   const resolvedSystolicRef = systolicRef ?? fallbackSystolicRef;
@@ -79,36 +84,50 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
         />
       </View>
 
-      <View className="flex-row items-start gap-3">
-        <BpNumberInput
-          ref={pulseRef}
-          label="Pulso (opcional)"
-          unit="bpm"
-          value={form.pulse}
-          onChangeText={form.setPulse}
-          maxLength={3}
-          errorMessage={form.fieldErrors.pulse ?? undefined}
-          returnKeyType="done"
-        />
-        {/* Observação ao lado do pulso: ocupa a coluna que antes ficava vazia, na mesma largura
-            dos campos numéricos, em vez de um bloco à parte esticado pela largura toda. */}
-        <View className="flex-1 gap-1">
-          <Field
-            label="Observação (opcional)"
-            value={form.note}
-            onChangeText={form.setNote}
-            maxLength={NOTE_MAX_LENGTH}
-            errorMessage={form.fieldErrors.note ?? undefined}
-            multiline
-            numberOfLines={3}
-            className="min-h-[88px] py-3"
-            textAlignVertical="top"
+      {areOptionalFieldsOpen ? (
+        <View className="flex-row items-start gap-3">
+          <BpNumberInput
+            ref={pulseRef}
+            label="Pulso"
+            unit="bpm"
+            value={form.pulse}
+            onChangeText={form.setPulse}
+            maxLength={3}
+            errorMessage={form.fieldErrors.pulse ?? undefined}
+            returnKeyType="done"
           />
-          <Text variant="caption" className="text-right">
-            {form.note.length}/{NOTE_MAX_LENGTH}
-          </Text>
+          {/* Observação ao lado do pulso: ocupa a coluna que antes ficava vazia, na mesma largura
+              dos campos numéricos, em vez de um bloco à parte esticado pela largura toda. */}
+          <View className="flex-1 gap-1">
+            <Field
+              label="Observação"
+              value={form.note}
+              onChangeText={form.setNote}
+              maxLength={NOTE_MAX_LENGTH}
+              errorMessage={form.fieldErrors.note ?? undefined}
+              multiline
+              numberOfLines={3}
+              className="min-h-[88px] py-3"
+              textAlignVertical="top"
+            />
+            <Text variant="caption" className="text-right">
+              {form.note.length}/{NOTE_MAX_LENGTH}
+            </Text>
+          </View>
         </View>
-      </View>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Adicionar pulso e observação"
+          onPress={() => setAreOptionalFieldsOpen(true)}
+          className="min-h-[48px] flex-row items-center justify-center gap-2 rounded-2xl border border-dashed border-light-border px-4 dark:border-dark-border"
+        >
+          <PlusIcon size={16} color={palette.muted} strokeWidth={2} />
+          <Text variant="body" color={palette.muted}>
+            Adicionar pulso e observação
+          </Text>
+        </Pressable>
+      )}
 
       {form.previewCategory ? (
         <View className="flex-row items-center justify-between gap-3 rounded-2xl bg-light-bg px-3 py-2.5 dark:bg-dark-bg">

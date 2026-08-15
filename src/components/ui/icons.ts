@@ -21,6 +21,7 @@ export { default as HeartPulseIcon } from 'lucide-react-native/icons/heart-pulse
 export { default as InfoIcon } from 'lucide-react-native/icons/info';
 export { default as LogOutIcon } from 'lucide-react-native/icons/log-out';
 export { default as MoonIcon } from 'lucide-react-native/icons/moon';
+export { default as PlusIcon } from 'lucide-react-native/icons/plus';
 export { default as SettingsIcon } from 'lucide-react-native/icons/settings';
 export { default as ShieldCheckIcon } from 'lucide-react-native/icons/shield-check';
 export { default as SmartphoneIcon } from 'lucide-react-native/icons/smartphone';
