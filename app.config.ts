@@ -63,9 +63,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // ⚠️ PLACEHOLDER: assets/*.png são quadrados teal sólidos gerados só para destravar a
   // configuração — troque pela arte real antes de publicar na Play Store.
   icon: './assets/icon.png',
+  // Config plugins do @react-native-firebase: sem eles o Crashlytics entra no bundle JS mas o
+  // módulo nativo nunca é configurado (o plugin do `app` adiciona o gradle do google-services; o
+  // do `crashlytics`, o plugin de crash reporting). Um coletor de erro que não inicializa seria o
+  // mesmo ponto cego que src/services/crashReporter.native.ts existe para fechar.
+  plugins: ['@react-native-firebase/app', '@react-native-firebase/crashlytics'],
   android: {
     // Não pode mudar depois de publicado na Play Store.
     package: 'com.ramonmenz.bptracker',
+    // Caminho, não credencial: o arquivo em si é gitignored (CLAUDE.md §4.4) e precisa ser baixado
+    // do Firebase Console antes do primeiro build. Sem ele o prebuild falha com mensagem explícita
+    // — preferível a gerar um build sem Crashlytics configurado, em silêncio.
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#0E7C86',
@@ -73,6 +82,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     bundleIdentifier: 'com.ramonmenz.bptracker',
+    googleServicesFile: process.env.GOOGLE_SERVICES_PLIST ?? './GoogleService-Info.plist',
   },
   web: {
     // 'single' (SPA) é o padrão quando web.output não é declarado — explicitado aqui porque é
