@@ -64,28 +64,31 @@ publicada, o app não pode ser submetido à Play Store: ele trata dado de saúde
 
 ---
 
-## 3. Ícones do app ainda são placeholders visuais (quadrado sólido, sem logotipo)
+## 3. ~~Ícones do app ainda são placeholders visuais~~ — ✅ Resolvido
 
-**Onde foi encontrado:** `app.config.ts:62-65`
-```ts
-// ⚠️ PLACEHOLDER: assets/*.png são quadrados teal sólidos gerados só para destravar a
-// configuração — troque pela arte real antes de publicar na Play Store.
-icon: './assets/icon.png',
-```
-Confirmado visualmente: `assets/icon.png` (1024×1024), `adaptive-icon.png` (1024×1024) e
-`favicon.png` (48×48) são todos um retângulo teal sólido (`#0E7C86`-ish), sem símbolo ou
-tipografia.
+**Onde foi encontrado:** `app.config.ts:62-65` (quadrado teal sólido gerado só para destravar a
+configuração, sem símbolo ou tipografia).
 
-**Estado atual:** suficiente para build de desenvolvimento e teste interno (o app abre e roda
-normalmente), mas não para publicação — a ficha da Play Store exige ícone final, e um quadrado
-sólido reprova a revisão de conteúdo.
+**O que foi feito:** arte gerada via IA de imagem (Gemini) a partir de um prompt com a paleta e o
+estilo "Medical Clean" do projeto (símbolo de braçadeira/manguito estilizado, azul `#2563EB` +
+branco, sem vermelho, sem texto). A imagem bruta do Gemini veio com ~6,5% de margem branca ao
+redor do quadrado (não era *full bleed*) e um azul levemente fora do hex da marca (`#2567DF` em
+vez de `#2563EB`) — ambos corrigidos programaticamente (recorte da margem + normalização exata de
+cor por interpolação no eixo azul→branco, preservando o antialiasing do traço) antes de gerar os
+4 arquivos finais:
+- `assets/icon.png` — 1024×1024, full bleed, `#2563EB` sólido + símbolo branco.
+- `assets/adaptive-icon.png` — 1024×1024, símbolo isolado em fundo transparente, redimensionado
+  para ocupar ~58% do canvas (dentro da safe zone de 61,1% do Android adaptive icon, com folga).
+- `assets/favicon.png` — 48×48, legível no tamanho de aba do navegador.
+- `assets/splash-icon.png` — 1024×1024, mesmo símbolo transparente, com mais respiro (tela de
+  carregamento).
+- `app.config.ts`: removido o comentário `⚠️ PLACEHOLDER`; `android.adaptiveIcon.backgroundColor`
+  trocado de `#0E7C86` (teal antigo, nunca correspondeu à paleta real do app) para `#2563EB`
+  (blue-600 de `src/theme/colors.ts`).
 
-**Passo a passo técnico:**
-1. 🔴 Arte final do ícone (decisão de design/branding do usuário — fora do escopo de código).
-2. Gerar os tamanhos exigidos: `icon.png` 1024×1024, `adaptive-icon.png` respeitando a safe zone
-   do Android adaptive icon, `favicon.png` para web, `splash-icon.png` para a splash screen — e
-   substituir os arquivos em `assets/`.
-3. Remover o comentário de placeholder em `app.config.ts:62-63` depois da troca.
+**Pendente, fora do código:** nenhum. Item fechado — só falta a validação visual final num
+dispositivo/emulador real antes do primeiro build de produção (o Android aplica máscaras de forma
+variadas por fabricante ao ícone adaptativo; vale conferir em pelo menos 2-3 launchers).
 
 ---
 
@@ -181,7 +184,7 @@ lacuna crítica de CRUD, é uma melhoria pequena sobre dado que já está calcul
 |---|---|---|---|
 | 1 | `eas.json` / build nativo não configurado | 🔴 Alta — bloqueia qualquer build instalável | Pequeno (+ credencial EAS) |
 | 2 | Política de privacidade — URL placeholder | 🔴 Alta — bloqueia publicação na Play Store | Fora do código (jurídico) |
-| 3 | Ícones placeholder (quadrado sólido) | 🟡 Média — bloqueia publicação, não bloqueia dev | Fora do código (arte) |
+| 3 | ~~Ícones placeholder~~ | ✅ Resolvido | — |
 | 4 | Média semanal/mensal consolidada (número único) | 🟢 Baixa — melhoria sobre dado já calculado | Pequeno |
 
 Comparado com a auditoria anterior: 4 dos 7 itens (edição de medição, push web, Cloud Functions

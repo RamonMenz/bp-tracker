@@ -60,8 +60,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: 'BP Tracker',
   slug: 'bp-tracker',
   scheme: 'bptracker',
-  // ⚠️ PLACEHOLDER: assets/*.png são quadrados teal sólidos gerados só para destravar a
-  // configuração — troque pela arte real antes de publicar na Play Store.
   icon: './assets/icon.png',
   // Config plugins do @react-native-firebase: sem eles o Crashlytics entra no bundle JS mas o
   // módulo nativo nunca é configurado (o plugin do `app` adiciona o gradle do google-services; o
@@ -77,7 +75,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0E7C86',
+      // blue-600 — mesma cor primária de src/theme/colors.ts (era um teal de placeholder antes
+      // da arte final do ícone).
+      backgroundColor: '#2563EB',
     },
   },
   ios: {
