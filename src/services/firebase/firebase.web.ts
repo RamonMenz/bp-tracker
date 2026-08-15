@@ -8,6 +8,7 @@ import {
   persistentMultipleTabManager,
   type Firestore,
 } from 'firebase/firestore';
+import { getMessaging, isSupported, type Messaging } from 'firebase/messaging';
 
 const extra = Constants.expoConfig?.extra as { firebase?: FirebaseOptions } | undefined;
 const firebaseConfig = extra?.firebase;
@@ -51,3 +52,25 @@ export const firestore: Firestore = isFirstInit
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     })
   : getFirestore(app);
+
+/**
+ * Memoizado numa Promise módulo-level, não recalculado a cada chamada: `isSupported()` faz
+ * feature-detection real (IndexedDB, Service Worker, Push API — nenhuma delas existe em todo
+ * navegador, ex.: Safari mais antigo ou modo privado de alguns browsers), e nada garante que
+ * `registerPushToken.web.ts` só chame isto uma vez (ex.: duplo toque no switch de notificações).
+ */
+let messagingInstance: Promise<Messaging | null> | undefined;
+
+/**
+ * `messaging` não pode ser um export síncrono como `auth`/`firestore` acima: `isSupported()` é
+ * assíncrono por natureza (a checagem de APIs do navegador não tem como ser síncrona), então todo
+ * consumidor precisa lidar com uma Promise de qualquer forma — não faz sentido fingir um valor
+ * síncrono e obrigar quem usa a esperar de outro jeito.
+ */
+export function getMessagingInstance(): Promise<Messaging | null> {
+  if (messagingInstance === undefined) {
+    messagingInstance = isSupported().then((supported) => (supported ? getMessaging(app) : null));
+  }
+
+  return messagingInstance;
+}
