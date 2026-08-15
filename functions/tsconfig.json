@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["es2022"],
+    "module": "node16",
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "types": ["jest", "node"],
+    "resolveJsonModule": true,
+    "outDir": "lib",
+    "rootDir": "src",
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true
+  },
+  "compileOnSave": true,
+  "include": ["src"],
+  "exclude": ["node_modules", "lib", "**/*.test.ts"]
+}
