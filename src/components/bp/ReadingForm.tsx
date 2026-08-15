@@ -90,9 +90,24 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
           errorMessage={form.fieldErrors.pulse ?? undefined}
           returnKeyType="done"
         />
-        {/* Coluna vazia deliberada: mantém o pulso na mesma largura da sistólica, preservando
-            a grade de duas colunas em vez de esticar um campo de 3 dígitos pela tela toda. */}
-        <View className="flex-1" />
+        {/* Observação ao lado do pulso: ocupa a coluna que antes ficava vazia, na mesma largura
+            dos campos numéricos, em vez de um bloco à parte esticado pela largura toda. */}
+        <View className="flex-1 gap-1">
+          <Field
+            label="Observação (opcional)"
+            value={form.note}
+            onChangeText={form.setNote}
+            maxLength={NOTE_MAX_LENGTH}
+            errorMessage={form.fieldErrors.note ?? undefined}
+            multiline
+            numberOfLines={3}
+            className="min-h-[88px] py-3"
+            textAlignVertical="top"
+          />
+          <Text variant="caption" className="text-right">
+            {form.note.length}/{NOTE_MAX_LENGTH}
+          </Text>
+        </View>
       </View>
 
       {form.previewCategory ? (
@@ -124,23 +139,6 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
           onClose={() => setIsPickerOpen(false)}
         />
       ) : null}
-
-      <View className="gap-1">
-        <Field
-          label="Observação (opcional)"
-          value={form.note}
-          onChangeText={form.setNote}
-          maxLength={NOTE_MAX_LENGTH}
-          errorMessage={form.fieldErrors.note ?? undefined}
-          multiline
-          numberOfLines={3}
-          className="min-h-[80px] py-3"
-          textAlignVertical="top"
-        />
-        <Text variant="caption" className="text-right">
-          {form.note.length}/{NOTE_MAX_LENGTH}
-        </Text>
-      </View>
 
       <Button
         label={submitLabel}
