@@ -58,16 +58,23 @@ beforeEach(() => {
 });
 
 describe('RecordScreen — campo de observação', () => {
-  it('mostra o campo de observação, opcional, depois do horário da medição', async () => {
+  it('esconde pulso e observação até o usuário tocar em "Adicionar pulso e observação"', async () => {
     await render(<RecordScreen />);
 
-    expect(screen.getByLabelText('Observação (opcional)')).toBeTruthy();
+    expect(screen.queryByLabelText('Observação')).toBeNull();
+
+    // fireEvent.press é assíncrono nesta versão do RTL — sem o await, a asserção seguinte roda
+    // antes do re-render que a revelação do campo dispara.
+    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+
+    expect(screen.getByLabelText('Observação')).toBeTruthy();
   });
 
   it('repassa o texto digitado para setNote do formulário', async () => {
     await render(<RecordScreen />);
 
-    fireEvent.changeText(screen.getByLabelText('Observação (opcional)'), 'Medi após caminhada.');
+    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+    fireEvent.changeText(screen.getByLabelText('Observação'), 'Medi após caminhada.');
 
     expect(setNoteMock).toHaveBeenCalledWith('Medi após caminhada.');
   });
