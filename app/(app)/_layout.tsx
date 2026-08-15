@@ -69,6 +69,10 @@ export default function AppLayout() {
           tabBarIcon: ({ color, size }) => <SettingsIcon color={color} size={size} strokeWidth={2.25} />,
         }}
       />
+      {/* href: null tira a rota da barra de abas sem tirá-la do navegador — toda rota sob (app)/
+          vira uma aba por padrão, e a edição é alcançada tocando uma linha do histórico, nunca
+          por um quarto botão fixo na barra. */}
+      <Tabs.Screen name="edit-reading/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

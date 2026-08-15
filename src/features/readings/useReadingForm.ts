@@ -2,6 +2,7 @@ import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
 
 import { classifyBloodPressure, type BpCategory } from '@/domain/bp-classification';
+import type { Reading } from '@/types/models';
 
 import {
   DIASTOLIC_MAX,
@@ -13,6 +14,16 @@ import {
   SYSTOLIC_MIN,
 } from './reading.schema';
 import { useAddReading } from './useAddReading';
+import { useUpdateReading } from './useUpdateReading';
+
+/**
+ * Medição já salva, com o id do documento junto. O `Reading` do domínio não carrega o id (ele é a
+ * chave do documento, não um campo dele), mas o modo edição precisa saber QUAL documento
+ * atualizar — daí o par. `ReadingListItem` (de useReadings) é atribuível a este tipo.
+ */
+export interface EditableReading extends Reading {
+  id: string;
+}
 
 export interface ReadingFieldErrors {
   systolic: string | null;
@@ -40,6 +51,7 @@ export interface UseReadingFormResult {
   previewCategory: BpCategory | null;
   /** false enquanto faltar campo obrigatório ou houver erro de faixa — o botão Salvar espelha isto. */
   canSubmit: boolean;
+  /** Cria ou atualiza, conforme o modo. `true` = gravou; é o gancho para a tela navegar depois. */
   submit: () => Promise<boolean>;
   isSaving: boolean;
   submitError: string | null;
@@ -69,25 +81,43 @@ function noteError(value: string, maxLength: number): string | null {
   return `A observação deve ter no máximo ${maxLength} caracteres.`;
 }
 
+/** Campo numérico do formulário é string; `null`/ausente (pulso não informado) vira campo vazio. */
+function numberToField(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value);
+}
+
 /**
- * Estado e validação do formulário de nova medição.
+ * Estado e validação do formulário de medição, em dois modos.
+ *
+ * Sem `initialReading` é o modo criação: campos vazios, `measuredAt` = agora, salva via
+ * `useAddReading`. Com `initialReading` é o modo edição: campos pré-preenchidos com a medição
+ * existente, salva via `useUpdateReading` no documento daquele id.
  *
  * A validação daqui é de FEEDBACK — mensagens curtas por campo, calculadas a cada tecla, para o
- * usuário corrigir antes de tentar salvar. Ela não substitui o schema Zod: `useAddReading`
- * continua sendo o portão único de entrada no repositório, e as faixas usadas aqui são
- * importadas de `reading.schema` justamente para as duas camadas não divergirem.
+ * usuário corrigir antes de tentar salvar. Ela não substitui o schema Zod: os hooks de escrita
+ * continuam sendo o portão único de entrada no repositório (o MESMO schema nos dois modos), e as
+ * faixas usadas aqui são importadas de `reading.schema` justamente para as duas camadas não
+ * divergirem.
  *
  * Só reporta erro em campo preenchido: acusar "valor inválido" num campo vazio que o usuário
  * ainda nem tocou é ruído, não ajuda.
+ *
+ * `initialReading` é lido só na montagem (é semente de `useState`, não estado derivado): quem abre
+ * o formulário em modo edição deve montá-lo apenas depois de ter a medição em mãos — senão os
+ * campos nasceriam vazios e continuariam vazios. É o que a rota de edição faz.
  */
-export function useReadingForm(): UseReadingFormResult {
-  const { addReading, isSaving, error: submitError } = useAddReading();
+export function useReadingForm(initialReading?: EditableReading): UseReadingFormResult {
+  const add = useAddReading();
+  const update = useUpdateReading();
 
-  const [systolic, setSystolic] = useState('');
-  const [diastolic, setDiastolic] = useState('');
-  const [pulse, setPulse] = useState('');
-  const [note, setNote] = useState('');
-  const [measuredAt, setMeasuredAt] = useState(() => new Date());
+  // Os dois hooks são sempre chamados (regra dos hooks), mas só um deles é acionado no submit.
+  const isEditing = initialReading !== undefined;
+
+  const [systolic, setSystolic] = useState(() => numberToField(initialReading?.systolic));
+  const [diastolic, setDiastolic] = useState(() => numberToField(initialReading?.diastolic));
+  const [pulse, setPulse] = useState(() => numberToField(initialReading?.pulse));
+  const [note, setNote] = useState(() => initialReading?.note ?? '');
+  const [measuredAt, setMeasuredAt] = useState(() => initialReading?.measuredAt ?? new Date());
 
   const fieldErrors = useMemo<ReadingFieldErrors>(() => {
     const systolicRange = rangeError(systolic, SYSTOLIC_MIN, SYSTOLIC_MAX);
@@ -121,16 +151,27 @@ export function useReadingForm(): UseReadingFormResult {
   const canSubmit = isPairValid && fieldErrors.pulse === null && fieldErrors.note === null;
 
   async function submit(): Promise<boolean> {
-    const success = await addReading({ systolic, diastolic, pulse, note, measuredAt });
+    const values = { systolic, diastolic, pulse, note, measuredAt };
+
+    const success =
+      initialReading !== undefined
+        ? await update.updateReading(initialReading.id, values)
+        : await add.addReading(values);
 
     if (success) {
       // Falha de háptico (aparelho sem motor, web) não pode derrubar um salvamento que deu certo.
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-      setSystolic('');
-      setDiastolic('');
-      setPulse('');
-      setNote('');
-      setMeasuredAt(new Date());
+
+      // Só o modo criação limpa os campos, para o próximo registro começar do zero na mesma tela.
+      // Na edição isso faria o formulário piscar em branco antes da tela sair de cena; quem chamou
+      // decide o que fazer com o `true` devolvido aqui (a rota de edição volta para o histórico).
+      if (initialReading === undefined) {
+        setSystolic('');
+        setDiastolic('');
+        setPulse('');
+        setNote('');
+        setMeasuredAt(new Date());
+      }
     }
 
     return success;
@@ -151,7 +192,7 @@ export function useReadingForm(): UseReadingFormResult {
     previewCategory,
     canSubmit,
     submit,
-    isSaving,
-    submitError,
+    isSaving: isEditing ? update.isSaving : add.isSaving,
+    submitError: isEditing ? update.error : add.error,
   };
 }

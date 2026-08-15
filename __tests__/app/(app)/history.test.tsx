@@ -13,9 +13,10 @@ import { FlashListStub as mockFlashListStub } from '../../../test-mocks/flash-li
 import HistoryScreen from '../../../app/(app)/history';
 
 const deleteReadingMock = jest.fn<Promise<boolean>, [string]>();
+const mockPush = jest.fn();
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // FlashList real depende de import ESM que o transformIgnorePatterns do projeto não cobre (só
@@ -127,6 +128,39 @@ describe('HistoryScreen — exclusão de medição', () => {
     // o conteúdo montado depois de exibido uma vez no iOS (`_shouldShowModal`), então procurar
     // pelo título aqui testaria o interno do RN, não o nosso comportamento.
     expect(deleteReadingMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * A linha do histórico é o único caminho até a edição — não há botão "editar" em lugar nenhum
+ * além dela. Quem monta a rota é esta tela; ReadingRow só avisa que a linha foi tocada.
+ */
+describe('HistoryScreen — edição de medição', () => {
+  it('abre a tela de edição da medição tocada, com o id dela na rota', async () => {
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByLabelText(/128 por 82/));
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/(app)/edit-reading/reading-1');
+  });
+
+  it('tocar na linha não abre o diálogo de exclusão', async () => {
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByLabelText(/128 por 82/));
+
+    expect(screen.queryByText('Excluir medição?')).toBeNull();
+    expect(deleteReadingMock).not.toHaveBeenCalled();
+  });
+
+  it('tocar em excluir não navega para a edição', async () => {
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByLabelText('Excluir medição'));
+
+    expect(await screen.findByText('Excluir medição?')).toBeTruthy();
+    expect(mockPush).not.toHaveBeenCalled();
   });
 });
 

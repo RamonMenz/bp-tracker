@@ -111,6 +111,10 @@ export default function HistoryScreen() {
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  function handleRequestEdit(readingId: string): void {
+    router.push(`/(app)/edit-reading/${readingId}`);
+  }
+
   function handleRequestDelete(readingId: string): void {
     // Trava de duplo toque: com uma exclusão já em voo, useDeleteReading não tem como rastrear
     // duas ao mesmo tempo (é um único par isDeleting/error para a tela toda).
@@ -220,6 +224,7 @@ export default function HistoryScreen() {
               position={item.position}
               isDeleting={isDeleting && deletingId === item.reading.id}
               onRequestDelete={handleRequestDelete}
+              onRequestEdit={handleRequestEdit}
             />
           )
         }
