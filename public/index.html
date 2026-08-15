@@ -17,6 +17,20 @@
          mudar sem que ninguém notasse. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>%WEB_TITLE%</title>
+
+    <!-- Ícone da aba do navegador e da instalação como PWA ("Adicionar à tela de início"). Sem
+         isso, o navegador não tinha de onde tirar um ícone em resolução alta pra tela inicial do
+         celular e caía pra um fallback borrado (upscaling de um favicon pequeno, ou um recorte da
+         própria página). manifest.json + apple-touch-icon cobrem Android/Chrome e iOS/Safari,
+         que leem esses ícones por caminhos diferentes. -->
+    <link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#2563EB" />
+    <!-- iOS ignora manifest.json pra "Adicionar à Tela de Início" — precisa dessas duas tags à
+         parte pra abrir em standalone (sem a barra do Safari) com o nome certo embaixo do ícone. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="BP Tracker" />
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
