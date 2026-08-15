@@ -34,7 +34,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!_expo/|assets/|firebase-messaging-sw\\.js|favicon\\.ico).*)",
+      "source": "/((?!_expo/|assets/|icons/|firebase-messaging-sw\\.js|favicon\\.ico|favicon\\.png|manifest\\.json).*)",
       "destination": "/index.html"
     }
   ]

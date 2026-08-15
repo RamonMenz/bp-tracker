@@ -92,6 +92,40 @@ variadas por fabricante ao ícone adaptativo; vale conferir em pelo menos 2-3 la
 
 ---
 
+## 3.1. ~~Ícone da instalação web (PWA) sem manifest~~ — ✅ Resolvido (encontrado durante o item 3)
+
+**Onde foi encontrado:** ao validar o item 3 num celular de verdade, o ícone ficava nítido no app
+nativo mas saía borrado/pixelado ao instalar a versão web pela opção "Adicionar à tela de início"
+do navegador. Causa raiz, não relacionada à resolução da arte: `public/index.html` (que o próprio
+arquivo já documenta ter prioridade sobre o template padrão do Expo) não tinha **nenhuma** tag de
+ícone — nem `<link rel="icon">`, nem `<link rel="manifest">`, nem `<link rel="apple-touch-icon">`.
+Sem isso, o navegador não tinha de onde tirar um ícone em resolução alta e caía para um fallback
+(upscaling de um ícone pequeno, ou recorte da própria página).
+
+**O que foi feito:**
+- `public/manifest.json` (Web App Manifest) novo, com `icons` em 192×192 e 512×512 (`purpose:
+  "any"`) + uma variante 512×512 `purpose: "maskable"` (reaproveita o símbolo isolado do item 3,
+  já dentro da safe zone, composto sobre o azul da marca).
+- `public/icons/apple-touch-icon.png` (180×180, opaco — iOS não aplica máscara/alpha no ícone da
+  tela de início).
+- `public/favicon.png` — favicon fora do pipeline de assets do Expo, servido direto pelo caminho
+  estático (mais confiável que depender do `web.favicon` do `app.config.ts` com um template HTML
+  totalmente customizado).
+- `public/index.html`: adicionadas as tags `<link rel="icon">`, `<link rel="apple-touch-icon">`,
+  `<link rel="manifest">`, `<meta name="theme-color">` e as duas tags específicas do iOS
+  (`apple-mobile-web-app-capable`, `apple-mobile-web-app-title`) — Safari ignora o
+  `manifest.json` para "Adicionar à Tela de Início", precisa dessas à parte.
+- `vercel.json`: a regra de rewrite (`source` do bloco `rewrites`) mandava **tudo** para
+  `/index.html` exceto uma lista fixa de exceções, que não incluía os arquivos novos — sem esse
+  ajuste, o manifest/ícones ficariam certos localmente e quebrados em produção (o Vercel serviria
+  HTML no lugar do PNG/JSON). Adicionado `icons/`, `favicon\.png` e `manifest\.json` à exceção.
+
+**Pendente, fora do código:** nenhum. Vale testar "Adicionar à tela de início" de verdade em
+Android/Chrome e iOS/Safari depois do próximo deploy — os dois lêem esse conjunto de arquivos de
+formas ligeiramente diferentes.
+
+---
+
 ## 4. Média semanal/mensal consolidada — só existe implícita no gráfico, não como número único
 
 **Onde foi encontrado:**
