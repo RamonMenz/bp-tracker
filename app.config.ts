@@ -65,7 +65,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // módulo nativo nunca é configurado (o plugin do `app` adiciona o gradle do google-services; o
   // do `crashlytics`, o plugin de crash reporting). Um coletor de erro que não inicializa seria o
   // mesmo ponto cego que src/services/crashReporter.native.ts existe para fechar.
-  plugins: ['@react-native-firebase/app', '@react-native-firebase/crashlytics'],
+  //
+  // `expo-notifications` precisa estar aqui também: é o plugin que declara `POST_NOTIFICATIONS`
+  // no AndroidManifest (obrigatória a partir do Android 13) — sem ela, `requestPermissionsAsync`
+  // nunca mostra o popup nativo, só nega em silêncio (é exatamente o sintoma que motivou este
+  // comentário: "permissão negada" sem diálogo nenhum na tela).
+  plugins: ['@react-native-firebase/app', '@react-native-firebase/crashlytics', 'expo-notifications'],
   android: {
     // Não pode mudar depois de publicado na Play Store.
     package: 'com.ramonmenz.bptracker',
