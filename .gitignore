@@ -25,3 +25,5 @@ ui-debug.log
 
 # Credenciais do EAS
 credentials.json
+*.jks
+*.keystore
