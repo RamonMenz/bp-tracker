@@ -96,5 +96,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebase,
     googleWebClientId,
     appCheck,
+    // Gerado por `eas build:configure` (config dinâmica não aceita escrita automática do eas-cli
+    // — precisa entrar aqui manualmente). Liga este projeto ao projeto EAS
+    // @ramoncode/bp-tracker; sem isso `eas build`/`eas init` não sabem para onde enviar o build.
+    eas: {
+      projectId: '19964a88-fc2d-4c83-a298-0c0f7396f105',
+    },
   },
 });
