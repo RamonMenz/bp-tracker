@@ -1,0 +1,40 @@
+name: EAS Build (development)
+
+# Disparo manual pela aba Actions do GitHub — de propósito, não a cada push. O plano
+# gratuito da EAS tem cota mensal de builds; automatizar por push consumiria a cota rápido
+# demais para uma fase de testes. Rode manualmente quando quiser gerar um build novo.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build_android_development:
+    name: Build Android (development)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Instalar eas-cli
+        run: npm install -g eas-cli
+
+      # Baixa as EXPO_PUBLIC_* já cadastradas na EAS (ver `eas env:create` no README de setup)
+      # e materializa o google-services.json (variável de arquivo) — evita duplicar segredo
+      # em dois lugares (GitHub Secrets e EAS Environment Variables).
+      - name: Baixar variáveis de ambiente do ambiente "development" na EAS
+        run: eas env:pull --environment development --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Rodar build Android (profile development)
+        run: eas build --platform android --profile development --non-interactive --no-wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
