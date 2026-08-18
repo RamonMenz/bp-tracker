@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, Switch, View } from 'react-native';
 
@@ -121,6 +122,7 @@ function dateToTimeString(date: Date): string {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useSession();
   const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
   const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
@@ -187,6 +189,17 @@ export default function SettingsScreen() {
       // portanto, sair junto com a tela. Mantê-lo depois disso exigiria um host de diálogo no
       // layout raiz — mudança maior, fora do escopo desta correção.
     }
+  }
+
+  /**
+   * Navegação direta, sem passar por `useOnboardingGate` nem chamar `markOnboardingSeen` — a
+   * marca de "já viu" já foi gravada na primeira exibição (automática ou não) e não deve ser
+   * escrita de novo aqui. `push`, não `replace`: veio de dentro do app por escolha do usuário,
+   * "Voltar" precisa devolver para Ajustes normalmente — diferente da entrada automática em
+   * `app/onboarding.tsx`, que sempre usa `replace`.
+   */
+  function handleOpenOnboarding(): void {
+    router.push('/onboarding');
   }
 
   async function handleOpenPrivacyPolicy(): Promise<void> {
@@ -395,6 +408,19 @@ export default function SettingsScreen() {
             {signOutError}
           </Text>
         ) : null}
+
+        {/* Atalho para reabrir o onboarding a qualquer momento — mesmo padrão visual da linha
+            "Política de privacidade" no Card "Privacidade" logo abaixo: Pressable com chevron,
+            sem Card próprio, porque o pedido é "acessível a qualquer momento", não destaque. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Como usar o app"
+          onPress={handleOpenOnboarding}
+          className="min-h-[48px] flex-row items-center justify-between gap-2"
+        >
+          <Text variant="body">Como usar o app</Text>
+          <ChevronRightIcon size={18} color={palette.muted} strokeWidth={2.25} />
+        </Pressable>
 
         <View className="gap-2">
           <Text variant="caption">

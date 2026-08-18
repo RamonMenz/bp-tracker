@@ -8,6 +8,11 @@ import SettingsScreen from '../../../app/(app)/settings';
 
 const toggleNotificationsMock = jest.fn<Promise<boolean>, [boolean]>();
 const updateReminderTimesMock = jest.fn<Promise<boolean>, [string[]]>();
+const mockPush = jest.fn();
+
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
 
 jest.mock('@/features/auth/useSession', () => ({
   useSession: jest.fn(),
@@ -105,5 +110,21 @@ describe('SettingsScreen — alvo de toque dos switches', () => {
     fireEvent.press(toggle);
 
     expect(toggleNotificationsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('SettingsScreen — atalho para reabrir o onboarding', () => {
+  /**
+   * Navegação direta: `router.push` (não `replace`, ao contrário da entrada automática em
+   * `app/onboarding.tsx`) e sem qualquer chamada a `markOnboardingSeen` ou `useOnboardingGate` —
+   * a marca de "já viu" já existe desde a primeira exibição, e este atalho não deve reescrevê-la.
+   */
+  it('navega para /onboarding ao tocar em "Como usar o app"', async () => {
+    await render(<SettingsScreen />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Como usar o app' }));
+
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    expect(mockPush).toHaveBeenCalledWith('/onboarding');
   });
 });
