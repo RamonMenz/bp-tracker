@@ -172,6 +172,80 @@ julgamento de produto/UX, não só reaproveitar um padrão de código já pronto
 
 ---
 
+## Prompt 2.1 — Corrigir navegação em `handleConfigureReminders` e remover "Voltar" do passo 3
+
+```
+Contexto: no BP Tracker, o Prompt 2 já implementou src/screens/OnboardingScreen.tsx (branch
+claude/onboarding-storage-gate-72jdrk, commit d967214). A implementação ficou correta na maior
+parte, mas duas coisas precisam ser corrigidas ANTES de rodar o Prompt 3 — a rota que consome este
+componente é escrita assumindo que ele não navega sozinho, e as duas divergem do combinado.
+
+Problema 1 (real, não só estilo): `OnboardingScreenProps` hoje é `{ onFinish: () => void }`, mas
+o componente importa `useRouter` e `handleConfigureReminders` chama `onFinish()` e
+`router.push('/(app)/settings')` diretamente — navegação de rota dentro do que deveria ser um
+componente "burro" (o próprio comentário do arquivo, logo acima de `OnboardingScreen`, diz o
+contrário disso). O Prompt 3 vai implementar `onFinish` como `() => router.replace('/(app)')` na
+rota app/onboarding.tsx — com o código atual, tocar "Configurar lembretes" dispara duas navegações
+concorrentes (um `replace` para a Home vindo de `onFinish`, um `push` para Ajustes vindo do
+componente), o que é frágil mesmo que hoje pareça "funcionar" na ordem em que as chamadas
+aparecem. A rota, não a tela, deve decidir para onde ir.
+
+Problema 2 (nit de produto, mas fácil de resolver junto): o passo 3 mostra 3 botões
+("Começar a registrar", "Configurar lembretes" e "Voltar") — o Prompt 2 pedia que o passo final
+trocasse "Próximo" pelos dois botões de conclusão, sem prever um terceiro caminho ali. Uma tela de
+fechamento com 3 ações compete consigo mesma; tire o "Voltar" do passo 3 (ele continua existindo
+normalmente nos passos 2 e a lógica de handleBack não muda).
+
+Tarefa (em src/screens/OnboardingScreen.tsx, branch claude/onboarding-storage-gate-72jdrk):
+1. Troque a assinatura de OnboardingScreenProps para:
+   export interface OnboardingScreenProps {
+     onFinish: (destination?: 'settings') => void;
+   }
+   Atualize o comentário da prop para refletir que quem decide o destino é a rota, recebendo o
+   argumento opcional — não o componente.
+2. Remova o import de useRouter e a chamada `const router = useRouter()`. Reescreva
+   handleConfigureReminders para:
+   function handleConfigureReminders(): void {
+     onFinish('settings');
+   }
+   Delete a linha `router.push('/(app)/settings')` e o comentário que a justificava (o motivo
+   passa a viver no Prompt 3, que é quem de fato decide a navegação).
+3. Ajuste as DUAS outras chamadas de onFinish (botão "Pular" no cabeçalho e botão "Começar a
+   registrar" no passo 3): hoje são `onPress={onFinish}` — passadas cruas, isso passaria o evento
+   de toque do Pressable como primeiro argumento de onFinish, que agora espera
+   `'settings' | undefined`. Troque as duas para `onPress={() => onFinish()}` (sem destino).
+4. No bloco `step === TOTAL_STEPS`, remova o `<Button label="Voltar" variant="ghost"
+   onPress={handleBack} />` — sobram só "Começar a registrar" e "Configurar lembretes". Não mexa
+   no botão "Voltar" dos passos 1/2 (ele continua exatamente como está).
+5. Em src/screens/OnboardingScreen.test.tsx:
+   - Remova `jest.mock('expo-router', ...)` e a constante `mockPush` — o componente não importa
+     mais expo-router, o mock deixou de ter propósito.
+   - No teste "encerra a apresentação e leva a Ajustes ao tocar 'Configurar lembretes'", troque a
+     asserção `expect(mockPush).toHaveBeenCalledWith('/(app)/settings')` por
+     `expect(onFinish).toHaveBeenCalledWith('settings')` (mantendo a asserção de
+     `toHaveBeenCalledTimes(1)` já existente ou ajustando para 1 chamada com esse argumento).
+   - No teste "chama onFinish ao tocar 'Pular'..." e no de "Começar a registrar", confirme que a
+     asserção continua correta com onFinish agora podendo receber argumento — `toHaveBeenCalledWith()`
+     (sem argumento) ou `toHaveBeenCalledWith(undefined)` conforme o que `onPress={() =>
+     onFinish()}` de fato produz.
+   - Adicione um teste simétrico ao "não oferece 'Voltar' no passo 1": "não oferece 'Voltar' no
+     passo 3" — avança até o passo 3 (goToStep(3)) e confirma
+     `screen.queryByLabelText('Voltar')` nulo.
+6. NÃO crie nem edite app/onboarding.tsx nem app/_layout.tsx neste prompt — isso continua sendo o
+   Prompt 3, que agora vai chamar `onFinish` com a nova assinatura
+   (`(destination?: 'settings') => void`) e decidir o `router.replace`/`router.push` com base
+   nela.
+7. Rode npm run lint && npm run typecheck && npm test.
+
+Commit (mesma branch claude/onboarding-storage-gate-72jdrk, em cima do commit do Prompt 2):
+fix(onboarding): mover a navegação de Configurar lembretes para a rota
+```
+
+**Modelo recomendado:** Claude Sonnet 5 — dois ajustes cirúrgicos e bem especificados (assinatura
+de prop, remoção de um botão) sobre um arquivo já existente, sem decisão de projeto nova.
+
+---
+
 ## Prompt 3 — Disparo automático no primeiro acesso + atalho manual em Ajustes
 
 ```
@@ -185,16 +259,23 @@ onboarding a qualquer momento.
 Tarefa:
 1. Crie app/onboarding.tsx: rota de composição pura (CLAUDE.md §3.2 — "app/ nunca importa
    firebase/* diretamente" e só compõe; aqui a regra equivalente é "só compõe OnboardingScreen").
+   Depois do Prompt 2.1, `OnboardingScreenProps.onFinish` já tem a assinatura
+   `(destination?: 'settings') => void` — é a rota, não o componente, que decide para onde
+   navegar em cada caso:
    export default function OnboardingRoute() {
      const router = useRouter();
-     return <OnboardingScreen onFinish={() => router.replace('/(app)')} />;
+     function handleFinish(destination?: 'settings'): void {
+       if (destination === 'settings') {
+         router.replace('/(app)/settings');
+         return;
+       }
+       router.replace('/(app)');
+     }
+     return <OnboardingScreen onFinish={handleFinish} />;
    }
-   Use router.replace, não router.push, ao sair — o onboarding não deve entrar na pilha de volta
-   (apertar "voltar" depois de concluído não pode reabrir o onboarding). No caminho "Configurar
-   lembretes" do passo 3 (Prompt 2), se OnboardingScreen precisar de navegação PARA settings além
-   de onFinish, ajuste a prop para cobrir os dois destinos sem duplicar lógica de rota dentro do
-   componente "burro" — decida a forma mais simples (ex.: onFinish(destination?: 'settings') e a
-   rota decide para onde ir) sem reabrir o Prompt 2 além do necessário.
+   Use router.replace nos dois casos, não router.push — o onboarding não deve entrar na pilha de
+   volta (apertar "voltar" depois de concluído não pode reabrir o onboarding, nem depois de ir
+   para Ajustes).
 2. Em app/_layout.tsx, dentro de RootNavigator, chame useOnboardingGate(user, isLoading) ao lado
    de useAuthRedirect/useNotificationRedirect/useForegroundPush já existentes ali — mesma posição,
    mesmo estilo dos outros hooks de efeito colateral de navegação.
