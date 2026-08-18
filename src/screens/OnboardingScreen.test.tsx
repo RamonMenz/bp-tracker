@@ -5,10 +5,6 @@ import type { BpCategory } from '@/domain/bp-classification';
 
 import { OnboardingScreen } from './OnboardingScreen';
 
-const mockPush = jest.fn();
-
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
-
 const ALL_CATEGORIES: BpCategory[] = ['normal', 'elevated', 'stage1', 'stage2', 'crisis'];
 
 beforeEach(() => {
@@ -65,6 +61,18 @@ describe('OnboardingScreen — navegação entre passos', () => {
 
     expect(screen.queryByLabelText('Voltar')).toBeNull();
   });
+
+  /**
+   * Simétrico ao passo 1, mas por outro motivo: o passo final é uma tela de fechamento com dois
+   * caminhos de conclusão, e uma terceira ação ali faria as três competirem entre si.
+   */
+  it('não oferece "Voltar" no passo 3', async () => {
+    await render(<OnboardingScreen onFinish={jest.fn()} />);
+
+    await goToStep(3);
+
+    expect(screen.queryByLabelText('Voltar')).toBeNull();
+  });
 });
 
 describe('OnboardingScreen — saídas da apresentação', () => {
@@ -75,6 +83,9 @@ describe('OnboardingScreen — saídas da apresentação', () => {
     await fireEvent.press(screen.getByLabelText('Pular apresentação'));
 
     expect(onFinish).toHaveBeenCalledTimes(1);
+    // Sem argumento nenhum — e não com o evento de toque do Pressable, que é o que um
+    // `onPress={onFinish}` cru entregaria no lugar do destino.
+    expect(onFinish).toHaveBeenCalledWith();
   });
 
   it('chama onFinish ao tocar "Começar a registrar" no passo 3', async () => {
@@ -85,13 +96,17 @@ describe('OnboardingScreen — saídas da apresentação', () => {
     await fireEvent.press(screen.getByLabelText('Começar a registrar'));
 
     expect(onFinish).toHaveBeenCalledTimes(1);
+    // Concluir não pede destino: a rota manda o usuário para a Home, o caminho padrão de saída.
+    expect(onFinish).toHaveBeenCalledWith();
   });
 
   /**
-   * "Configurar lembretes" também encerra a apresentação: sem isso, voltar de Ajustes traria o
-   * usuário de volta para o onboarding que ele acabou de concluir.
+   * "Configurar lembretes" sai pelo MESMO `onFinish` das outras saídas, só que pedindo um destino.
+   * A tela não navega: quem traduz `'settings'` em rota é `app/onboarding`. Este teste é o que
+   * trava esse contrato — se alguém voltar a chamar o roteador daqui, ele continua passando, mas
+   * a ausência de qualquer mock de expo-router neste arquivo faz o componente quebrar.
    */
-  it('encerra a apresentação e leva a Ajustes ao tocar "Configurar lembretes"', async () => {
+  it('encerra a apresentação pedindo o destino Ajustes ao tocar "Configurar lembretes"', async () => {
     const onFinish = jest.fn();
     await render(<OnboardingScreen onFinish={onFinish} />);
 
@@ -99,7 +114,7 @@ describe('OnboardingScreen — saídas da apresentação', () => {
     await fireEvent.press(screen.getByLabelText('Configurar lembretes'));
 
     expect(onFinish).toHaveBeenCalledTimes(1);
-    expect(mockPush).toHaveBeenCalledWith('/(app)/settings');
+    expect(onFinish).toHaveBeenCalledWith('settings');
   });
 });
 

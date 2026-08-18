@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -15,8 +14,13 @@ import { tokens } from '@/theme/tokens';
 import { useColorScheme } from '@/theme/useColorScheme';
 
 export interface OnboardingScreenProps {
-  /** Sai da apresentação. Quem decide o que "sair" significa é a rota — ver `app/onboarding`. */
-  onFinish: () => void;
+  /**
+   * Sai da apresentação. Quem navega é a ROTA, não esta tela: o argumento só diz para ONDE o
+   * usuário pediu para ir — `'settings'` quando ele escolheu configurar lembretes, ausente quando
+   * ele apenas concluiu ou pulou. Traduzir isso em `router.replace`/`router.push` é trabalho de
+   * `app/onboarding`, que é o único lugar com contexto para decidir a pilha de navegação.
+   */
+  onFinish: (destination?: 'settings') => void;
 }
 
 const TOTAL_STEPS = 3;
@@ -98,11 +102,10 @@ const ACTIVE_DOT_WIDTH = 24;
  * Apresentação de 3 passos mostrada no primeiro acesso depois do login.
  *
  * Componente burro (CLAUDE.md §3.4): o passo atual é estado local e a saída é sempre `onFinish` —
- * nada de AsyncStorage, sessão ou decisão de "já viu isto antes" mora aqui. Essa parte é do
- * `useOnboardingGate`, e é a rota que amarra as duas.
+ * nada de AsyncStorage, sessão, roteador ou decisão de "já viu isto antes" mora aqui. Essa parte é
+ * do `useOnboardingGate`, e é a rota que amarra as duas.
  */
 export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
-  const router = useRouter();
   const scheme = useColorScheme();
   const palette = colors[scheme];
   const [step, setStep] = useState<number>(1);
@@ -115,13 +118,8 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
     setStep((current) => Math.max(current - 1, 1));
   }
 
-  /**
-   * Leva a Ajustes E encerra a apresentação: sem o `onFinish`, voltar de Ajustes cairia de novo
-   * no onboarding, que é justamente o que esta tela não pode fazer depois de concluída.
-   */
   function handleConfigureReminders(): void {
-    onFinish();
-    router.push('/(app)/settings');
+    onFinish('settings');
   }
 
   return (
@@ -152,7 +150,14 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
           })}
         </View>
 
-        <Button label="Pular" variant="ghost" accessibilityLabel="Pular apresentação" onPress={onFinish} />
+        {/* Arrow em vez de `onPress={onFinish}`: passado cru, o Pressable entregaria o evento de
+            toque como primeiro argumento, e `onFinish` espera `'settings' | undefined`. */}
+        <Button
+          label="Pular"
+          variant="ghost"
+          accessibilityLabel="Pular apresentação"
+          onPress={() => onFinish()}
+        />
       </View>
 
       {step === 1 ? (
@@ -231,9 +236,8 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
 
       {step === TOTAL_STEPS ? (
         <View style={{ gap: tokens.spacing.sm }}>
-          <Button label="Começar a registrar" size="lg" onPress={onFinish} />
+          <Button label="Começar a registrar" size="lg" onPress={() => onFinish()} />
           <Button label="Configurar lembretes" variant="secondary" onPress={handleConfigureReminders} />
-          <Button label="Voltar" variant="ghost" onPress={handleBack} />
         </View>
       ) : (
         <View className="flex-row items-center" style={{ gap: tokens.spacing.sm }}>
