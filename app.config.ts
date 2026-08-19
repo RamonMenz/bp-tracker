@@ -54,6 +54,15 @@ const appCheck = {
   recaptchaSiteKey: optionalEnv('EXPO_PUBLIC_APPCHECK_RECAPTCHA_SITE_KEY'),
 };
 
+// DSN do Sentry (coletor de erro em produção na web — ver src/services/crashReporter.web.ts).
+// Pública por design, igual à config do Firebase: ela existe para ir no bundle client-side, é só o
+// endereço do projeto para onde o relatório é enviado, não uma credencial. Opcional enquanto o
+// projeto no sentry.io não existir — sem ela o adapter apenas não inicializa (registra um aviso
+// único e vira no-op), e o app segue funcionando normalmente.
+const sentry = {
+  dsn: optionalEnv('EXPO_PUBLIC_SENTRY_DSN'),
+};
+
 // `export default` aqui é exigido pelo Expo para app.config.ts — é a exceção à regra de exports nomeados.
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -101,6 +110,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     firebase,
     googleWebClientId,
     appCheck,
+    sentry,
     // Gerado por `eas build:configure` (config dinâmica não aceita escrita automática do eas-cli
     // — precisa entrar aqui manualmente). Liga este projeto ao projeto EAS
     // @ramoncode/bp-tracker; sem isso `eas build`/`eas init` não sabem para onde enviar o build.

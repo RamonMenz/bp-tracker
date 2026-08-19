@@ -1,6 +1,7 @@
 import type { Crashlytics } from '@react-native-firebase/crashlytics';
 
 import type { CrashReporter } from '@/lib/logger';
+import { toError } from '@/lib/toError';
 
 /**
  * O módulo é carregado por `require` TARDIO, dentro do try/catch de `recordError`, e não por
@@ -30,17 +31,6 @@ function getCrashlyticsApi(): { api: CrashlyticsModule; instance: Crashlytics } 
   }
 
   return cached;
-}
-
-/**
- * O Crashlytics agrupa relatórios por `Error` (usa `.stack`), então um valor não-Error precisa ser
- * embrulhado. O CONTEÚDO desse valor não é serializado de propósito: diferente do `context`, ele
- * nunca passou pelo sanitizador de `logError`, e um objeto lançado pode carregar PII ou dado de
- * saúde (CLAUDE.md §4.4). Um `Error` de verdade passa direto — é a ressalva já documentada em
- * `logger.ts`: a mensagem do erro não é sanitizada, só o contexto.
- */
-function toError(value: unknown): Error {
-  return value instanceof Error ? value : new Error(`valor não-Error reportado (${typeof value})`);
 }
 
 function serializeContext(context: Record<string, unknown>): string | null {
