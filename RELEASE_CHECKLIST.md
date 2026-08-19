@@ -85,12 +85,17 @@ Nenhum desses é motivo pra pular a Fase 7 — são exatamente o tipo de coisa q
       declara os config plugins `@react-native-firebase/app` e `.../crashlytics` e aponta
       `android.googleServicesFile`; sem o arquivo, o `prebuild`/`eas build` falha com mensagem
       explícita, que é o comportamento desejado (melhor falhar do que buildar sem coletor).
-- [ ] ⚠️ **Web: gap conhecido, permanece aberto.** `src/services/crashReporter.web.ts` é um no-op
-      DECLARADO (não silencioso): não existe SDK web do Crashlytics, e o Firebase JS SDK não expõe
-      esse produto. Na versão web, `logError` continua descartando erro de produção. Fechar isso
-      significa adotar Sentry ou equivalente — dependência nova + mais um processador de dados
-      recebendo stack trace de app de saúde (LGPD), então é decisão à parte, com a mesma
-      justificativa por escrito que o CLAUDE.md §4.1 exigiu para o Crashlytics.
+- [x] ✅ **Web: resolvido.** `src/services/crashReporter.web.ts` usa `@sentry/browser` (não existe
+      SDK web do Crashlytics, e o Firebase JS SDK não expõe esse produto). Inicializa de forma
+      preguiçosa na primeira chamada de `recordError`, com `sendDefaultPii: false`,
+      `tracesSampleRate: 0` e rastreio de sessão desligado — requisito de LGPD do CLAUDE.md §4.4,
+      já que é mais um processador de dados recebendo stack trace de app de saúde. Coberto por
+      `src/services/crashReporter.web.test.ts`.
+- [ ] 🔴 **Depende de você antes de gerar sinal de verdade:** o adapter só inicializa com
+      `EXPO_PUBLIC_SENTRY_DSN` preenchida (ver `.env.example`), e essa DSN vem de um projeto criado
+      por você em sentry.io (Settings > Projects > seu projeto > Client Keys). Sem ela, o adapter
+      registra um aviso único e segue como no-op — não quebra o app, só continua sem coletor web,
+      mesmo comportamento do Play Integrity logo abaixo antes do app estar no Play Console.
 
 ---
 

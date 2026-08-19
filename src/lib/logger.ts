@@ -61,10 +61,10 @@ let crashReporter: CrashReporter | null = null;
  *   - NATIVO: conectado. `src/services/firebase/index.ts` chama `setCrashReporter(...)` no
  *     bootstrap, fora de `__DEV__`, com o adapter de `src/services/crashReporter.native.ts`
  *     (`@react-native-firebase/crashlytics`). Erro de produção no Android chega ao Crashlytics.
- *   - WEB: gap conhecido e declarado. O mesmo bootstrap injeta `crashReporter.web.ts`, que é um
- *     no-op EXPLÍCITO — não existe SDK web do Crashlytics, e adotar Sentry (ou outro coletor de
- *     terceiros) é decisão à parte, pelo mesmo critério do CLAUDE.md §4.1. Na web, `logError`
- *     ainda descarta erro de produção. Registrado em RELEASE_CHECKLIST.md.
+ *   - WEB: conectado. O mesmo bootstrap injeta `crashReporter.web.ts`, que usa `@sentry/browser`
+ *     (não existe SDK web do Crashlytics). Erro de produção na web chega ao Sentry, agrupado pela
+ *     tag `scope`, com o contexto já sanitizado como `extra` — sem inicializar quando a DSN não
+ *     está configurada (ver RELEASE_CHECKLIST.md).
  */
 export function setCrashReporter(reporter: CrashReporter | null): void {
   crashReporter = reporter;

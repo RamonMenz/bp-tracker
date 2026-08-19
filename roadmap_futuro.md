@@ -54,18 +54,13 @@ ser priorizada antes do produto provar retenção com registro manual.
 
 ---
 
-### 3. Coletor de erros em produção na Web — mencionado como próximo passo, nunca começado
+### 3. ~~Coletor de erros em produção na Web~~ — ✅ Resolvido
 
-**Onde está escrito:** `prompts_de_funcionalidades.md:334` — ao registrar o gap do Crashlytics
-nativo, o próprio prompt já registra: *"uma integração futura poderia usar Sentry ou Firebase
-Crashlytics JS"*. `src/services/crashReporter.web.ts` documenta isso como
-`IS_WEB_CRASH_REPORTING_GAP` — um no-op **intencional**, não um bug, mas também não tem nenhum
-código de verdade por trás.
-
-**Estado atual:** zero. Nenhuma dependência instalada, nenhum SDK inicializado na build web.
-
-**Por que importa:** hoje, um erro em produção na versão web do app não gera nenhum sinal para o
-time — só aparece se o usuário reclamar.
+`src/services/crashReporter.web.ts` usa `@sentry/browser`, inicializado de forma preguiçosa na
+primeira chamada de `recordError`, com `sendDefaultPii: false`, `tracesSampleRate: 0` e rastreio de
+sessão desligado (requisito de LGPD, CLAUDE.md §4.4). Ainda depende de você: `EXPO_PUBLIC_SENTRY_DSN`
+só existe depois de criar o projeto em sentry.io — sem ela o adapter registra um aviso único e
+segue como no-op, sem quebrar o app (ver RELEASE_CHECKLIST.md).
 
 ---
 
@@ -134,7 +129,7 @@ linguagem médica prescritiva. **Impacto na qualidade do dado, esforço baixo.**
 |---|---|---|---|
 | Documentação | 1 | Suporte a iOS (build, credenciais, App Store) | Médio-alto (+ conta Apple Developer) |
 | Documentação | 2 | Integração Bluetooth com aparelhos de pressão | Alto |
-| Documentação | 3 | Coletor de erros em produção na Web | Baixo |
+| Documentação | 3 | ~~Coletor de erros em produção na Web~~ — ✅ Resolvido | Baixo |
 | Sugestão PM | 1 | Exportação em PDF para o médico | Médio |
 | Sugestão PM | 2 | Meta/faixa alvo + indicador de aderência | Médio |
 | Sugestão PM | 3 | Sign in with Apple | Baixo (bloqueante do item 1) |
