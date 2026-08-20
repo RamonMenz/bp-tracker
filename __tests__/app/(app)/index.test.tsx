@@ -107,3 +107,74 @@ describe('RecordScreen — campo de observação', () => {
     expect(button.props.accessibilityState?.disabled).toBe(true);
   });
 });
+
+/**
+ * Fluxo completo da sugestão de segunda medição (protocolo AHA). `useReadingForm` continua
+ * mockado — o que se testa aqui é a ORQUESTRAÇÃO da tela: o retrato dos campos antes do submit,
+ * a máquina de estados real de `useSecondMeasurementFlow` e o card certo em cada etapa.
+ */
+describe('RecordScreen — sugestão de segunda medição', () => {
+  beforeEach(() => {
+    submitMock.mockResolvedValue(true);
+  });
+
+  it('não mostra nada sobre segunda medição antes de salvar a primeira', async () => {
+    await render(<RecordScreen />);
+
+    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
+  });
+
+  it('percorre offer → measuring → summary → idle com a média das duas medições', async () => {
+    await render(<RecordScreen />);
+
+    // 1ª medição (120/80, sem pulso): o card de sugestão aparece com o contador cheio.
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+
+    expect(screen.getByText('Quer confirmar com uma segunda medição?')).toBeTruthy();
+    expect(screen.getByText('Sugestão: aguarde mais 60s')).toBeTruthy();
+
+    // O formulário é a MESMA instância de sempre — continua na tela, pronto para a segunda.
+    useReadingForm.mockReturnValue(buildForm({ systolic: '130', diastolic: '90' }));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
+
+    expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+
+    // 2ª medição (130/90): a média de 120/80 e 130/90 é 125/85.
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+
+    expect(screen.getByText('Média das duas medições')).toBeTruthy();
+    expect(screen.getByText('125/85')).toBeTruthy();
+    expect(screen.getByText(/As duas medições já estão no seu histórico/)).toBeTruthy();
+
+    // Concluir devolve a tela ao estado comum de registro.
+    await fireEvent.press(screen.getByRole('button', { name: 'Concluir' }));
+
+    expect(screen.queryByText('Média das duas medições')).toBeNull();
+    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+  });
+
+  it('dispensar a sugestão volta a tela ao estado comum, sem descartar o que já foi salvo', async () => {
+    await render(<RecordScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Não, obrigado' }));
+
+    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
+    // A medição em si já foi para o repositório — dispensar só descarta o estado da sessão.
+    expect(submitMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('não sugere segunda medição quando o salvamento falha', async () => {
+    submitMock.mockResolvedValue(false);
+
+    await render(<RecordScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+
+    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
+  });
+});
