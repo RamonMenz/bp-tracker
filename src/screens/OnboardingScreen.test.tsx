@@ -25,10 +25,13 @@ async function goToStep(stepNumber: number): Promise<void> {
 }
 
 describe('OnboardingScreen — navegação entre passos', () => {
-  it('avança do passo 1 ao 3 tocando "Próximo" duas vezes', async () => {
+  it('avança do passo 1 ao 4 tocando "Próximo" três vezes', async () => {
     await render(<OnboardingScreen onFinish={jest.fn()} />);
 
     expect(screen.getByText('Bem-vindo(a) ao BP Tracker')).toBeTruthy();
+
+    await fireEvent.press(screen.getByLabelText('Próximo'));
+    expect(screen.getByText('Como medir corretamente')).toBeTruthy();
 
     await fireEvent.press(screen.getByLabelText('Próximo'));
     expect(screen.getByText('O que significa cada categoria')).toBeTruthy();
@@ -47,12 +50,12 @@ describe('OnboardingScreen — navegação entre passos', () => {
     await render(<OnboardingScreen onFinish={jest.fn()} />);
 
     await goToStep(2);
-    expect(screen.getByText('O que significa cada categoria')).toBeTruthy();
+    expect(screen.getByText('Como medir corretamente')).toBeTruthy();
 
     await fireEvent.press(screen.getByLabelText('Voltar'));
 
     expect(screen.getByText('Bem-vindo(a) ao BP Tracker')).toBeTruthy();
-    expect(screen.queryByText('O que significa cada categoria')).toBeNull();
+    expect(screen.queryByText('Como medir corretamente')).toBeNull();
   });
 
   /** Não há passo anterior ao primeiro — oferecer "Voltar" ali seria um botão que não faz nada. */
@@ -66,10 +69,10 @@ describe('OnboardingScreen — navegação entre passos', () => {
    * Simétrico ao passo 1, mas por outro motivo: o passo final é uma tela de fechamento com dois
    * caminhos de conclusão, e uma terceira ação ali faria as três competirem entre si.
    */
-  it('não oferece "Voltar" no passo 3', async () => {
+  it('não oferece "Voltar" no passo 4', async () => {
     await render(<OnboardingScreen onFinish={jest.fn()} />);
 
-    await goToStep(3);
+    await goToStep(4);
 
     expect(screen.queryByLabelText('Voltar')).toBeNull();
   });
@@ -88,11 +91,11 @@ describe('OnboardingScreen — saídas da apresentação', () => {
     expect(onFinish).toHaveBeenCalledWith();
   });
 
-  it('chama onFinish ao tocar "Começar a registrar" no passo 3', async () => {
+  it('chama onFinish ao tocar "Começar a registrar" no passo 4', async () => {
     const onFinish = jest.fn();
     await render(<OnboardingScreen onFinish={onFinish} />);
 
-    await goToStep(3);
+    await goToStep(4);
     await fireEvent.press(screen.getByLabelText('Começar a registrar'));
 
     expect(onFinish).toHaveBeenCalledTimes(1);
@@ -110,7 +113,7 @@ describe('OnboardingScreen — saídas da apresentação', () => {
     const onFinish = jest.fn();
     await render(<OnboardingScreen onFinish={onFinish} />);
 
-    await goToStep(3);
+    await goToStep(4);
     await fireEvent.press(screen.getByLabelText('Configurar lembretes'));
 
     expect(onFinish).toHaveBeenCalledTimes(1);
@@ -118,11 +121,59 @@ describe('OnboardingScreen — saídas da apresentação', () => {
   });
 });
 
+/**
+ * Passo que deu nome à Sugestão de Produto #7 do roadmap: como medir, não o que o valor significa.
+ * Vem antes das categorias de propósito — a orientação de manuseio é o que o usuário precisa ANTES
+ * da primeira medição; a leitura do resultado só importa depois que existe um resultado.
+ */
+describe('OnboardingScreen — passo da técnica de medição', () => {
+  it('mostra as quatro orientações de medição no passo 2', async () => {
+    await render(<OnboardingScreen onFinish={jest.fn()} />);
+
+    await goToStep(2);
+
+    expect(screen.getByText('Como medir corretamente')).toBeTruthy();
+    expect(screen.getByText(/Descanse 5 minutos sentado\(a\) e em silêncio/)).toBeTruthy();
+    expect(screen.getByText(/Apoie o braço na altura do coração/)).toBeTruthy();
+    expect(screen.getByText(/Mantenha os pés apoiados no chão/)).toBeTruthy();
+    expect(screen.getByText(/espere cerca de 1 minuto/)).toBeTruthy();
+  });
+
+  /**
+   * O texto sobre a segunda medição descreve um comportamento REAL do app (o card sugerido por
+   * `useSecondMeasurementFlow` na tela de registro), não uma promessa futura.
+   */
+  it('conta que o próprio app sugere a segunda medição', async () => {
+    await render(<OnboardingScreen onFinish={jest.fn()} />);
+
+    await goToStep(2);
+
+    expect(screen.getByText(/o app sugere isso automaticamente depois da primeira medição/)).toBeTruthy();
+  });
+
+  it('fica entre a apresentação das funcionalidades e as categorias', async () => {
+    await render(<OnboardingScreen onFinish={jest.fn()} />);
+
+    // Passo 1: ainda não apareceu.
+    expect(screen.queryByText('Como medir corretamente')).toBeNull();
+
+    await goToStep(2);
+    expect(screen.getByText('Como medir corretamente')).toBeTruthy();
+    // E não divide a tela com o passo seguinte.
+    expect(screen.queryByText('O que significa cada categoria')).toBeNull();
+
+    // Um toque a mais a partir daqui — `goToStep` conta sempre do passo 1.
+    await fireEvent.press(screen.getByLabelText('Próximo'));
+    expect(screen.getByText('O que significa cada categoria')).toBeTruthy();
+    expect(screen.queryByText('Como medir corretamente')).toBeNull();
+  });
+});
+
 describe('OnboardingScreen — passo das categorias', () => {
   it('mostra as 5 categorias com os rótulos de CATEGORY_LABEL', async () => {
     await render(<OnboardingScreen onFinish={jest.fn()} />);
 
-    await goToStep(2);
+    await goToStep(3);
 
     for (const category of ALL_CATEGORIES) {
       expect(screen.getByText(CATEGORY_LABEL[category])).toBeTruthy();
@@ -136,7 +187,7 @@ describe('OnboardingScreen — passo das categorias', () => {
   it('mantém o aviso de que a classificação não substitui avaliação médica', async () => {
     await render(<OnboardingScreen onFinish={jest.fn()} />);
 
-    await goToStep(2);
+    await goToStep(3);
 
     expect(screen.getByText(/não substitui avaliação médica/)).toBeTruthy();
   });

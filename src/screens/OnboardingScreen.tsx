@@ -7,7 +7,16 @@ import { Card } from '@/components/ui/Card';
 import { Disclaimer } from '@/components/ui/Disclaimer';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
-import { BellIcon, DownloadIcon, HeartPulseIcon, TrendingUpIcon, type LucideIcon } from '@/components/ui/icons';
+import {
+  ActivityIcon,
+  BellIcon,
+  CheckIcon,
+  ClockIcon,
+  DownloadIcon,
+  HeartPulseIcon,
+  TrendingUpIcon,
+  type LucideIcon,
+} from '@/components/ui/icons';
 import type { BpCategory } from '@/domain/bp-classification';
 import { colors } from '@/theme/colors';
 import { tokens } from '@/theme/tokens';
@@ -23,10 +32,11 @@ export interface OnboardingScreenProps {
   onFinish: (destination?: 'settings') => void;
 }
 
-const TOTAL_STEPS = 3;
-const STEP_NUMBERS = [1, 2, 3];
+const TOTAL_STEPS = 4;
+const STEP_NUMBERS = [1, 2, 3, 4];
 
-interface OnboardingFeature {
+/** Item das listas com ícone dos passos 1 e 2 — a estrutura é a mesma, só o conteúdo muda. */
+interface OnboardingListEntry {
   id: string;
   icon: LucideIcon;
   title: string;
@@ -38,7 +48,7 @@ interface OnboardingFeature {
  * levar ao médico. A primeira é a que o CLAUDE.md §1 põe como objetivo central do produto, então é
  * a primeira que o usuário lê.
  */
-const FEATURES: OnboardingFeature[] = [
+const FEATURES: OnboardingListEntry[] = [
   {
     id: 'record',
     icon: HeartPulseIcon,
@@ -62,6 +72,42 @@ const FEATURES: OnboardingFeature[] = [
     icon: DownloadIcon,
     title: 'Exporte para o médico',
     description: 'Baixe suas medições em CSV pelo Histórico e leve na próxima consulta.',
+  },
+];
+
+/**
+ * Orientações práticas de uso do aparelho, na ordem em que acontecem: preparar → posicionar o
+ * braço → ajeitar a postura → repetir. São instruções de MANUSEIO, não indicação clínica — o app
+ * registra, não diagnostica (CLAUDE.md §1), então nada aqui interpreta valor nem recomenda conduta.
+ *
+ * A última fala da sugestão de segunda medição porque ela existe de verdade na tela de registro
+ * (`useSecondMeasurementFlow`); se aquele fluxo sair do app, este texto sai junto.
+ */
+const MEASUREMENT_TECHNIQUE: OnboardingListEntry[] = [
+  {
+    id: 'rest',
+    icon: ClockIcon,
+    title: 'Repouso',
+    description: 'Descanse 5 minutos sentado(a) e em silêncio antes de medir.',
+  },
+  {
+    id: 'arm',
+    icon: HeartPulseIcon,
+    title: 'Braço',
+    description: 'Apoie o braço na altura do coração, com a palma da mão para cima.',
+  },
+  {
+    id: 'posture',
+    icon: ActivityIcon,
+    title: 'Postura',
+    description: 'Mantenha os pés apoiados no chão, sem cruzar as pernas.',
+  },
+  {
+    id: 'second-measurement',
+    icon: CheckIcon,
+    title: 'Segunda medição',
+    description:
+      'Se for medir de novo, espere cerca de 1 minuto — o app sugere isso automaticamente depois da primeira medição.',
   },
 ];
 
@@ -98,8 +144,45 @@ const INACTIVE_DOT_SIZE = 7;
 /** O ponto ativo vira cápsula: além de maior, muda de FORMA — cor sozinha não marca estado (§4.7). */
 const ACTIVE_DOT_WIDTH = 24;
 
+interface OnboardingListRowProps {
+  entry: OnboardingListEntry;
+  iconColor: string;
+}
+
 /**
- * Apresentação de 3 passos mostrada no primeiro acesso depois do login.
+ * Linha de lista com ícone em pastilha + título + descrição, compartilhada pelos passos 1 e 2 —
+ * eram duas listas com o mesmo desenho, e duplicar o JSX faria as duas divergirem no primeiro
+ * ajuste de espaçamento.
+ *
+ * O ícone é decorativo: o título ao lado já nomeia o item, e o leitor de tela anunciando "ícone de
+ * sino, Receba lembretes" seria ruído. Mesma pastilha do SectionHeader, para a tela não inventar um
+ * segundo jeito de desenhar ícone.
+ */
+function OnboardingListRow({ entry, iconColor }: OnboardingListRowProps) {
+  const EntryIcon = entry.icon;
+
+  return (
+    <View className="flex-row items-start" style={{ gap: tokens.spacing.md }}>
+      <View
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        className="h-9 w-9 items-center justify-center rounded-xl bg-light-primaryTint dark:bg-dark-primaryTint"
+      >
+        <EntryIcon size={18} color={iconColor} strokeWidth={2.25} />
+      </View>
+
+      <View className="flex-1" style={{ gap: tokens.spacing.xs }}>
+        <Text variant="body" style={{ fontWeight: '600' }}>
+          {entry.title}
+        </Text>
+        <Text variant="caption">{entry.description}</Text>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * Apresentação de 4 passos mostrada no primeiro acesso depois do login.
  *
  * Componente burro (CLAUDE.md §3.4): o passo atual é estado local e a saída é sempre `onFinish` —
  * nada de AsyncStorage, sessão, roteador ou decisão de "já viu isto antes" mora aqui. Essa parte é
@@ -170,36 +253,31 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
           </View>
 
           <Card style={{ gap: tokens.spacing.lg }}>
-            {FEATURES.map((feature) => {
-              const FeatureIcon = feature.icon;
-
-              return (
-                <View key={feature.id} className="flex-row items-start" style={{ gap: tokens.spacing.md }}>
-                  {/* Decorativo: o título ao lado já nomeia a funcionalidade, e o leitor de tela
-                      anunciando "ícone de sino, Receba lembretes" seria ruído. Mesma pastilha do
-                      SectionHeader, para a tela não inventar um segundo jeito de desenhar ícone. */}
-                  <View
-                    accessibilityElementsHidden
-                    importantForAccessibility="no-hide-descendants"
-                    className="h-9 w-9 items-center justify-center rounded-xl bg-light-primaryTint dark:bg-dark-primaryTint"
-                  >
-                    <FeatureIcon size={18} color={palette.primary} strokeWidth={2.25} />
-                  </View>
-
-                  <View className="flex-1" style={{ gap: tokens.spacing.xs }}>
-                    <Text variant="body" style={{ fontWeight: '600' }}>
-                      {feature.title}
-                    </Text>
-                    <Text variant="caption">{feature.description}</Text>
-                  </View>
-                </View>
-              );
-            })}
+            {FEATURES.map((feature) => (
+              <OnboardingListRow key={feature.id} entry={feature} iconColor={palette.primary} />
+            ))}
           </Card>
         </View>
       ) : null}
 
       {step === 2 ? (
+        <View style={{ gap: tokens.spacing.lg }}>
+          <View style={{ gap: tokens.spacing.sm }}>
+            <Text variant="title">Como medir corretamente</Text>
+            <Text variant="body" color={palette.muted}>
+              Medir sempre do mesmo jeito deixa seus registros comparáveis entre si.
+            </Text>
+          </View>
+
+          <Card style={{ gap: tokens.spacing.lg }}>
+            {MEASUREMENT_TECHNIQUE.map((entry) => (
+              <OnboardingListRow key={entry.id} entry={entry} iconColor={palette.primary} />
+            ))}
+          </Card>
+        </View>
+      ) : null}
+
+      {step === 3 ? (
         <View style={{ gap: tokens.spacing.lg }}>
           <View style={{ gap: tokens.spacing.sm }}>
             <Text variant="title">O que significa cada categoria</Text>
@@ -221,7 +299,9 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
         </View>
       ) : null}
 
-      {step === 3 ? (
+      {/* `TOTAL_STEPS`, não o número literal: este bloco e o do rodapé são a MESMA condição — o
+          passo final — e um deles com número fixo já ficou para trás ao inserir um passo novo. */}
+      {step === TOTAL_STEPS ? (
         <View style={{ gap: tokens.spacing.sm }}>
           <Text variant="title">Pronto para começar</Text>
           <Text variant="body" color={palette.muted}>
@@ -231,7 +311,7 @@ export function OnboardingScreen({ onFinish }: OnboardingScreenProps) {
       ) : null}
 
       {/* Empurra a navegação para o rodapé sem prender a tela: o Screen já rola, e o flex-1 aqui
-          só ocupa a sobra quando o conteúdo do passo é curto (passo 3). */}
+          só ocupa a sobra quando o conteúdo do passo é curto (passo final). */}
       <View className="flex-1" />
 
       {step === TOTAL_STEPS ? (
