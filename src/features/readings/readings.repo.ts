@@ -8,7 +8,9 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
   type FieldValue,
+  type QueryConstraint,
 } from 'firebase/firestore';
 
 import { readingDocPath, readingsCollectionPath } from '@/lib/firestore-paths';
@@ -19,6 +21,12 @@ import type { Reading, ReadingInput } from '@/types/models';
 import { parseReading } from './reading.schema';
 
 type ReadingWritePayload = ReadingInput & { createdAt: FieldValue };
+
+/** Recorte por período para `getAllReadings` — usado pela exportação de CSV com range escolhido. */
+export interface ReadingDateRange {
+  start: Date;
+  end: Date;
+}
 
 const PERMISSION_MESSAGE = 'Sem permissão para salvar. Faça login novamente.';
 const NETWORK_MESSAGE = 'Sem conexão com a internet. Verifique sua rede e tente novamente.';
@@ -99,12 +107,21 @@ export async function deleteReading(uid: string, readingId: string): Promise<voi
   }
 }
 
-/** Leitura única (não é um listener) — usada pelo export, que só precisa de uma fotografia do histórico. */
-export async function getAllReadings(uid: string): Promise<Reading[]> {
+/**
+ * Leitura única (não é um listener) — usada pelo export, que só precisa de uma fotografia do
+ * histórico. `range`, quando informado, filtra por `measuredAt` — o MESMO campo do `orderBy`, o
+ * que não exige índice composto novo em firestore.indexes.json (o índice de campo único em
+ * `measuredAt` já existe e cobre filtro + ordenação nele).
+ */
+export async function getAllReadings(uid: string, range?: ReadingDateRange): Promise<Reading[]> {
   try {
-    const snapshot = await getDocs(
-      query(collection(firestore, readingsCollectionPath(uid)), orderBy('measuredAt', 'desc')),
-    );
+    const constraints: QueryConstraint[] = [orderBy('measuredAt', 'desc')];
+
+    if (range !== undefined) {
+      constraints.push(where('measuredAt', '>=', range.start), where('measuredAt', '<=', range.end));
+    }
+
+    const snapshot = await getDocs(query(collection(firestore, readingsCollectionPath(uid)), ...constraints));
 
     const readings: Reading[] = [];
 
