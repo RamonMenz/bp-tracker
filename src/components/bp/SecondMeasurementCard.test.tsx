@@ -32,6 +32,12 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+/**
+ * 'offer' também deixou de ser um card no scroll: o convite é um pop-up
+ * (SecondMeasurementOfferDialog, com testes próprios) que aparece na hora, em vez de esperar
+ * despercebido abaixo do formulário. O que se verifica aqui é o encaixe — que o card monta o
+ * pop-up e repassa as props certas.
+ */
 describe('SecondMeasurementCard — estado offer', () => {
   it('convida para a segunda medição em tom informativo, sem prometer precisão médica', async () => {
     await renderCard();
