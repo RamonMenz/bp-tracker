@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ExportCsvDialog } from '@/components/bp/ExportCsvDialog';
 import { ReadingRow, type ReadingRowPosition } from '@/components/bp/ReadingRow';
 import { TrendChart } from '@/components/bp/TrendChart';
 import { Button } from '@/components/ui/Button';
@@ -107,6 +108,7 @@ export default function HistoryScreen() {
 
   /** id da medição aguardando confirmação — null enquanto não há diálogo aberto. */
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   /** id da medição sendo excluída agora — é o que diz a QUAL linha o indicador de progresso
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -203,7 +205,7 @@ export default function HistoryScreen() {
               label="Exportar CSV"
               variant="secondary"
               icon={DownloadIcon}
-              onPress={() => void exportCsv()}
+              onPress={() => setIsExportDialogOpen(true)}
               loading={isExporting}
             />
           </View>
@@ -248,6 +250,19 @@ export default function HistoryScreen() {
         isDestructive
         onConfirm={() => void handleConfirmDelete()}
         onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <ExportCsvDialog
+        visible={isExportDialogOpen}
+        isExporting={isExporting}
+        error={exportError}
+        onExport={(range) => {
+          // Fecha ao iniciar a exportação — o feedback de erro/sucesso continua no InlineFeedback
+          // já ancorado fora da FlashList (ver acima), não duplicado aqui dentro do diálogo.
+          setIsExportDialogOpen(false);
+          void exportCsv(range);
+        }}
+        onCancel={() => setIsExportDialogOpen(false)}
       />
     </SafeAreaView>
   );
