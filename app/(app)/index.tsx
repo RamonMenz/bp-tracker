@@ -58,7 +58,9 @@ export default function RecordScreen() {
       pulse: form.pulse === '' ? null : Number(form.pulse),
     };
 
-    if (await form.submit()) {
+    const { success } = await form.submit();
+
+    if (success) {
       flow.handleReadingSaved(snapshot);
     }
   }

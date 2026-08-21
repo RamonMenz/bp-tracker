@@ -26,7 +26,7 @@ const { useReadingForm } = jest.requireMock('@/features/readings/useReadingForm'
 };
 
 const setNoteMock = jest.fn();
-const submitMock = jest.fn<Promise<boolean>, []>();
+const submitMock = jest.fn<Promise<{ success: boolean; readingId: string | null }>, []>();
 
 function buildForm(overrides: Record<string, unknown> = {}) {
   return {
@@ -122,7 +122,7 @@ describe('RecordScreen — campo de observação', () => {
  */
 describe('RecordScreen — sugestão de segunda medição', () => {
   beforeEach(() => {
-    submitMock.mockResolvedValue(true);
+    submitMock.mockResolvedValue({ success: true, readingId: 'reading-1' });
   });
 
   it('não mostra nada sobre segunda medição antes de salvar a primeira', async () => {
@@ -176,7 +176,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
   });
 
   it('não sugere segunda medição quando o salvamento falha', async () => {
-    submitMock.mockResolvedValue(false);
+    submitMock.mockResolvedValue({ success: false, readingId: null });
 
     await render(<RecordScreen />);
 

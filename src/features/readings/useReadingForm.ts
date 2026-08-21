@@ -51,8 +51,12 @@ export interface UseReadingFormResult {
   previewCategory: BpCategory | null;
   /** false enquanto faltar campo obrigatório ou houver erro de faixa — o botão Salvar espelha isto. */
   canSubmit: boolean;
-  /** Cria ou atualiza, conforme o modo. `true` = gravou; é o gancho para a tela navegar depois. */
-  submit: () => Promise<boolean>;
+  /**
+   * Cria ou atualiza, conforme o modo. `success` = gravou; é o gancho para a tela navegar depois.
+   * `readingId` só é preenchido em modo CRIAÇÃO com sucesso; é `null` em modo edição ou em
+   * qualquer falha.
+   */
+  submit: () => Promise<{ success: boolean; readingId: string | null }>;
   isSaving: boolean;
   submitError: string | null;
 }
@@ -150,31 +154,33 @@ export function useReadingForm(initialReading?: EditableReading): UseReadingForm
   // já visível no campo, do que deixar o submit falhar e mostrar o erro genérico do repositório.
   const canSubmit = isPairValid && fieldErrors.pulse === null && fieldErrors.note === null;
 
-  async function submit(): Promise<boolean> {
+  async function submit(): Promise<{ success: boolean; readingId: string | null }> {
     const values = { systolic, diastolic, pulse, note, measuredAt };
 
-    const success =
-      initialReading !== undefined
-        ? await update.updateReading(initialReading.id, values)
-        : await add.addReading(values);
+    if (initialReading !== undefined) {
+      const success = await update.updateReading(initialReading.id, values);
+      return { success, readingId: null };
+    }
+
+    const result = await add.addReading(values);
+    const success = result !== false;
 
     if (success) {
       // Falha de háptico (aparelho sem motor, web) não pode derrubar um salvamento que deu certo.
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 
-      // Só o modo criação limpa os campos, para o próximo registro começar do zero na mesma tela.
-      // Na edição isso faria o formulário piscar em branco antes da tela sair de cena; quem chamou
-      // decide o que fazer com o `true` devolvido aqui (a rota de edição volta para o histórico).
-      if (initialReading === undefined) {
-        setSystolic('');
-        setDiastolic('');
-        setPulse('');
-        setNote('');
-        setMeasuredAt(new Date());
-      }
+      // Só o modo criação chega até aqui (edição retorna antes, acima) — limpa os campos para o
+      // próximo registro começar do zero na mesma tela. Na edição isso faria o formulário piscar
+      // em branco antes da tela sair de cena; quem chamou decide o que fazer com o `success`
+      // devolvido aqui (a rota de edição volta para o histórico).
+      setSystolic('');
+      setDiastolic('');
+      setPulse('');
+      setNote('');
+      setMeasuredAt(new Date());
     }
 
-    return success;
+    return { success, readingId: success ? result : null };
   }
 
   return {
