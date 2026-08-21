@@ -4,15 +4,8 @@ import { useMemo, useState } from 'react';
 import { classifyBloodPressure, type BpCategory } from '@/domain/bp-classification';
 import type { Reading } from '@/types/models';
 
-import {
-  DIASTOLIC_MAX,
-  DIASTOLIC_MIN,
-  NOTE_MAX_LENGTH,
-  PULSE_MAX,
-  PULSE_MIN,
-  SYSTOLIC_MAX,
-  SYSTOLIC_MIN,
-} from './reading.schema';
+import { computeBpFieldErrors, isBpPairValid } from './reading-field-errors';
+import { NOTE_MAX_LENGTH } from './reading.schema';
 import { useAddReading } from './useAddReading';
 import { useUpdateReading } from './useUpdateReading';
 
@@ -59,20 +52,6 @@ export interface UseReadingFormResult {
   submit: () => Promise<{ success: boolean; readingId: string | null }>;
   isSaving: boolean;
   submitError: string | null;
-}
-
-function rangeError(value: string, min: number, max: number): string | null {
-  if (value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
-    return `Informe um valor entre ${min} e ${max}.`;
-  }
-
-  return null;
 }
 
 // Mesma regra dos campos numéricos: só acusa erro quando o conteúdo já ultrapassa o limite, nunca
@@ -123,28 +102,17 @@ export function useReadingForm(initialReading?: EditableReading): UseReadingForm
   const [note, setNote] = useState(() => initialReading?.note ?? '');
   const [measuredAt, setMeasuredAt] = useState(() => initialReading?.measuredAt ?? new Date());
 
-  const fieldErrors = useMemo<ReadingFieldErrors>(() => {
-    const systolicRange = rangeError(systolic, SYSTOLIC_MIN, SYSTOLIC_MAX);
-    const diastolicRange = rangeError(diastolic, DIASTOLIC_MIN, DIASTOLIC_MAX);
-
-    // A relação entre os dois só é checável quando ambos estão dentro da própria faixa; senão a
-    // mensagem "menor que a sistólica" apareceria por cima de um valor que já é inválido sozinho.
-    const isPairComparable = systolicRange === null && diastolicRange === null && systolic !== '' && diastolic !== '';
-    const isPairInverted = isPairComparable && Number(systolic) <= Number(diastolic);
-
-    return {
-      systolic: systolicRange,
-      diastolic: diastolicRange ?? (isPairInverted ? 'Deve ser menor que a sistólica.' : null),
-      pulse: rangeError(pulse, PULSE_MIN, PULSE_MAX),
+  // As regras dos três campos numéricos moram em reading-field-errors.ts — as MESMAS que o pop-up
+  // da segunda medição usa, para "sistólica maior que a diastólica" não existir em duas cópias.
+  const fieldErrors = useMemo<ReadingFieldErrors>(
+    () => ({
+      ...computeBpFieldErrors({ systolic, diastolic, pulse }),
       note: noteError(note, NOTE_MAX_LENGTH),
-    };
-  }, [systolic, diastolic, pulse, note]);
+    }),
+    [systolic, diastolic, pulse, note],
+  );
 
-  // O par é classificável assim que os dois campos estão válidos entre si — o pulso, que é
-  // opcional, não entra na conta: um pulso fora de faixa não deve apagar a classificação da
-  // pressão que o usuário acabou de digitar.
-  const isPairValid =
-    systolic !== '' && diastolic !== '' && fieldErrors.systolic === null && fieldErrors.diastolic === null;
+  const isPairValid = isBpPairValid({ systolic, diastolic, pulse }, fieldErrors);
 
   const previewCategory = isPairValid ? classifyBloodPressure(Number(systolic), Number(diastolic)) : null;
 

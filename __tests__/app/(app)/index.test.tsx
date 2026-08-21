@@ -135,48 +135,64 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
   });
 
-  it('percorre idle → offer → measuring ao aceitar a segunda medição', async () => {
+  it('percorre offer → measuring → summary → idle, com a segunda medição vinda do pop-up', async () => {
     await render(<RecordScreen />);
 
-    // 1ª medição (120/80, sem pulso): o card de sugestão aparece com o contador cheio.
+    // 1ª medição (120/80, sem pulso), pelo formulário grande de sempre: o card de sugestão
+    // aparece com o contador cheio.
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
 
     expect(screen.getByText('Quer confirmar com uma segunda medição?')).toBeTruthy();
     expect(screen.getByText('Sugestão: aguarde mais 60s')).toBeTruthy();
 
-    // O formulário é a MESMA instância de sempre — continua na tela, pronto para a segunda.
-    useReadingForm.mockReturnValue(buildForm({ systolic: '130', diastolic: '90' }));
-
     await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
 
+    // A 2ª medição NÃO reaproveita mais o formulário grande: ela é digitada no pop-up, que pede
+    // só os números.
     expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salvar segunda medição' })).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+    await fireEvent.changeText(screen.getByLabelText('Diastólica'), '90');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar segunda medição' }));
+
+    // A média de 120/80 e 130/90 é 125/85 — e ela ATUALIZA o documento da primeira medição
+    // (reading-1), em vez de criar um segundo registro.
+    expect(mockUpdateReading).toHaveBeenCalledTimes(1);
+    expect(mockUpdateReading).toHaveBeenCalledWith(
+      'reading-1',
+      expect.objectContaining({ systolic: '125', diastolic: '85' }),
+    );
+
+    expect(screen.getByText('Média das duas medições')).toBeTruthy();
+    expect(screen.getByText('125/85')).toBeTruthy();
+    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
+
+    // Concluir devolve a tela ao estado comum de registro.
+    await fireEvent.press(screen.getByRole('button', { name: 'Concluir' }));
+
+    expect(screen.queryByText('Média das duas medições')).toBeNull();
+    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
     expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
   });
 
-  /**
-   * O Prompt 4.2 tirou a transição measuring→'summary' de dentro de handleReadingSaved — ela
-   * agora só acontece por `submitSecondMeasurement` (useSecondMeasurementFlow.test.ts cobre essa
-   * transição isoladamente). Esta tela ainda não foi rewired para chamar
-   * `submitSecondMeasurement` no lugar de `form.submit()` durante 'measuring' — isso, junto do
-   * pop-up, é o Prompt 4.3. Até lá, tocar em "Salvar medição" na 2ª medição continua chamando só
-   * `form.submit()` (mockado) e `handleReadingSaved`, que agora é NO-OP em 'measuring' — o fluxo
-   * fica parado em 'measuring', de propósito, em vez de fingir uma conclusão que a tela ainda não
-   * sabe fazer.
-   */
-  it('a 2ª medição ainda não fecha o resumo nesta tela — isso é o Prompt 4.3', async () => {
+  /** Falhar ao gravar a média mantém o pop-up aberto, com o que já foi digitado e o erro à vista. */
+  it('mantém o pop-up aberto quando a gravação da média falha', async () => {
+    mockUpdateReading.mockResolvedValue(false);
+
     await render(<RecordScreen />);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
-
-    useReadingForm.mockReturnValue(buildForm({ systolic: '130', diastolic: '90' }));
-
     await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+    await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+    await fireEvent.changeText(screen.getByLabelText('Diastólica'), '90');
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar segunda medição' }));
 
     expect(screen.queryByText('Média das duas medições')).toBeNull();
-    expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Salvar segunda medição' })).toBeTruthy();
+    expect(screen.getByLabelText('Sistólica').props.value).toBe('130');
   });
 
   it('dispensar a sugestão volta a tela ao estado comum, sem descartar o que já foi salvo', async () => {

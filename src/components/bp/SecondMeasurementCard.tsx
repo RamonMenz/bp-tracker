@@ -10,12 +10,18 @@ import type { SessionReading } from '@/domain/session-average';
 import type { SecondMeasurementState } from '@/features/readings/useSecondMeasurementFlow';
 
 import { BpCategoryBadge, CATEGORY_LABEL } from './BpCategoryBadge';
+import { SecondMeasurementDialog } from './SecondMeasurementDialog';
 
 export interface SecondMeasurementCardProps {
   state: SecondMeasurementState;
   secondsRemaining: number;
   average: SessionReading | null;
+  /** `useSecondMeasurementFlow.isSaving` — a segunda medição sendo gravada. Só vale em 'measuring'. */
+  isSaving: boolean;
+  /** `useSecondMeasurementFlow.saveError`: mensagem amigável já traduzida, nunca crua (§4.3). */
+  saveError: string | null;
   onAccept: () => void;
+  onSubmitSecondMeasurement: (values: { systolic: string; diastolic: string; pulse: string }) => void;
   onDecline: () => void;
   onDismissSummary: () => void;
 }
@@ -43,7 +49,10 @@ export function SecondMeasurementCard({
   state,
   secondsRemaining,
   average,
+  isSaving,
+  saveError,
   onAccept,
+  onSubmitSecondMeasurement,
   onDecline,
   onDismissSummary,
 }: SecondMeasurementCardProps) {
@@ -57,14 +66,25 @@ export function SecondMeasurementCard({
     return <SessionSummary average={average} onDismissSummary={onDismissSummary} />;
   }
 
-  const isMeasuring = state === 'measuring';
+  // 'measuring' virou um pop-up: os valores da segunda medição são digitados ALI, não no
+  // ReadingForm grande da tela (que continua sendo o da primeira medição, intocado). O card de
+  // fundo sai de cena junto — deixá-lo por baixo do scrim só duplicaria o "Medição 2 de 2" que o
+  // próprio pop-up já anuncia.
+  if (state === 'measuring') {
+    return (
+      <SecondMeasurementDialog
+        visible
+        isSaving={isSaving}
+        error={saveError}
+        onSubmit={onSubmitSecondMeasurement}
+        onCancel={onDecline}
+      />
+    );
+  }
 
   return (
     <Card className="gap-3">
-      <SectionHeader
-        title={isMeasuring ? 'Medição 2 de 2' : 'Quer confirmar com uma segunda medição?'}
-        icon={ClockIcon}
-      />
+      <SectionHeader title="Quer confirmar com uma segunda medição?" icon={ClockIcon} />
 
       <Text variant="body">
         O protocolo clínico sugere medir de novo em cerca de 1 minuto, para reduzir a variação da primeira
@@ -74,8 +94,8 @@ export function SecondMeasurementCard({
       <Text variant="caption">{countdownLabel(secondsRemaining)}</Text>
 
       <View className="gap-2">
-        {isMeasuring ? null : <Button label="Medir novamente" variant="secondary" onPress={onAccept} />}
-        <Button label={isMeasuring ? 'Cancelar' : 'Não, obrigado'} variant="ghost" onPress={onDecline} />
+        <Button label="Medir novamente" variant="secondary" onPress={onAccept} />
+        <Button label="Não, obrigado" variant="ghost" onPress={onDecline} />
       </View>
     </Card>
   );
@@ -122,7 +142,9 @@ function SessionSummary({ average, onDismissSummary }: SessionSummaryProps) {
         <BpCategoryBadge category={category} />
       </View>
 
-      <Text variant="caption">As duas medições já estão no seu histórico — este resumo não é salvo à parte.</Text>
+      {/* A média não é um resumo à parte: ela SUBSTITUIU a primeira leitura no mesmo documento
+          (ver useSecondMeasurementFlow.submitSecondMeasurement) — o texto precisa dizer isso. */}
+      <Text variant="caption">A média das duas medições foi salva no seu histórico.</Text>
 
       <Button label="Concluir" onPress={onDismissSummary} />
     </Card>
