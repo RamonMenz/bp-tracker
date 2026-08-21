@@ -51,6 +51,36 @@ describe('DateTimeField (web)', () => {
     expect(handleChange).toHaveBeenCalledWith(new Date(2026, 7, 13, 14, 15, 0, 0));
   });
 
+  /**
+   * `mode="date"` existe para o range de exportação (Prompt 6.3), que filtra por dia — pedir hora
+   * ali seria ruído. O input nasce como `type="date"` e a data resultante é sempre meia-noite
+   * local, sem herdar a hora do valor atual.
+   */
+  it('entrega um Date à meia-noite local a partir do valor do input só de data', async () => {
+    const handleChange = jest.fn();
+
+    await renderField({ mode: 'date', accessibilityLabel: 'Data', onChange: handleChange });
+
+    const input = screen.getByLabelText('Data');
+    expect(input.props.type).toBe('date');
+    expect(input.props.value).toBe('2026-08-13');
+
+    await fireEvent(input, 'change', { target: { value: '2026-08-01' } });
+
+    expect(handleChange).toHaveBeenCalledTimes(1);
+    expect(handleChange).toHaveBeenCalledWith(new Date(2026, 7, 1, 0, 0, 0, 0));
+  });
+
+  it('ignora valor vazio ou incompleto no modo date, sem propagar data inválida', async () => {
+    const handleChange = jest.fn();
+
+    await renderField({ mode: 'date', accessibilityLabel: 'Data', onChange: handleChange });
+
+    await fireEvent(screen.getByLabelText('Data'), 'change', { target: { value: '' } });
+
+    expect(handleChange).not.toHaveBeenCalled();
+  });
+
   it('ignora valor vazio ou incompleto em vez de propagar uma data inválida', async () => {
     const handleChange = jest.fn();
 
