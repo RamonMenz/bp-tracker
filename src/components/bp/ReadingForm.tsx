@@ -9,7 +9,13 @@ import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Field } from '@/components/ui/Field';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
-import { ActivityIcon, CalendarDaysIcon, CheckIcon, PlusIcon, TriangleAlertIcon } from '@/components/ui/icons';
+import {
+  ActivityIcon,
+  CalendarDaysIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  TriangleAlertIcon,
+} from '@/components/ui/icons';
 import { NOTE_MAX_LENGTH } from '@/features/readings/reading.schema';
 import type { UseReadingFormResult } from '@/features/readings/useReadingForm';
 import { formatShortDateTime } from '@/lib/datetime';
@@ -84,6 +90,25 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
         />
       </View>
 
+      {/* Cabeçalho de disclosure sempre visível — abrir mostra os campos, tocar de novo no mesmo
+          controle esconde. Ao contrário do Pressable anterior (que sumia assim que aberto e não
+          deixava mais como fechar), este não desaparece em nenhum dos dois estados. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Pulso e observação"
+        accessibilityState={{ expanded: areOptionalFieldsOpen }}
+        onPress={() => setAreOptionalFieldsOpen((open) => !open)}
+        className="min-h-[48px] flex-row items-center justify-between gap-2 rounded-2xl border border-light-border px-4 dark:border-dark-border"
+      >
+        <Text variant="body">Pulso e observação</Text>
+        <ChevronDownIcon
+          size={18}
+          color={palette.muted}
+          strokeWidth={2.25}
+          style={{ transform: [{ rotate: areOptionalFieldsOpen ? '180deg' : '0deg' }] }}
+        />
+      </Pressable>
+
       {areOptionalFieldsOpen ? (
         <View className="flex-row items-start gap-3">
           <BpNumberInput
@@ -115,19 +140,7 @@ export function ReadingForm({ form, title, submitLabel, onSubmit, systolicRef }:
             </Text>
           </View>
         </View>
-      ) : (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Adicionar pulso e observação"
-          onPress={() => setAreOptionalFieldsOpen(true)}
-          className="min-h-[48px] flex-row items-center justify-center gap-2 rounded-2xl border border-dashed border-light-border px-4 dark:border-dark-border"
-        >
-          <PlusIcon size={16} color={palette.muted} strokeWidth={2} />
-          <Text variant="body" color={palette.muted}>
-            Adicionar pulso e observação
-          </Text>
-        </Pressable>
-      )}
+      ) : null}
 
       {form.previewCategory ? (
         <View className="flex-row items-center justify-between gap-3 rounded-2xl bg-light-bg px-3 py-2.5 dark:bg-dark-bg">

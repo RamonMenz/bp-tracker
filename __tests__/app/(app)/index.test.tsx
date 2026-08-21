@@ -58,22 +58,29 @@ beforeEach(() => {
 });
 
 describe('RecordScreen — campo de observação', () => {
-  it('esconde pulso e observação até o usuário tocar em "Adicionar pulso e observação"', async () => {
+  it('esconde pulso e observação até o usuário tocar em "Pulso e observação", e esconde de novo ao tocar outra vez', async () => {
     await render(<RecordScreen />);
 
     expect(screen.queryByLabelText('Observação')).toBeNull();
 
     // fireEvent.press é assíncrono nesta versão do RTL — sem o await, a asserção seguinte roda
     // antes do re-render que a revelação do campo dispara.
-    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+    const disclosure = screen.getByLabelText('Pulso e observação');
+    await fireEvent.press(disclosure);
 
     expect(screen.getByLabelText('Observação')).toBeTruthy();
+
+    // O mesmo controle que abriu também fecha — accordion de verdade, não uma revelação de mão
+    // única sem jeito de voltar atrás.
+    await fireEvent.press(disclosure);
+
+    expect(screen.queryByLabelText('Observação')).toBeNull();
   });
 
   it('repassa o texto digitado para setNote do formulário', async () => {
     await render(<RecordScreen />);
 
-    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+    await fireEvent.press(screen.getByLabelText('Pulso e observação'));
     fireEvent.changeText(screen.getByLabelText('Observação'), 'Medi após caminhada.');
 
     expect(setNoteMock).toHaveBeenCalledWith('Medi após caminhada.');
