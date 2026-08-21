@@ -67,21 +67,21 @@ async function ensureNotificationPermission(): Promise<void> {
 }
 
 export async function registerPushToken(uid: string): Promise<void> {
-  const messaging = await getMessagingInstance();
-
-  if (messaging === null) {
-    throw new Error(WEB_NOT_SUPPORTED_MESSAGE);
-  }
-
-  const extra = Constants.expoConfig?.extra as { firebase?: WebFirebaseConfig } | undefined;
-  const firebaseConfig = extra?.firebase;
-  const vapidKey = firebaseConfig?.vapidKey;
-
-  if (firebaseConfig === undefined || vapidKey === undefined) {
-    throw new Error(VAPID_KEY_MISSING_MESSAGE);
-  }
-
   try {
+    const messaging = await getMessagingInstance();
+
+    if (messaging === null) {
+      throw new Error(WEB_NOT_SUPPORTED_MESSAGE);
+    }
+
+    const extra = Constants.expoConfig?.extra as { firebase?: WebFirebaseConfig } | undefined;
+    const firebaseConfig = extra?.firebase;
+    const vapidKey = firebaseConfig?.vapidKey;
+
+    if (firebaseConfig === undefined || vapidKey === undefined) {
+      throw new Error(VAPID_KEY_MISSING_MESSAGE);
+    }
+
     await ensureNotificationPermission();
 
     const serviceWorkerRegistration = await navigator.serviceWorker.register(
@@ -101,7 +101,9 @@ export async function registerPushToken(uid: string): Promise<void> {
       { merge: true },
     );
   } catch (error) {
-    if (error instanceof Error && error.message === PERMISSION_DENIED_MESSAGE) {
+    const knownMessages: string[] = [WEB_NOT_SUPPORTED_MESSAGE, VAPID_KEY_MISSING_MESSAGE, PERMISSION_DENIED_MESSAGE];
+
+    if (error instanceof Error && knownMessages.includes(error.message)) {
       throw error;
     }
 
