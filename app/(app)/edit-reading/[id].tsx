@@ -25,7 +25,7 @@ function EditReadingFormCard({ reading }: { reading: EditableReading }) {
   const router = useRouter();
 
   async function handleSave(): Promise<void> {
-    const success = await form.submit();
+    const { success } = await form.submit();
 
     if (success) {
       // Volta para a tela de origem (o histórico): a lista já reflete a correção pelo onSnapshot,

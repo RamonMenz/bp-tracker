@@ -36,14 +36,15 @@ function getErrorCode(error: unknown): string | undefined {
   return undefined;
 }
 
-export async function addReading(uid: string, input: ReadingInput): Promise<void> {
+export async function addReading(uid: string, input: ReadingInput): Promise<string> {
   try {
     const payload: ReadingWritePayload = {
       ...input,
       createdAt: serverTimestamp(),
     };
 
-    await addDoc(collection(firestore, readingsCollectionPath(uid)), payload);
+    const docRef = await addDoc(collection(firestore, readingsCollectionPath(uid)), payload);
+    return docRef.id;
   } catch (error) {
     const code = getErrorCode(error);
 
