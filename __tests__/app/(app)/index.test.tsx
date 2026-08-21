@@ -176,6 +176,10 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.getByText('125/85')).toBeTruthy();
     expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
 
+    // 'summary' também é pop-up: o formulário de fundo continua escondido do leitor de tela
+    // (CLAUDE.md §4.7), não só nos dois estados anteriores.
+    expect(screen.queryByRole('button', { name: 'Salvar medição' })).toBeNull();
+
     // Concluir devolve a tela ao estado comum de registro.
     await fireEvent.press(screen.getByRole('button', { name: 'Concluir' }));
 
@@ -218,7 +222,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
    * navegável por gestos — quem usa leitor de tela sairia do pop-up sem perceber. Vale para o
    * convite ('offer'), não só para o pop-up que repete os rótulos dos campos ('measuring').
    */
-  it('esconde o formulário de fundo do leitor de tela enquanto o convite está aberto', async () => {
+  it('esconde o formulário de fundo do leitor de tela enquanto o convite (offer) está aberto', async () => {
     await render(<RecordScreen />);
 
     expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();

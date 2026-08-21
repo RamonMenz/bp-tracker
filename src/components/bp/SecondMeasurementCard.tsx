@@ -1,17 +1,9 @@
-import { View } from 'react-native';
-
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Text } from '@/components/ui/Text';
-import { ActivityIcon } from '@/components/ui/icons';
-import { classifyBloodPressure } from '@/domain/bp-classification';
 import type { SessionReading } from '@/domain/session-average';
 import type { SecondMeasurementState } from '@/features/readings/useSecondMeasurementFlow';
 
-import { BpCategoryBadge, CATEGORY_LABEL } from './BpCategoryBadge';
 import { SecondMeasurementDialog } from './SecondMeasurementDialog';
 import { SecondMeasurementOfferDialog } from './SecondMeasurementOfferDialog';
+import { SecondMeasurementSummaryDialog } from './SecondMeasurementSummaryDialog';
 
 export interface SecondMeasurementCardProps {
   state: SecondMeasurementState;
@@ -31,8 +23,8 @@ export interface SecondMeasurementCardProps {
  * Apresentação da sugestão de segunda medição (protocolo AHA: duas leituras com 1-2 min de
  * intervalo, reportando a média).
  *
- * Despacha por estado: 'offer' e 'measuring' são pop-ups (o convite e os campos da 2ª leitura),
- * e só 'summary' continua sendo um card inline no scroll da tela.
+ * Despacha por estado: os três (convite, 2ª leitura, resumo) são pop-ups em sequência — nenhum
+ * cai solto no scroll da tela depois que o de baixo fecha.
  *
  * Componente burro (CLAUDE.md §3.4): todo o estado da sessão mora em `useSecondMeasurementFlow` —
  * aqui só entram props e sai desenho. O estado 'idle' não é tratado: a tela só monta este
@@ -58,7 +50,7 @@ export function SecondMeasurementCard({
       return null;
     }
 
-    return <SessionSummary average={average} onDismissSummary={onDismissSummary} />;
+    return <SecondMeasurementSummaryDialog visible average={average} onDismiss={onDismissSummary} />;
   }
 
   // 'measuring' virou um pop-up: os valores da segunda medição são digitados ALI, não no
@@ -86,55 +78,5 @@ export function SecondMeasurementCard({
       onAccept={onAccept}
       onDecline={onDecline}
     />
-  );
-}
-
-interface SessionSummaryProps {
-  average: SessionReading;
-  onDismissSummary: () => void;
-}
-
-function SessionSummary({ average, onDismissSummary }: SessionSummaryProps) {
-  const category = classifyBloodPressure(average.systolic, average.diastolic);
-  const pulsePhrase = average.pulse !== null ? `, pulso ${average.pulse} batimentos por minuto` : '';
-
-  return (
-    <Card className="gap-3">
-      <SectionHeader title="Média das duas medições" icon={ActivityIcon} />
-
-      {/* Mesmo desenho do valor grande de LastReadingCard: o número da média não pode aparecer num
-          terceiro formato só por estar em outro card. */}
-      <View
-        accessible
-        accessibilityLabel={`Média das duas medições: ${average.systolic} por ${average.diastolic} milímetros de mercúrio${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}`}
-        className="gap-2.5"
-      >
-        <View className="flex-row items-end justify-between gap-3">
-          <View className="flex-row items-baseline gap-1.5">
-            <Text variant="metric">
-              {average.systolic}/{average.diastolic}
-            </Text>
-            <Text variant="caption">mmHg</Text>
-          </View>
-
-          {average.pulse !== null ? (
-            <View className="items-end">
-              <Text variant="sectionHeader" style={{ fontVariant: ['tabular-nums'] }}>
-                {average.pulse}
-              </Text>
-              <Text variant="caption">bpm</Text>
-            </View>
-          ) : null}
-        </View>
-
-        <BpCategoryBadge category={category} />
-      </View>
-
-      {/* A média não é um resumo à parte: ela SUBSTITUIU a primeira leitura no mesmo documento
-          (ver useSecondMeasurementFlow.submitSecondMeasurement) — o texto precisa dizer isso. */}
-      <Text variant="caption">A média das duas medições foi salva no seu histórico.</Text>
-
-      <Button label="Concluir" onPress={onDismissSummary} />
-    </Card>
   );
 }

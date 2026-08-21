@@ -136,6 +136,12 @@ describe('SecondMeasurementCard — estado measuring', () => {
   });
 });
 
+/**
+ * 'summary' também deixou de ser um card no scroll: o resumo é um pop-up
+ * (SecondMeasurementSummaryDialog, com testes próprios) que fecha a sequência de pop-ups do
+ * convite e da 2ª medição, em vez de cair solto na tela depois que o de baixo fecha. O que se
+ * verifica aqui é o encaixe — que o card monta o pop-up e repassa as props certas.
+ */
 describe('SecondMeasurementCard — estado summary', () => {
   it('mostra a média das duas medições com a mesma cara do valor grande da última medição', async () => {
     await renderCard({ state: 'summary', average: AVERAGE, secondsRemaining: 0 });
