@@ -722,3 +722,131 @@ nenhum destes dez prompts.
 
 Cada prompt termina em UM commit. Depois de rodar os que quiser, revise o diff acumulado e faça
 `git push` (ou peça para eu fazer) — não faço push automático de nenhum destes sem você pedir.
+
+---
+
+## Prompt de Consolidação — juntar o trabalho da sessão, corrigir versionamento e abrir PR
+
+> Use este prompt quando os 10 prompts acima (ou parte deles) já tiverem sido rodados numa ÚNICA
+> sessão corrida, sem commit/push intermediário e sem PR — o cenário em que é fácil um prompt
+> posterior pisar sem querer no resultado de um anterior, ou uma mudança de contrato (ex.: Prompt
+> 4.1) não ter se propagado para todo mundo que dependia dela (Prompts 4.2/4.3). Este prompt audita
+> o estado real do código contra a spec de cada item, conserta o que estiver inconsistente, organiza
+> o histórico em commits limpos e abre o PR.
+
+```
+Contexto: no BP Tracker, os 10 prompts de prompts_melhorias_registrar_historico_ajustes.md (Itens
+A-F: mensagem de erro do messaging web, "Como usar o app" em card próprio, accordion de pulso/
+observação, segunda medição por pop-up salvando a média — Prompts 4.1/4.2/4.3 —, linhas de grade
+no gráfico, e pop-up de range de datas no export CSV — Prompts 6.1/6.2/6.3) foram rodados em
+sequência, numa mesma sessão, sem nenhum commit nem push intermediário. Não existe PR aberto ainda.
+Isso significa duas coisas a checar com cuidado, não a assumir como certas:
+(a) um prompt posterior pode ter alterado ou revertido sem querer algo que um prompt anterior já
+    tinha deixado pronto (ex.: um contrato mudado no Prompt 4.1 — addReading/submit() devolvendo
+    {success, readingId} — precisa estar refletido em TODOS os call sites que os Prompts 4.2/4.3
+    dependem dele, não só nos arquivos que o próprio 4.1 listava);
+(b) branch remota `claude/app-improvements-plan-kcu88f` já tem um commit que este checkout local
+    pode não ter (o arquivo prompts_melhorias_registrar_historico_ajustes.md foi commitado e
+    empurrado numa sessão separada, só de planejamento) — NÃO force-push por cima disso.
+
+Tarefa:
+
+1. Reconciliar com a remota ANTES de qualquer outra coisa:
+   - `git fetch origin claude/app-improvements-plan-kcu88f`.
+   - Confirme em qual branch este checkout está (`git branch --show-current`) e se ele é
+     descendente de `origin/claude/app-improvements-plan-kcu88f`. Se NÃO for (a remota tem o
+     commit `docs: adicionar prompts de desenvolvimento para Registrar/Histórico/Ajustes` que este
+     checkout não tem), faça `git merge origin/claude/app-improvements-plan-kcu88f` para trazê-lo
+     para dentro do seu histórico local antes de prosseguir — nunca `git push --force` para
+     descartar esse commit, ele é trabalho de outra sessão que já está na remota.
+   - Depois de reconciliado, NÃO use `git rebase -i` (não suportado neste ambiente). Para
+     reorganizar o histórico em commits limpos, use `git reset --soft
+     origin/claude/app-improvements-plan-kcu88f` (ou o commit correspondente após o merge acima) —
+     isso devolve TODO o trabalho já commitado nesta sessão para a área de stage, como mudanças não
+     commitadas, sem perder nada, e sem tocar no working tree. A partir daí você recomita em pedaços
+     limpos (passo 4).
+
+2. Auditar item por item contra a spec (não assuma que "rodou" = "ficou correto"). Para cada um dos
+   Itens A, B, C, D (4.1+4.2+4.3), E, F (6.1+6.2+6.3) descritos em
+   prompts_melhorias_registrar_historico_ajustes.md, releia a seção "Tarefa" do prompt
+   correspondente e confira, no código atual (depois do reset --soft do passo 1, o working tree
+   ainda tem TODAS as mudanças, só não commitadas):
+   - O arquivo/mudança principal do item existe e faz o que o prompt pedia?
+   - Toda mudança de CONTRATO que um item promete (ex.: 4.1 — addReading devolve string|false,
+     submit() devolve {success, readingId}; 6.1 — DateTimeField aceita mode: 'date') está
+     refletida em TODOS os lugares que dependem dela, inclusive testes? Procure especificamente por
+     chamadas ou mocks que ainda assumem o formato ANTIGO (ex.: `if (await form.submit())` tratando
+     o retorno como boolean puro, ou `jest.fn<Promise<boolean>, []>()` num teste que deveria ter
+     sido atualizado pelo Prompt 4.1) — isso é o sintoma mais provável de "um prompt pisou no
+     anterior".
+   - Não sobrou nenhum código morto do desenho ANTIGO que o item substituiu (ex.: o Item D removeu
+     o reaproveitamento do ReadingForm grande para a segunda medição — confirme que
+     SecondMeasurementCard.tsx não ficou com os dois caminhos, o novo pop-up E um resquício do
+     antigo, ao mesmo tempo).
+   - Não há import não utilizado, tipo duplicado, ou comentário que descreve um comportamento que
+     não existe mais (ex.: o comentário "as duas medições já estão no histórico" de
+     SecondMeasurementCard.tsx precisa ter sido trocado pelo Prompt 4.3 — confirme que não sobrou a
+     versão antiga em nenhum lugar).
+   - Se algum item parecer TOTALMENTE ausente (nenhum traço da mudança no código) — não implemente
+     do zero por conta própria neste prompt. Anote isso para o relatório final (passo 6) e para a
+     descrição do PR (passo 5): é uma decisão do usuário rodar aquele prompt específico depois, não
+     algo para "completar" por iniciativa própria aqui, já que o pedido é juntar o que foi feito,
+     não inventar o que não foi.
+   - Se algum item estiver PARCIAL (ex.: o componente novo existe mas não foi ligado na tela, ou o
+     teste não foi atualizado), conserte — isso é exatamente o "erro de versionamento" que este
+     prompt existe para resolver, diferente de um item ausente por completo.
+
+3. Depois de corrigir o que precisar de correção, rode `npm run lint && npm run typecheck && npm
+   test` e resolva TODOS os erros antes de prosseguir. Não crie o PR com testes vermelhos ou tipo
+   quebrado — se algo não for possível resolver com confiança (ex.: exige decisão de produto que
+   não está especificada em nenhum dos prompts), pare e explique claramente o que está bloqueado em
+   vez de forçar um jeito de fazer passar.
+
+4. Recomite em commits atômicos, na ORDEM abaixo (mesmas mensagens de commit já especificadas em
+   cada prompt de prompts_melhorias_registrar_historico_ajustes.md — reutilize-as, não invente
+   mensagens novas):
+   1. Item A — `fix(reminders): não deixar erro cru do Firebase Messaging escapar ao ativar
+      notificações na web`
+   2. Item B — `refactor(settings): dar destaque próprio ao link "Como usar o app" num card "Ajuda"`
+   3. Item C — `feat(ui): transformar pulso e observação em accordion que abre e fecha`
+   4. Item E — `feat(history): mostrar linhas de grade no eixo Y do gráfico de tendência`
+   5. Item F — três commits (ou um só, se os arquivos de 6.1/6.2/6.3 estiverem interdependentes
+      demais para separar com segurança — use julgamento, mas NUNCA misture Item F com Item D no
+      mesmo commit):
+      `feat(ui): DateTimeField ganha modo somente-data` →
+      `feat(export): aceitar range de datas na exportação de CSV` →
+      `feat(export): pop-up de período para exportar CSV`
+   6. Item D — três commits (mesma ressalva: pode agrupar 4.1+4.2+4.3 se os arquivos estiverem
+      emaranhados demais, mas nunca misturados com outro item):
+      `refactor(readings): addReading e submit() devolvem o id do documento criado` →
+      `feat(readings): segunda medição atualiza a leitura original com a média, em vez de criar
+      outra` →
+      `feat(readings): segunda medição por pop-up, sem reaproveitar o formulário grande`
+   Use `git add <arquivos do item>` (ou `git add -p` onde um arquivo for tocado por mais de um
+   item) para montar cada commit só com o que pertence àquele item — não um `git add -A` genérico
+   commitando tudo de uma vez, que é exatamente o problema que motivou este prompt.
+
+5. Depois do último commit, `git push -u origin claude/app-improvements-plan-kcu88f`. Se o push for
+   rejeitado por non-fast-forward, NÃO force-push — faça `git fetch` + `git merge` de novo e
+   resolva antes de tentar de novo.
+
+6. Abra o PR (procure primeiro `.github/pull_request_template.md`,
+   `.github/PULL_REQUEST_TEMPLATE.md` ou `PULL_REQUEST_TEMPLATE.md` na raiz — se existir, siga a
+   estrutura dele; senão escreva como abaixo). A descrição precisa:
+   - Listar os seis itens (A-F) com uma linha cada do que mudou.
+   - Indicar explicitamente, numa seção separada (ex.: "Pendências"), qualquer item que a auditoria
+     do passo 2 encontrou AUSENTE por completo (não implementado nesta sessão) — para o usuário
+     decidir se roda aquele prompt específico depois, num commit à parte.
+   - Confirmar que `npm run lint && npm run typecheck && npm test` passam no estado final.
+   Não mescle o PR sozinho — só abra, para revisão humana.
+
+Rode `npm run lint && npm run typecheck && npm test` uma última vez depois de tudo commitado e
+antes de abrir o PR, para confirmar que a reorganização em commits não quebrou nada.
+```
+
+**Modelo recomendado:** Claude Opus 5 — não é seguir uma spec fechada, é diagnosticar o que
+sobreviveu, o que se perdeu e o que ficou inconsistente depois de 10 prompts corridos sem
+checkpoint, decidir o que é seguro corrigir versus o que precisa ser reportado em vez de
+"completado" por conta própria, e fazer cirurgia de git (reset --soft, recomposição de commits,
+reconciliação com a remota) sem perder trabalho — julgamento em várias frentes ao mesmo tempo, não
+uma tarefa mecânica.
