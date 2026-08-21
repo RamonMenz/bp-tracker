@@ -71,9 +71,10 @@ export function SecondMeasurementDialog({
       <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: BACKDROP_COLOR }}>
         <Card accessibilityViewIsModal elevation="flat" className="w-full max-w-[420px] gap-4">
           <View className="gap-1">
-            <Text variant="sectionHeader">Medição 2 de 2</Text>
+            <Text variant="sectionHeader">Segunda medição</Text>
             <Text variant="caption">
-              Só os números desta leitura — a observação e o horário da primeira medição são mantidos.
+              Digite os valores da nova leitura. A observação e o horário continuam sendo os da primeira
+              medição.
             </Text>
           </View>
 

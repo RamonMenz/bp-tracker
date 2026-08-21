@@ -54,9 +54,9 @@ export function SecondMeasurementOfferDialog({
     >
       <View className="flex-1 items-center justify-center px-6" style={{ backgroundColor: BACKDROP_COLOR }}>
         <Card accessibilityViewIsModal elevation="flat" className="w-full max-w-[420px] gap-3">
-          {/* Texto puro, sem ícone e sem numberOfLines — mesmo padrão do "Medição 2 de 2" e do
-              title de ConfirmDialog. Aqui a pergunta inteira quebra em quantas linhas precisar,
-              inclusive com a fonte ampliada pelo usuário (§4.7). */}
+          {/* Texto puro, sem ícone e sem numberOfLines — mesmo padrão do "Segunda medição" (título
+              de SecondMeasurementDialog) e do title de ConfirmDialog. Aqui a pergunta inteira
+              quebra em quantas linhas precisar, inclusive com a fonte ampliada pelo usuário (§4.7). */}
           <Text variant="sectionHeader">Quer confirmar com uma segunda medição?</Text>
 
           <Text variant="body">
