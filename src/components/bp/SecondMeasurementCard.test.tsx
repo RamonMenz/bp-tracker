@@ -96,7 +96,7 @@ describe('SecondMeasurementCard — estado measuring', () => {
   it('abre o pop-up com os campos da segunda medição, sem observação nem horário', async () => {
     await renderCard({ state: 'measuring' });
 
-    expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
+    expect(screen.getByText('Segunda medição')).toBeTruthy();
     expect(screen.getByLabelText('Sistólica')).toBeTruthy();
     expect(screen.getByLabelText('Diastólica')).toBeTruthy();
     expect(screen.getByLabelText('Pulso')).toBeTruthy();

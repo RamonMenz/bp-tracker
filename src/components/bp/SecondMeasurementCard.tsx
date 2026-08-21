@@ -63,7 +63,7 @@ export function SecondMeasurementCard({
 
   // 'measuring' virou um pop-up: os valores da segunda medição são digitados ALI, não no
   // ReadingForm grande da tela (que continua sendo o da primeira medição, intocado). O card de
-  // fundo sai de cena junto — deixá-lo por baixo do scrim só duplicaria o "Medição 2 de 2" que o
+  // fundo sai de cena junto — deixá-lo por baixo do scrim só duplicaria o "Segunda medição" que o
   // próprio pop-up já anuncia.
   if (state === 'measuring') {
     return (

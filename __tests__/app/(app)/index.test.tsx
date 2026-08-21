@@ -156,7 +156,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
 
     // A 2ª medição NÃO reaproveita mais o formulário grande: ela é digitada no pop-up, que pede
     // só os números.
-    expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
+    expect(screen.getByText('Segunda medição')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Salvar segunda medição' })).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
