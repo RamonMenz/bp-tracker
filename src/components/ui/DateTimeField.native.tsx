@@ -11,7 +11,7 @@ export type MinuteInterval = 1 | 2 | 3 | 4 | 5 | 6 | 10 | 12 | 15 | 20 | 30;
 export interface DateTimeFieldProps {
   /** Valor atualmente selecionado. */
   value: Date;
-  mode: 'datetime' | 'time';
+  mode: 'datetime' | 'time' | 'date';
   /** Chamado a cada valor escolhido. Só o `Date` — quem chama não precisa saber do evento nativo. */
   onChange: (date: Date) => void;
   /**
@@ -20,7 +20,7 @@ export interface DateTimeFieldProps {
    * sempre depois do primeiro toque.
    */
   onClose: () => void;
-  /** Só faz sentido em `mode="datetime"`. */
+  /** Faz sentido em `mode="datetime"` ou `mode="date"`. */
   maximumDate?: Date;
   /** Só faz sentido em `mode="time"`. */
   minuteInterval?: MinuteInterval;

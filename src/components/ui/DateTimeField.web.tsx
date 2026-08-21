@@ -13,7 +13,7 @@ export type MinuteInterval = 1 | 2 | 3 | 4 | 5 | 6 | 10 | 12 | 15 | 20 | 30;
 export interface DateTimeFieldProps {
   /** Valor atualmente selecionado. */
   value: Date;
-  mode: 'datetime' | 'time';
+  mode: 'datetime' | 'time' | 'date';
   /** Chamado a cada valor escolhido. Só o `Date` — quem chama não precisa saber do evento do input. */
   onChange: (date: Date) => void;
   /**
@@ -22,7 +22,7 @@ export interface DateTimeFieldProps {
    * sempre depois do primeiro toque.
    */
   onClose: () => void;
-  /** Só faz sentido em `mode="datetime"`. */
+  /** Faz sentido em `mode="datetime"` ou `mode="date"`. */
   maximumDate?: Date;
   /** Só faz sentido em `mode="time"`. */
   minuteInterval?: MinuteInterval;
@@ -34,17 +34,23 @@ function pad(value: number): string {
 }
 
 /**
- * Formato exigido pelo input: `HH:mm` (`time`) ou `YYYY-MM-DDTHH:mm` (`datetime-local`), sempre no
- * fuso LOCAL. `toISOString()` não serve aqui — converteria para UTC e deslocaria a hora exibida.
+ * Formato exigido pelo input: `HH:mm` (`time`), `YYYY-MM-DD` (`date`) ou `YYYY-MM-DDTHH:mm`
+ * (`datetime-local`), sempre no fuso LOCAL. `toISOString()` não serve aqui — converteria para UTC
+ * e deslocaria a hora exibida.
  */
 function toInputValue(date: Date, mode: DateTimeFieldProps['mode']): string {
   const time = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
   if (mode === 'time') {
     return time;
   }
 
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${time}`;
+  if (mode === 'date') {
+    return day;
+  }
+
+  return `${day}T${time}`;
 }
 
 /**
@@ -54,7 +60,9 @@ function toInputValue(date: Date, mode: DateTimeFieldProps['mode']): string {
  * nada a propagar.
  *
  * No modo `time` o input só carrega hora e minuto, então a data vem de `reference`: trocar o
- * horário de um lembrete não pode mudar o dia por baixo.
+ * horário de um lembrete não pode mudar o dia por baixo. No modo `date` não há o inverso a
+ * preservar — o input não carrega hora nenhuma, e a data resultante nasce à meia-noite local, sem
+ * herdar a hora de `reference`.
  */
 function fromInputValue(inputValue: string, mode: DateTimeFieldProps['mode'], reference: Date): Date | null {
   if (mode === 'time') {
@@ -67,6 +75,16 @@ function fromInputValue(inputValue: string, mode: DateTimeFieldProps['mode'], re
     const date = new Date(reference);
     date.setHours(Number(match[1]), Number(match[2]), 0, 0);
     return date;
+  }
+
+  if (mode === 'date') {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(inputValue);
+
+    if (match === null) {
+      return null;
+    }
+
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
   }
 
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(inputValue);
@@ -168,7 +186,7 @@ export function DateTimeField({
       // e quer justamente digitar ali. Focar por conta própria é o equivalente ao diálogo que o
       // seletor nativo abre em cima da tela, e é o que faz o Esc/Tab de saída chegarem até aqui.
       autoFocus
-      type={mode === 'time' ? 'time' : 'datetime-local'}
+      type={mode === 'time' ? 'time' : mode === 'date' ? 'date' : 'datetime-local'}
       value={toInputValue(value, mode)}
       max={maximumDate === undefined ? undefined : toInputValue(maximumDate, mode)}
       step={minuteInterval === undefined ? undefined : minuteInterval * 60}

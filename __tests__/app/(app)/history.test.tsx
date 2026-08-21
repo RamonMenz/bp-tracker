@@ -216,3 +216,51 @@ describe('HistoryScreen — feedback ancorado fora da lista', () => {
     expect(screen.getByText(message)).toBeTruthy();
   });
 });
+
+/**
+ * "Exportar CSV" deixou de chamar exportCsv() direto — agora abre um pop-up de período
+ * (ExportCsvDialog) primeiro. Quem efetivamente chama exportCsv é o botão "Exportar" DENTRO do
+ * diálogo, com o range (ou undefined, para "Tudo") que o usuário escolheu ali.
+ */
+describe('HistoryScreen — exportar CSV', () => {
+  it('não chama exportCsv só de tocar em "Exportar CSV" — antes abre o pop-up de período', async () => {
+    const exportCsvMock = jest.fn();
+    useExportCsv.mockReturnValue({ exportCsv: exportCsvMock, isExporting: false, error: null });
+
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Exportar CSV' }));
+
+    expect(await screen.findByText('Período da exportação')).toBeTruthy();
+    expect(exportCsvMock).not.toHaveBeenCalled();
+  });
+
+  it('chama exportCsv(undefined) ao exportar "Tudo" (o padrão do pop-up) e fecha o diálogo', async () => {
+    const exportCsvMock = jest.fn();
+    useExportCsv.mockReturnValue({ exportCsv: exportCsvMock, isExporting: false, error: null });
+
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Exportar CSV' }));
+    expect(await screen.findByText('Período da exportação')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Exportar' }));
+
+    expect(exportCsvMock).toHaveBeenCalledTimes(1);
+    expect(exportCsvMock).toHaveBeenCalledWith(undefined);
+  });
+
+  it('cancelar o pop-up fecha sem chamar exportCsv', async () => {
+    const exportCsvMock = jest.fn();
+    useExportCsv.mockReturnValue({ exportCsv: exportCsvMock, isExporting: false, error: null });
+
+    await render(<HistoryScreen />);
+
+    fireEvent.press(screen.getByRole('button', { name: 'Exportar CSV' }));
+    expect(await screen.findByText('Período da exportação')).toBeTruthy();
+
+    fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(exportCsvMock).not.toHaveBeenCalled();
+  });
+});
