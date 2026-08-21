@@ -1,7 +1,7 @@
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExportCsvDialog } from '@/components/bp/ExportCsvDialog';
@@ -113,6 +113,38 @@ export default function HistoryScreen() {
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const flashListRef = useRef<FlashListRef<ListItem>>(null);
+  /** Offset a restaurar assim que a linha excluída sumir de `readings` — ver useEffect abaixo. */
+  const pendingScrollRestoreRef = useRef<number | null>(null);
+  const previousReadingsLengthRef = useRef(readings.length);
+
+  // BUG: excluir uma medição jogava a rolagem para o fundo da lista. `FlashList` tenta preservar
+  // a posição sozinho (`maintainVisibleContentPosition`, ligado por padrão), mas esse recurso
+  // depende do ScrollView NATIVO entender essa prop — e o ScrollView do react-native-web não a
+  // implementa. Sem esse suporte, o navegador só recalcula a altura do conteúdo e prende o scroll
+  // no novo limite, que quase sempre é o fim da lista mais curta. Guardamos o offset no instante
+  // em que a exclusão é confirmada e devolvemos assim que a linha sai de `readings`. No nativo
+  // (Android) o `maintainVisibleContentPosition` da lib já resolve isso sozinho — daí o guard de
+  // plataforma, para não competir com um ajuste que ali já está correto.
+  useEffect(() => {
+    if (
+      Platform.OS === 'web' &&
+      pendingScrollRestoreRef.current !== null &&
+      readings.length < previousReadingsLengthRef.current
+    ) {
+      const offset = pendingScrollRestoreRef.current;
+      pendingScrollRestoreRef.current = null;
+
+      // rAF: espera o FlashList commitar o layout com uma linha a menos antes de repor o
+      // scroll — chamando antes, o restore competiria com o próprio reflow da lista.
+      requestAnimationFrame(() => {
+        flashListRef.current?.scrollToOffset({ offset, animated: false });
+      });
+    }
+
+    previousReadingsLengthRef.current = readings.length;
+  }, [readings.length]);
+
   function handleRequestEdit(readingId: string): void {
     router.push(`/(app)/edit-reading/${readingId}`);
   }
@@ -135,6 +167,7 @@ export default function HistoryScreen() {
     const readingId = pendingDeleteId;
     setPendingDeleteId(null);
     setDeletingId(readingId);
+    pendingScrollRestoreRef.current = flashListRef.current?.getAbsoluteLastScrollOffset() ?? null;
 
     await deleteReading(readingId);
 
@@ -190,6 +223,7 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
       <FlashList
+        ref={flashListRef}
         data={items}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
