@@ -15,6 +15,7 @@ const shortDateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
   hour: '2-digit',
   minute: '2-digit',
 });
+const shortDateFormatter = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 /** Chave de agrupamento por dia local. Só para comparar/agrupar — nunca exibida ao usuário. */
 export function dayKey(date: Date): string {
@@ -28,6 +29,11 @@ export function formatTime(date: Date): string {
 /** Data e hora compactas, para o carimbo editável do formulário: "13/08, 08:30". */
 export function formatShortDateTime(date: Date): string {
   return shortDateTimeFormatter.format(date);
+}
+
+/** Só a data, sem hora — para o range de exportação em CSV (mode="date" do DateTimeField): "01/07/2026". */
+export function formatShortDate(date: Date): string {
+  return shortDateFormatter.format(date);
 }
 
 /** "Hoje" / "Ontem" / "12 de agosto" — cabeçalho de grupo do histórico. */

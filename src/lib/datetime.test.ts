@@ -1,4 +1,4 @@
-import { dayLabel, formatDayAndTime } from './datetime';
+import { dayLabel, formatDayAndTime, formatShortDate } from './datetime';
 
 describe('dayLabel', () => {
   const now = new Date(2026, 7, 13, 10, 0, 0); // 13/08/2026, uma quinta-feira
@@ -36,5 +36,11 @@ describe('formatDayAndTime', () => {
   it('junta o rótulo do dia com o horário local', () => {
     const now = new Date(2026, 7, 13, 20, 0, 0);
     expect(formatDayAndTime(new Date(2026, 7, 13, 8, 30, 0), now)).toBe('Hoje às 08:30');
+  });
+});
+
+describe('formatShortDate', () => {
+  it('formata só a data, sem hora, com zero à esquerda no dia e no mês', () => {
+    expect(formatShortDate(new Date(2026, 6, 1, 23, 59, 0))).toBe('01/07/2026');
   });
 });
