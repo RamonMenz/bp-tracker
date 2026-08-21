@@ -48,8 +48,10 @@ export default function RecordScreen() {
 
   /**
    * O retrato dos campos TEM que ser tirado antes do await: no modo criação, `useReadingForm`
-   * limpa os campos para '' assim que o submit dá certo — ler `form.systolic` depois do await
-   * pegaria string vazia, e a média da sessão sairia de um `Number('')`.
+   * limpa os campos para '' assim que o submit dá certo — ler `form.systolic` (ou `form.note`)
+   * depois do await pegaria valores já limpos. `readingId`, por outro lado, só existe DEPOIS do
+   * submit (é o id devolvido pelo Firestore) — por isso entra no objeto só ao final, quando já se
+   * sabe que deu certo.
    */
   async function handleSubmit(): Promise<void> {
     const snapshot: SessionReading = {
@@ -57,11 +59,13 @@ export default function RecordScreen() {
       diastolic: Number(form.diastolic),
       pulse: form.pulse === '' ? null : Number(form.pulse),
     };
+    const note = form.note;
+    const measuredAt = form.measuredAt;
 
-    const { success } = await form.submit();
+    const { success, readingId } = await form.submit();
 
-    if (success) {
-      flow.handleReadingSaved(snapshot);
+    if (success && readingId !== null) {
+      flow.handleReadingSaved({ ...snapshot, id: readingId, note, measuredAt });
     }
   }
 
