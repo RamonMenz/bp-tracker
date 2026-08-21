@@ -84,7 +84,10 @@ export function SecondMeasurementCard({
 
   return (
     <Card className="gap-3">
-      <SectionHeader title="Quer confirmar com uma segunda medição?" icon={ClockIcon} />
+      {/* Título é uma pergunta inteira, não cabe na linha única padrão de SectionHeader — truncar
+          cortaria a pergunta ao meio (CLAUDE.md §4.7). Duas linhas bastam no tamanho de fonte
+          padrão; com fonte ampliada pode quebrar mais, o que é aceitável. */}
+      <SectionHeader title="Quer confirmar com uma segunda medição?" icon={ClockIcon} titleNumberOfLines={2} />
 
       <Text variant="body">
         O protocolo clínico sugere medir de novo em cerca de 1 minuto, para reduzir a variação da primeira
