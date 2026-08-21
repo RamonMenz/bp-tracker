@@ -18,6 +18,16 @@ jest.mock('@/features/readings/useReadingForm', () => ({
   useReadingForm: jest.fn(),
 }));
 
+const mockUpdateReading = jest.fn<Promise<boolean>, [string, unknown]>();
+
+// useReadingForm continua mockado — o que se testa aqui é a ORQUESTRAÇÃO da tela (comentário mais
+// abaixo). useSecondMeasurementFlow, porém, roda REAL, e agora chama useUpdateReading por baixo
+// (para persistir a média da segunda medição) — que, por sua vez, puxa useSession e todo o SDK do
+// Firebase. Mocked no nível do hook de escrita, mesmo padrão já usado em edit-reading.test.tsx.
+jest.mock('@/features/readings/useUpdateReading', () => ({
+  useUpdateReading: () => ({ updateReading: mockUpdateReading, isSaving: false, error: null }),
+}));
+
 const { useLastReading } = jest.requireMock('@/features/readings/useLastReading') as {
   useLastReading: jest.Mock;
 };
@@ -55,6 +65,7 @@ beforeEach(() => {
 
   useLastReading.mockReturnValue({ lastReading: null, isLoading: false });
   useReadingForm.mockReturnValue(buildForm());
+  mockUpdateReading.mockResolvedValue(true);
 });
 
 describe('RecordScreen — campo de observação', () => {
@@ -124,7 +135,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
   });
 
-  it('percorre offer → measuring → summary → idle com a média das duas medições', async () => {
+  it('percorre idle → offer → measuring ao aceitar a segunda medição', async () => {
     await render(<RecordScreen />);
 
     // 1ª medição (120/80, sem pulso): o card de sugestão aparece com o contador cheio.
@@ -141,20 +152,31 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+  });
 
-    // 2ª medição (130/90): a média de 120/80 e 130/90 é 125/85.
+  /**
+   * O Prompt 4.2 tirou a transição measuring→'summary' de dentro de handleReadingSaved — ela
+   * agora só acontece por `submitSecondMeasurement` (useSecondMeasurementFlow.test.ts cobre essa
+   * transição isoladamente). Esta tela ainda não foi rewired para chamar
+   * `submitSecondMeasurement` no lugar de `form.submit()` durante 'measuring' — isso, junto do
+   * pop-up, é o Prompt 4.3. Até lá, tocar em "Salvar medição" na 2ª medição continua chamando só
+   * `form.submit()` (mockado) e `handleReadingSaved`, que agora é NO-OP em 'measuring' — o fluxo
+   * fica parado em 'measuring', de propósito, em vez de fingir uma conclusão que a tela ainda não
+   * sabe fazer.
+   */
+  it('a 2ª medição ainda não fecha o resumo nesta tela — isso é o Prompt 4.3', async () => {
+    await render(<RecordScreen />);
+
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
 
-    expect(screen.getByText('Média das duas medições')).toBeTruthy();
-    expect(screen.getByText('125/85')).toBeTruthy();
-    expect(screen.getByText(/As duas medições já estão no seu histórico/)).toBeTruthy();
+    useReadingForm.mockReturnValue(buildForm({ systolic: '130', diastolic: '90' }));
 
-    // Concluir devolve a tela ao estado comum de registro.
-    await fireEvent.press(screen.getByRole('button', { name: 'Concluir' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
 
     expect(screen.queryByText('Média das duas medições')).toBeNull();
-    expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+    expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
   });
 
   it('dispensar a sugestão volta a tela ao estado comum, sem descartar o que já foi salvo', async () => {
