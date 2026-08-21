@@ -7,6 +7,7 @@ import { SecondMeasurementCard } from './SecondMeasurementCard';
 const AVERAGE: SessionReading = { systolic: 125, diastolic: 85, pulse: 75 };
 
 const onAccept = jest.fn();
+const onSubmitSecondMeasurement = jest.fn();
 const onDecline = jest.fn();
 const onDismissSummary = jest.fn();
 
@@ -16,7 +17,10 @@ function renderCard(props: Partial<React.ComponentProps<typeof SecondMeasurement
       state="offer"
       secondsRemaining={60}
       average={null}
+      isSaving={false}
+      saveError={null}
       onAccept={onAccept}
+      onSubmitSecondMeasurement={onSubmitSecondMeasurement}
       onDecline={onDecline}
       onDismissSummary={onDismissSummary}
       {...props}
@@ -76,24 +80,39 @@ describe('SecondMeasurementCard — estado offer', () => {
   });
 });
 
+/**
+ * 'measuring' deixou de ser um card na tela: os valores da segunda medição são digitados no
+ * pop-up (SecondMeasurementDialog, com testes próprios), e não mais no ReadingForm grande
+ * reaproveitado. O que se verifica aqui é só o encaixe — que o card monta o pop-up e repassa as
+ * props certas.
+ */
 describe('SecondMeasurementCard — estado measuring', () => {
-  it('anuncia que esta é a segunda de duas medições', async () => {
+  it('abre o pop-up com os campos da segunda medição, sem observação nem horário', async () => {
     await renderCard({ state: 'measuring' });
 
     expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
+    expect(screen.getByLabelText('Sistólica')).toBeTruthy();
+    expect(screen.getByLabelText('Diastólica')).toBeTruthy();
+    expect(screen.getByLabelText('Pulso')).toBeTruthy();
+    expect(screen.queryByLabelText('Observação')).toBeNull();
   });
 
-  it('mantém o contador de apoio', async () => {
+  it('não mostra mais o convite nem o contador — o pop-up substituiu o card de fundo', async () => {
     await renderCard({ state: 'measuring', secondsRemaining: 30 });
 
-    expect(screen.getByText('Sugestão: aguarde mais 30s')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
+    expect(screen.queryByText('Sugestão: aguarde mais 30s')).toBeNull();
   });
 
-  it('some com "Medir novamente" — o convite já foi aceito — e deixa só cancelar', async () => {
+  it('repassa os valores digitados no pop-up para onSubmitSecondMeasurement', async () => {
     await renderCard({ state: 'measuring' });
 
-    expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeTruthy();
+    await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+    await fireEvent.changeText(screen.getByLabelText('Diastólica'), '90');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar segunda medição' }));
+
+    expect(onSubmitSecondMeasurement).toHaveBeenCalledWith({ systolic: '130', diastolic: '90', pulse: '' });
   });
 
   it('dispara onDecline ao tocar em "Cancelar" — dá para desistir depois de aceitar', async () => {
@@ -102,6 +121,12 @@ describe('SecondMeasurementCard — estado measuring', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(onDecline).toHaveBeenCalledTimes(1);
+  });
+
+  it('mostra no pop-up o erro amigável de gravação vindo do fluxo', async () => {
+    await renderCard({ state: 'measuring', saveError: 'Não foi possível salvar sua medição. Tente novamente.' });
+
+    expect(screen.getByText('Não foi possível salvar sua medição. Tente novamente.')).toBeTruthy();
   });
 });
 
@@ -128,10 +153,11 @@ describe('SecondMeasurementCard — estado summary', () => {
     expect(screen.getByLabelText('Categoria: Estágio 1')).toBeTruthy();
   });
 
-  it('deixa claro que o resumo não é um terceiro registro salvo', async () => {
+  /** A média substituiu a primeira leitura no mesmo documento — não é um resumo à parte. */
+  it('diz que a média foi salva no histórico', async () => {
     await renderCard({ state: 'summary', average: AVERAGE, secondsRemaining: 0 });
 
-    expect(screen.getByText(/As duas medições já estão no seu histórico/)).toBeTruthy();
+    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
   });
 
   it('dispara onDismissSummary ao tocar em "Concluir"', async () => {
