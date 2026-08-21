@@ -213,6 +213,27 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(submitMock).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * CLAUDE.md §4.7: com um pop-up cobrindo a tela, o formulário atrás do scrim continua montado e
+   * navegável por gestos — quem usa leitor de tela sairia do pop-up sem perceber. Vale para o
+   * convite ('offer'), não só para o pop-up que repete os rótulos dos campos ('measuring').
+   */
+  it('esconde o formulário de fundo do leitor de tela enquanto o convite está aberto', async () => {
+    await render(<RecordScreen />);
+
+    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+
+    expect(screen.getByText('Quer confirmar com uma segunda medição?')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Salvar medição' })).toBeNull();
+
+    // Dispensar devolve o formulário ao leitor de tela — o esconde-esconde não é de mão única.
+    await fireEvent.press(screen.getByRole('button', { name: 'Não, obrigado' }));
+
+    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+  });
+
   it('não sugere segunda medição quando o salvamento falha', async () => {
     submitMock.mockResolvedValue({ success: false, readingId: null });
 

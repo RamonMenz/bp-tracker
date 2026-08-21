@@ -4,13 +4,14 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Text } from '@/components/ui/Text';
-import { ActivityIcon, ClockIcon } from '@/components/ui/icons';
+import { ActivityIcon } from '@/components/ui/icons';
 import { classifyBloodPressure } from '@/domain/bp-classification';
 import type { SessionReading } from '@/domain/session-average';
 import type { SecondMeasurementState } from '@/features/readings/useSecondMeasurementFlow';
 
 import { BpCategoryBadge, CATEGORY_LABEL } from './BpCategoryBadge';
 import { SecondMeasurementDialog } from './SecondMeasurementDialog';
+import { SecondMeasurementOfferDialog } from './SecondMeasurementOfferDialog';
 
 export interface SecondMeasurementCardProps {
   state: SecondMeasurementState;
@@ -27,21 +28,15 @@ export interface SecondMeasurementCardProps {
 }
 
 /**
- * Texto de apoio do contador. Nunca é "Aguarde..." sozinho: o app não bloqueia nada aqui — o
- * intervalo é sugestão do protocolo, e quem quiser medir antes pode (CLAUDE.md §1, interface
- * calma). Por isso o zero vira um convite, não um "liberado".
- */
-function countdownLabel(secondsRemaining: number): string {
-  return secondsRemaining > 0 ? `Sugestão: aguarde mais ${secondsRemaining}s` : 'Pode medir quando quiser';
-}
-
-/**
- * Card da sugestão de segunda medição (protocolo AHA: duas leituras com 1-2 min de intervalo,
- * reportando a média).
+ * Apresentação da sugestão de segunda medição (protocolo AHA: duas leituras com 1-2 min de
+ * intervalo, reportando a média).
+ *
+ * Despacha por estado: 'offer' e 'measuring' são pop-ups (o convite e os campos da 2ª leitura),
+ * e só 'summary' continua sendo um card inline no scroll da tela.
  *
  * Componente burro (CLAUDE.md §3.4): todo o estado da sessão mora em `useSecondMeasurementFlow` —
- * aqui só entram props e sai desenho. O estado 'idle' não é tratado: a tela só monta este card
- * quando `state !== 'idle'`.
+ * aqui só entram props e sai desenho. O estado 'idle' não é tratado: a tela só monta este
+ * componente quando `state !== 'idle'`.
  *
  * O tom é informativo, nunca prescritivo — o app registra, não diagnostica (CLAUDE.md §1).
  */
@@ -82,22 +77,15 @@ export function SecondMeasurementCard({
     );
   }
 
+  // 'offer' também virou pop-up: como card no scroll, abaixo do formulário, o convite passava
+  // despercebido justo no instante em que faz sentido — logo depois de salvar a primeira medição.
   return (
-    <Card className="gap-3">
-      <SectionHeader title="Quer confirmar com uma segunda medição?" icon={ClockIcon} />
-
-      <Text variant="body">
-        O protocolo clínico sugere medir de novo em cerca de 1 minuto, para reduzir a variação da primeira
-        leitura.
-      </Text>
-
-      <Text variant="caption">{countdownLabel(secondsRemaining)}</Text>
-
-      <View className="gap-2">
-        <Button label="Medir novamente" variant="secondary" onPress={onAccept} />
-        <Button label="Não, obrigado" variant="ghost" onPress={onDecline} />
-      </View>
-    </Card>
+    <SecondMeasurementOfferDialog
+      visible
+      secondsRemaining={secondsRemaining}
+      onAccept={onAccept}
+      onDecline={onDecline}
+    />
   );
 }
 

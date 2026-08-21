@@ -87,12 +87,14 @@ export default function RecordScreen() {
     }
   }, [autoFocus]);
 
-  // Com o pop-up da segunda medição aberto, o formulário atrás do scrim continua montado — e os
-  // campos dele têm os MESMOS rótulos dos campos do pop-up. Sem esconder este bloco do leitor de
-  // tela, quem navega por gestos ouviria dois campos "Sistólica" sem distinção (CLAUDE.md §4.7);
+  // QUALQUER pop-up sobre o formulário tem que escondê-lo do leitor de tela, não só o que repete
+  // rótulos de campo: atrás do scrim o bloco continua montado e navegável por gestos, então quem
+  // usa leitor de tela sairia do pop-up sem perceber e passearia por um conteúdo que, para quem
+  // enxerga, está coberto (CLAUDE.md §4.7). Vale para 'measuring' (cujos campos ainda por cima
+  // duplicam os rótulos "Sistólica"/"Diastólica"/"Pulso" daqui) e para 'offer'.
   // `accessibilityViewIsModal` do Card resolve isso só no iOS, e o app é Android + web.
   // gap-4 = tokens.spacing.lg, o mesmo espaçamento que o Screen já aplicava entre estes filhos.
-  const isSecondMeasurementOpen = flow.state === 'measuring';
+  const isSecondMeasurementOpen = flow.state === 'measuring' || flow.state === 'offer';
 
   return (
     <Screen>
@@ -118,9 +120,10 @@ export default function RecordScreen() {
         />
       </View>
 
-      {/* Em 'idle' o card não existe — o formulário continua sendo a primeira coisa da tela, e o
+      {/* Em 'idle' nada disto existe — o formulário continua sendo a primeira coisa da tela, e o
           caminho de registrar em ≤10s (CLAUDE.md §1) segue intacto para quem só quer uma medição.
-          Em 'measuring' o que sai daqui é o pop-up da segunda medição, não um card na tela. */}
+          Em 'offer' e 'measuring' o que sai daqui é um pop-up, não um card na tela; só o resumo
+          de 'summary' é um card inline. */}
       {flow.state !== 'idle' ? (
         <SecondMeasurementCard
           state={flow.state}

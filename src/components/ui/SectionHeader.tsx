@@ -11,6 +11,12 @@ export interface SectionHeaderProps extends ViewProps {
   icon: LucideIcon;
   /** Renderizado à direita do título — botão de ação ou seletor da seção. */
   trailing?: React.ReactNode;
+  /**
+   * Padrão 1, como nos títulos curtos (Ajustes, LastReadingCard etc.). Alguns títulos são uma
+   * frase que não cabe numa linha — truncar com reticências corta informação por causa do
+   * tamanho de fonte, o que o CLAUDE.md §4.7 proíbe (allowFontScaling nunca é desativado).
+   */
+  titleNumberOfLines?: number;
 }
 
 /**
@@ -19,7 +25,14 @@ export interface SectionHeaderProps extends ViewProps {
  * O ícone é decorativo (`accessibilityElementsHidden`) — quem o descrevesse repetiria o título
  * logo ao lado, e leitor de tela lendo "ícone de coração, Última medição" é ruído, não ajuda.
  */
-export function SectionHeader({ title, icon: Icon, trailing, className, ...props }: SectionHeaderProps) {
+export function SectionHeader({
+  title,
+  icon: Icon,
+  trailing,
+  className,
+  titleNumberOfLines = 1,
+  ...props
+}: SectionHeaderProps) {
   const scheme = useColorScheme();
   const palette = colors[scheme];
 
@@ -36,7 +49,7 @@ export function SectionHeader({ title, icon: Icon, trailing, className, ...props
         >
           <Icon size={18} color={palette.primary} strokeWidth={2.25} />
         </View>
-        <Text variant="sectionHeader" className="flex-1" numberOfLines={1}>
+        <Text variant="sectionHeader" className="flex-1" numberOfLines={titleNumberOfLines}>
           {title}
         </Text>
       </View>
