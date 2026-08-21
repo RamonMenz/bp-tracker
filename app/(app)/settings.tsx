@@ -15,6 +15,7 @@ import {
   BellIcon,
   CheckIcon,
   ChevronRightIcon,
+  CircleHelpIcon,
   ClockIcon,
   LogOutIcon,
   MoonIcon,
@@ -399,6 +400,25 @@ export default function SettingsScreen() {
       </Card>
 
       <Card className="gap-4">
+        <SectionHeader title="Ajuda" icon={CircleHelpIcon} />
+
+        {/* Atalho para reabrir o onboarding a qualquer momento — mesmo padrão visual da linha
+            "Política de privacidade" no Card "Privacidade" logo abaixo: texto em destaque na cor
+            primária, com chevron também primário. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Como usar o app"
+          onPress={handleOpenOnboarding}
+          className="min-h-[48px] flex-row items-center justify-between gap-2"
+        >
+          <Text variant="body" color={palette.primary} style={{ fontWeight: '600' }}>
+            Como usar o app
+          </Text>
+          <ChevronRightIcon size={18} color={palette.primary} strokeWidth={2.25} />
+        </Pressable>
+      </Card>
+
+      <Card className="gap-4">
         <SectionHeader title="Conta" icon={UserRoundIcon} />
 
         <Button label="Sair" variant="secondary" icon={LogOutIcon} onPress={handleSignOut} loading={isSigningOut} />
@@ -408,19 +428,6 @@ export default function SettingsScreen() {
             {signOutError}
           </Text>
         ) : null}
-
-        {/* Atalho para reabrir o onboarding a qualquer momento — mesmo padrão visual da linha
-            "Política de privacidade" no Card "Privacidade" logo abaixo: Pressable com chevron,
-            sem Card próprio, porque o pedido é "acessível a qualquer momento", não destaque. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Como usar o app"
-          onPress={handleOpenOnboarding}
-          className="min-h-[48px] flex-row items-center justify-between gap-2"
-        >
-          <Text variant="body">Como usar o app</Text>
-          <ChevronRightIcon size={18} color={palette.muted} strokeWidth={2.25} />
-        </Pressable>
 
         <View className="gap-2">
           <Text variant="caption">

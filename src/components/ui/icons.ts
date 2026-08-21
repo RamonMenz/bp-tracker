@@ -14,6 +14,11 @@ export { default as BellIcon } from 'lucide-react-native/icons/bell';
 export { default as CalendarDaysIcon } from 'lucide-react-native/icons/calendar-days';
 export { default as CheckIcon } from 'lucide-react-native/icons/circle-check';
 export { default as ChevronRightIcon } from 'lucide-react-native/icons/chevron-right';
+// A versão instalada do pacote renomeou este ícone de circle-help para circle-question-mark
+// (circle-help.d.ts virou só um shim de tipos, sem arquivo .js/.mjs correspondente) — path e nome
+// do componente importado seguem o pacote; o export continua CircleHelpIcon, o nome que o pedido
+// original especificou e que o resto do código usa.
+export { default as CircleHelpIcon } from 'lucide-react-native/icons/circle-question-mark';
 export { default as ClipboardListIcon } from 'lucide-react-native/icons/clipboard-list';
 export { default as ClockIcon } from 'lucide-react-native/icons/clock';
 export { default as DownloadIcon } from 'lucide-react-native/icons/download';
