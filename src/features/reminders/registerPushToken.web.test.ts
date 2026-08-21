@@ -144,6 +144,16 @@ describe('registerPushToken (web) — erros de getToken/setDoc', () => {
     );
   });
 
+  it('nunca propaga error.message cru de getMessagingInstance — sempre a mensagem genérica amigável', async () => {
+    mockGetMessagingInstance.mockRejectedValue(new Error('messaging/unsupported-browser'));
+
+    await expect(registerPushToken('user-1')).rejects.toThrow(
+      'Não foi possível ativar as notificações. Tente novamente.',
+    );
+
+    expect(mockServiceWorkerRegister).not.toHaveBeenCalled();
+  });
+
   it('mesma mensagem genérica quando o registro do service worker falha', async () => {
     mockServiceWorkerRegister.mockRejectedValue(new Error('SecurityError'));
 

@@ -2,14 +2,32 @@ import { act, renderHook } from '@testing-library/react-native';
 
 import type { SessionReading } from '@/domain/session-average';
 
-import { useSecondMeasurementFlow } from './useSecondMeasurementFlow';
+import { useSecondMeasurementFlow, type FirstMeasurement } from './useSecondMeasurementFlow';
 
-const READING_A: SessionReading = { systolic: 120, diastolic: 80, pulse: 70 };
+const mockUpdateReading = jest.fn<Promise<boolean>, [string, unknown]>();
+
+// useSecondMeasurementFlow agora chama useUpdateReading para persistir a média — mesmo padrão de
+// stub já usado nos testes de useReadingForm para useAddReading/useUpdateReading: o hook de
+// escrita vira um mock que só registra a chamada, sem puxar useSession/Firebase de verdade.
+jest.mock('./useUpdateReading', () => ({
+  useUpdateReading: () => ({ updateReading: mockUpdateReading, isSaving: false, error: null }),
+}));
+
+const READING_A: FirstMeasurement = {
+  id: 'reading-1',
+  systolic: 120,
+  diastolic: 80,
+  pulse: 70,
+  note: 'Antes do café.',
+  measuredAt: new Date(2026, 7, 14, 8, 0, 0),
+};
 const READING_B: SessionReading = { systolic: 130, diastolic: 90, pulse: 80 };
 
 describe('useSecondMeasurementFlow', () => {
   beforeEach(() => {
     jest.useFakeTimers();
+    jest.clearAllMocks();
+    mockUpdateReading.mockResolvedValue(true);
   });
 
   afterEach(() => {
@@ -57,25 +75,94 @@ describe('useSecondMeasurementFlow', () => {
     expect(result.current.secondsRemaining).toBe(45);
   });
 
-  it('measuring → handleReadingSaved(B) vira summary com a média de A e B', async () => {
-    const { result } = await renderHook(() => useSecondMeasurementFlow());
+  describe('submitSecondMeasurement', () => {
+    it('measuring → ATUALIZA o documento da primeira medição com a média, e vira summary', async () => {
+      const { result } = await renderHook(() => useSecondMeasurementFlow());
 
-    await act(async () => {
-      result.current.handleReadingSaved(READING_A);
+      await act(async () => {
+        result.current.handleReadingSaved(READING_A);
+      });
+
+      await act(async () => {
+        result.current.acceptSecondMeasurement();
+      });
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.submitSecondMeasurement(READING_B);
+      });
+
+      expect(success).toBe(true);
+      expect(result.current.state).toBe('summary');
+      // (120+130)/2 = 125, (80+90)/2 = 85, (70+80)/2 = 75 — nenhuma conta exige arredondamento,
+      // o resultado fica óbvio de conferir.
+      expect(result.current.average).toEqual({ systolic: 125, diastolic: 85, pulse: 75 });
+
+      // Não cria um segundo documento — atualiza o MESMO id da primeira medição, com os valores
+      // da média já como string (formato ReadingFormValues) e note/measuredAt preservados.
+      expect(mockUpdateReading).toHaveBeenCalledTimes(1);
+      expect(mockUpdateReading).toHaveBeenCalledWith('reading-1', {
+        systolic: '125',
+        diastolic: '85',
+        pulse: '75',
+        note: 'Antes do café.',
+        measuredAt: READING_A.measuredAt,
+      });
     });
 
-    await act(async () => {
-      result.current.acceptSecondMeasurement();
+    it('updateReading falhando mantém measuring, sem média, com saveError refletindo o hook', async () => {
+      mockUpdateReading.mockResolvedValue(false);
+
+      const { result } = await renderHook(() => useSecondMeasurementFlow());
+
+      await act(async () => {
+        result.current.handleReadingSaved(READING_A);
+      });
+
+      await act(async () => {
+        result.current.acceptSecondMeasurement();
+      });
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.submitSecondMeasurement(READING_B);
+      });
+
+      expect(success).toBe(false);
+      expect(result.current.state).toBe('measuring');
+      expect(result.current.average).toBeNull();
+      // saveError é o que useUpdateReading (mockado) expõe — o mock deste arquivo devolve null
+      // por padrão, então é isso que se espera aqui: o hook nunca inventa a própria mensagem.
+      expect(result.current.saveError).toBeNull();
     });
 
-    await act(async () => {
-      result.current.handleReadingSaved(READING_B);
-    });
+    it('fora de measuring é no-op: não chama updateReading, devolve false, não muda o estado', async () => {
+      const { result } = await renderHook(() => useSecondMeasurementFlow());
 
-    expect(result.current.state).toBe('summary');
-    // (120+130)/2 = 125, (80+90)/2 = 85, (70+80)/2 = 75 — nenhuma conta exige arredondamento,
-    // o resultado fica óbvio de conferir.
-    expect(result.current.average).toEqual({ systolic: 125, diastolic: 85, pulse: 75 });
+      // Em 'idle'.
+      let successFromIdle: boolean | undefined;
+      await act(async () => {
+        successFromIdle = await result.current.submitSecondMeasurement(READING_B);
+      });
+
+      expect(successFromIdle).toBe(false);
+      expect(result.current.state).toBe('idle');
+      expect(mockUpdateReading).not.toHaveBeenCalled();
+
+      // Em 'offer' (primeira medição já salva, mas ainda não aceitou a segunda).
+      await act(async () => {
+        result.current.handleReadingSaved(READING_A);
+      });
+
+      let successFromOffer: boolean | undefined;
+      await act(async () => {
+        successFromOffer = await result.current.submitSecondMeasurement(READING_B);
+      });
+
+      expect(successFromOffer).toBe(false);
+      expect(result.current.state).toBe('offer');
+      expect(mockUpdateReading).not.toHaveBeenCalled();
+    });
   });
 
   it('o contador nunca passa de 0 para negativo, e chegar a 0 não muda o estado sozinho', async () => {
@@ -171,7 +258,7 @@ describe('useSecondMeasurementFlow', () => {
     });
 
     await act(async () => {
-      result.current.handleReadingSaved(READING_B);
+      await result.current.submitSecondMeasurement(READING_B);
     });
 
     await act(async () => {
@@ -190,9 +277,10 @@ describe('useSecondMeasurementFlow', () => {
     });
 
     // Se a chamada abaixo lançasse, o act a propagaria e o teste falharia — não é preciso um
-    // try/catch explícito para cobrir "não lança".
+    // try/catch explícito para cobrir "não lança". Reusa READING_A (não importa o conteúdo, só
+    // que o estado e a média não se movem).
     await act(async () => {
-      result.current.handleReadingSaved(READING_B);
+      result.current.handleReadingSaved(READING_A);
     });
 
     expect(result.current.state).toBe('offer');
@@ -211,7 +299,7 @@ describe('useSecondMeasurementFlow', () => {
     });
 
     await act(async () => {
-      result.current.handleReadingSaved(READING_B);
+      await result.current.submitSecondMeasurement(READING_B);
     });
 
     const averageBeforeExtraCall = result.current.average;

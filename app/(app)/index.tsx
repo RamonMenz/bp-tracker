@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { TextInput } from 'react-native';
+import { TextInput, View } from 'react-native';
 
 import { LastReadingCard } from '@/components/bp/LastReadingCard';
 import { ReadingForm } from '@/components/bp/ReadingForm';
@@ -48,8 +48,10 @@ export default function RecordScreen() {
 
   /**
    * O retrato dos campos TEM que ser tirado antes do await: no modo criação, `useReadingForm`
-   * limpa os campos para '' assim que o submit dá certo — ler `form.systolic` depois do await
-   * pegaria string vazia, e a média da sessão sairia de um `Number('')`.
+   * limpa TODOS os campos assim que o submit dá certo — ler `form.systolic` (ou `form.note`,
+   * `form.measuredAt`) depois do await pegaria valores já zerados. `readingId`, por outro lado,
+   * só existe DEPOIS do submit (é o id devolvido pelo Firestore) — por isso o objeto completo só
+   * é montado ao final, quando já se sabe que deu certo.
    */
   async function handleSubmit(): Promise<void> {
     const snapshot: SessionReading = {
@@ -57,10 +59,23 @@ export default function RecordScreen() {
       diastolic: Number(form.diastolic),
       pulse: form.pulse === '' ? null : Number(form.pulse),
     };
+    const note = form.note === '' ? null : form.note;
+    const measuredAt = form.measuredAt;
 
-    if (await form.submit()) {
-      flow.handleReadingSaved(snapshot);
+    const { success, readingId } = await form.submit();
+
+    if (success && readingId !== null) {
+      flow.handleReadingSaved({ ...snapshot, id: readingId, note, measuredAt });
     }
+  }
+
+  /** A segunda medição vem do pop-up, em string — o fluxo trabalha com números. */
+  function handleSubmitSecondMeasurement(values: { systolic: string; diastolic: string; pulse: string }): void {
+    void flow.submitSecondMeasurement({
+      systolic: Number(values.systolic),
+      diastolic: Number(values.diastolic),
+      pulse: values.pulse === '' ? null : Number(values.pulse),
+    });
   }
 
   // Toque no lembrete (local ou push) manda para cá com autoFocus=systolic — quem tocou quer
@@ -72,32 +87,49 @@ export default function RecordScreen() {
     }
   }, [autoFocus]);
 
+  // Com o pop-up da segunda medição aberto, o formulário atrás do scrim continua montado — e os
+  // campos dele têm os MESMOS rótulos dos campos do pop-up. Sem esconder este bloco do leitor de
+  // tela, quem navega por gestos ouviria dois campos "Sistólica" sem distinção (CLAUDE.md §4.7);
+  // `accessibilityViewIsModal` do Card resolve isso só no iOS, e o app é Android + web.
+  // gap-4 = tokens.spacing.lg, o mesmo espaçamento que o Screen já aplicava entre estes filhos.
+  const isSecondMeasurementOpen = flow.state === 'measuring';
+
   return (
     <Screen>
-      <Text variant="title">Registrar medição</Text>
+      <View
+        accessibilityElementsHidden={isSecondMeasurementOpen}
+        importantForAccessibility={isSecondMeasurementOpen ? 'no-hide-descendants' : 'auto'}
+        className="gap-4"
+      >
+        <Text variant="title">Registrar medição</Text>
 
-      {showDisclaimer ? (
-        <Card>
-          <Disclaimer onDismiss={handleDismissDisclaimer} />
-        </Card>
-      ) : null}
+        {showDisclaimer ? (
+          <Card>
+            <Disclaimer onDismiss={handleDismissDisclaimer} />
+          </Card>
+        ) : null}
 
-      <ReadingForm
-        form={form}
-        title="Nova medição"
-        submitLabel="Salvar medição"
-        systolicRef={systolicRef}
-        onSubmit={() => void handleSubmit()}
-      />
+        <ReadingForm
+          form={form}
+          title="Nova medição"
+          submitLabel="Salvar medição"
+          systolicRef={systolicRef}
+          onSubmit={() => void handleSubmit()}
+        />
+      </View>
 
       {/* Em 'idle' o card não existe — o formulário continua sendo a primeira coisa da tela, e o
-          caminho de registrar em ≤10s (CLAUDE.md §1) segue intacto para quem só quer uma medição. */}
+          caminho de registrar em ≤10s (CLAUDE.md §1) segue intacto para quem só quer uma medição.
+          Em 'measuring' o que sai daqui é o pop-up da segunda medição, não um card na tela. */}
       {flow.state !== 'idle' ? (
         <SecondMeasurementCard
           state={flow.state}
           secondsRemaining={flow.secondsRemaining}
           average={flow.average}
+          isSaving={flow.isSaving}
+          saveError={flow.saveError}
           onAccept={flow.acceptSecondMeasurement}
+          onSubmitSecondMeasurement={handleSubmitSecondMeasurement}
           onDecline={flow.decline}
           onDismissSummary={flow.dismissSummary}
         />

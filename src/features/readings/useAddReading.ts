@@ -16,7 +16,7 @@ export interface ReadingFormValues {
 }
 
 export interface UseAddReadingResult {
-  addReading: (values: ReadingFormValues) => Promise<boolean>;
+  addReading: (values: ReadingFormValues) => Promise<string | false>;
   isSaving: boolean;
   error: string | null;
 }
@@ -30,7 +30,7 @@ export function useAddReading(): UseAddReadingResult {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function addReading(values: ReadingFormValues): Promise<boolean> {
+  async function addReading(values: ReadingFormValues): Promise<string | false> {
     if (user === null) {
       setError(NOT_SIGNED_IN_MESSAGE);
       return false;
@@ -62,8 +62,8 @@ export function useAddReading(): UseAddReadingResult {
         return false;
       }
 
-      await persistReading(user.uid, input);
-      return true;
+      const readingId = await persistReading(user.uid, input);
+      return readingId;
     } catch (persistError) {
       setError(persistError instanceof Error ? persistError.message : GENERIC_MESSAGE);
       return false;

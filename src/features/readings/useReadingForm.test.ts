@@ -5,7 +5,7 @@ import type { Reading } from '@/types/models';
 import { NOTE_MAX_LENGTH } from './reading.schema';
 import { useReadingForm, type EditableReading } from './useReadingForm';
 
-const mockAddReading = jest.fn<Promise<boolean>, [unknown]>();
+const mockAddReading = jest.fn<Promise<string | false>, [unknown]>();
 const mockUpdateReading = jest.fn<Promise<boolean>, [string, unknown]>();
 
 // useReadingForm delega a persistência a useAddReading/useUpdateReading — que, por sua vez, puxam
@@ -38,7 +38,7 @@ function makeEditableReading(overrides: Partial<Reading> = {}): EditableReading 
 describe('useReadingForm — campo de observação', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAddReading.mockResolvedValue(true);
+    mockAddReading.mockResolvedValue('reading-1');
     mockUpdateReading.mockResolvedValue(true);
   });
 
@@ -147,7 +147,7 @@ describe('useReadingForm — campo de observação', () => {
 describe('useReadingForm — modo edição', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAddReading.mockResolvedValue(true);
+    mockAddReading.mockResolvedValue('reading-1');
     mockUpdateReading.mockResolvedValue(true);
   });
 
@@ -203,11 +203,15 @@ describe('useReadingForm — modo edição', () => {
     });
 
     let success: boolean | undefined;
+    let readingId: string | null | undefined;
     await act(async () => {
-      success = await result.current.submit();
+      ({ success, readingId } = await result.current.submit());
     });
 
     expect(success).toBe(true);
+    // Modo edição nunca cria documento novo — readingId é sempre null aqui, o único id envolvido
+    // (initialReading.id) já era conhecido antes do submit.
+    expect(readingId).toBeNull();
     expect(result.current.systolic).toBe('120');
     expect(result.current.diastolic).toBe('82');
   });
@@ -219,7 +223,7 @@ describe('useReadingForm — modo edição', () => {
 
     let success: boolean | undefined;
     await act(async () => {
-      success = await result.current.submit();
+      ({ success } = await result.current.submit());
     });
 
     expect(success).toBe(false);
@@ -243,7 +247,7 @@ describe('useReadingForm — modo edição', () => {
 describe('useReadingForm — modo criação continua intacto', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockAddReading.mockResolvedValue(true);
+    mockAddReading.mockResolvedValue('reading-1');
     mockUpdateReading.mockResolvedValue(true);
   });
 
@@ -280,5 +284,41 @@ describe('useReadingForm — modo criação continua intacto', () => {
 
     expect(result.current.systolic).toBe('');
     expect(result.current.diastolic).toBe('');
+  });
+
+  it('devolve o id do documento criado quando o salvamento dá certo', async () => {
+    const { result } = await renderHook(() => useReadingForm());
+
+    await act(async () => {
+      result.current.setSystolic('120');
+      result.current.setDiastolic('80');
+    });
+
+    let readingId: string | null | undefined;
+    await act(async () => {
+      ({ readingId } = await result.current.submit());
+    });
+
+    expect(readingId).toBe('reading-1');
+  });
+
+  it('devolve readingId null quando o salvamento falha', async () => {
+    mockAddReading.mockResolvedValue(false);
+
+    const { result } = await renderHook(() => useReadingForm());
+
+    await act(async () => {
+      result.current.setSystolic('120');
+      result.current.setDiastolic('80');
+    });
+
+    let success: boolean | undefined;
+    let readingId: string | null | undefined;
+    await act(async () => {
+      ({ success, readingId } = await result.current.submit());
+    });
+
+    expect(success).toBe(false);
+    expect(readingId).toBeNull();
   });
 });

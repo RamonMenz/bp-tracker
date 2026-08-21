@@ -18,6 +18,16 @@ jest.mock('@/features/readings/useReadingForm', () => ({
   useReadingForm: jest.fn(),
 }));
 
+const mockUpdateReading = jest.fn<Promise<boolean>, [string, unknown]>();
+
+// useReadingForm continua mockado — o que se testa aqui é a ORQUESTRAÇÃO da tela (comentário mais
+// abaixo). useSecondMeasurementFlow, porém, roda REAL, e agora chama useUpdateReading por baixo
+// (para persistir a média da segunda medição) — que, por sua vez, puxa useSession e todo o SDK do
+// Firebase. Mocked no nível do hook de escrita, mesmo padrão já usado em edit-reading.test.tsx.
+jest.mock('@/features/readings/useUpdateReading', () => ({
+  useUpdateReading: () => ({ updateReading: mockUpdateReading, isSaving: false, error: null }),
+}));
+
 const { useLastReading } = jest.requireMock('@/features/readings/useLastReading') as {
   useLastReading: jest.Mock;
 };
@@ -26,7 +36,7 @@ const { useReadingForm } = jest.requireMock('@/features/readings/useReadingForm'
 };
 
 const setNoteMock = jest.fn();
-const submitMock = jest.fn<Promise<boolean>, []>();
+const submitMock = jest.fn<Promise<{ success: boolean; readingId: string | null }>, []>();
 
 function buildForm(overrides: Record<string, unknown> = {}) {
   return {
@@ -55,25 +65,33 @@ beforeEach(() => {
 
   useLastReading.mockReturnValue({ lastReading: null, isLoading: false });
   useReadingForm.mockReturnValue(buildForm());
+  mockUpdateReading.mockResolvedValue(true);
 });
 
 describe('RecordScreen — campo de observação', () => {
-  it('esconde pulso e observação até o usuário tocar em "Adicionar pulso e observação"', async () => {
+  it('esconde pulso e observação até o usuário tocar em "Pulso e observação", e esconde de novo ao tocar outra vez', async () => {
     await render(<RecordScreen />);
 
     expect(screen.queryByLabelText('Observação')).toBeNull();
 
     // fireEvent.press é assíncrono nesta versão do RTL — sem o await, a asserção seguinte roda
     // antes do re-render que a revelação do campo dispara.
-    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+    const disclosure = screen.getByLabelText('Pulso e observação');
+    await fireEvent.press(disclosure);
 
     expect(screen.getByLabelText('Observação')).toBeTruthy();
+
+    // O mesmo controle que abriu também fecha — accordion de verdade, não uma revelação de mão
+    // única sem jeito de voltar atrás.
+    await fireEvent.press(disclosure);
+
+    expect(screen.queryByLabelText('Observação')).toBeNull();
   });
 
   it('repassa o texto digitado para setNote do formulário', async () => {
     await render(<RecordScreen />);
 
-    await fireEvent.press(screen.getByLabelText('Adicionar pulso e observação'));
+    await fireEvent.press(screen.getByLabelText('Pulso e observação'));
     fireEvent.changeText(screen.getByLabelText('Observação'), 'Medi após caminhada.');
 
     expect(setNoteMock).toHaveBeenCalledWith('Medi após caminhada.');
@@ -115,7 +133,7 @@ describe('RecordScreen — campo de observação', () => {
  */
 describe('RecordScreen — sugestão de segunda medição', () => {
   beforeEach(() => {
-    submitMock.mockResolvedValue(true);
+    submitMock.mockResolvedValue({ success: true, readingId: 'reading-1' });
   });
 
   it('não mostra nada sobre segunda medição antes de salvar a primeira', async () => {
@@ -124,30 +142,39 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
   });
 
-  it('percorre offer → measuring → summary → idle com a média das duas medições', async () => {
+  it('percorre offer → measuring → summary → idle, com a segunda medição vinda do pop-up', async () => {
     await render(<RecordScreen />);
 
-    // 1ª medição (120/80, sem pulso): o card de sugestão aparece com o contador cheio.
+    // 1ª medição (120/80, sem pulso), pelo formulário grande de sempre: o card de sugestão
+    // aparece com o contador cheio.
     await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
 
     expect(screen.getByText('Quer confirmar com uma segunda medição?')).toBeTruthy();
     expect(screen.getByText('Sugestão: aguarde mais 60s')).toBeTruthy();
 
-    // O formulário é a MESMA instância de sempre — continua na tela, pronto para a segunda.
-    useReadingForm.mockReturnValue(buildForm({ systolic: '130', diastolic: '90' }));
-
     await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
 
+    // A 2ª medição NÃO reaproveita mais o formulário grande: ela é digitada no pop-up, que pede
+    // só os números.
     expect(screen.getByText('Medição 2 de 2')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'Medir novamente' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Salvar segunda medição' })).toBeTruthy();
 
-    // 2ª medição (130/90): a média de 120/80 e 130/90 é 125/85.
-    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+    await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+    await fireEvent.changeText(screen.getByLabelText('Diastólica'), '90');
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar segunda medição' }));
+
+    // A média de 120/80 e 130/90 é 125/85 — e ela ATUALIZA o documento da primeira medição
+    // (reading-1), em vez de criar um segundo registro.
+    expect(mockUpdateReading).toHaveBeenCalledTimes(1);
+    expect(mockUpdateReading).toHaveBeenCalledWith(
+      'reading-1',
+      expect.objectContaining({ systolic: '125', diastolic: '85' }),
+    );
 
     expect(screen.getByText('Média das duas medições')).toBeTruthy();
     expect(screen.getByText('125/85')).toBeTruthy();
-    expect(screen.getByText(/As duas medições já estão no seu histórico/)).toBeTruthy();
+    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
 
     // Concluir devolve a tela ao estado comum de registro.
     await fireEvent.press(screen.getByRole('button', { name: 'Concluir' }));
@@ -155,6 +182,24 @@ describe('RecordScreen — sugestão de segunda medição', () => {
     expect(screen.queryByText('Média das duas medições')).toBeNull();
     expect(screen.queryByText('Quer confirmar com uma segunda medição?')).toBeNull();
     expect(screen.getByRole('button', { name: 'Salvar medição' })).toBeTruthy();
+  });
+
+  /** Falhar ao gravar a média mantém o pop-up aberto, com o que já foi digitado e o erro à vista. */
+  it('mantém o pop-up aberto quando a gravação da média falha', async () => {
+    mockUpdateReading.mockResolvedValue(false);
+
+    await render(<RecordScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar medição' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Medir novamente' }));
+
+    await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+    await fireEvent.changeText(screen.getByLabelText('Diastólica'), '90');
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar segunda medição' }));
+
+    expect(screen.queryByText('Média das duas medições')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Salvar segunda medição' })).toBeTruthy();
+    expect(screen.getByLabelText('Sistólica').props.value).toBe('130');
   });
 
   it('dispensar a sugestão volta a tela ao estado comum, sem descartar o que já foi salvo', async () => {
@@ -169,7 +214,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
   });
 
   it('não sugere segunda medição quando o salvamento falha', async () => {
-    submitMock.mockResolvedValue(false);
+    submitMock.mockResolvedValue({ success: false, readingId: null });
 
     await render(<RecordScreen />);
 

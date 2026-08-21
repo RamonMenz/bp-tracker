@@ -153,7 +153,8 @@ export function TrendChart({ trend7d, trend30d, isLoading }: TrendChartProps) {
               dataPointsColor={palette.primary}
               dataPointsColor2={palette.muted}
               curved
-              hideRules
+              rulesColor={palette.border}
+              rulesType="dashed"
               xAxisColor={palette.border}
               yAxisColor={palette.border}
               yAxisTextStyle={{ color: palette.muted, fontSize: 12 }}

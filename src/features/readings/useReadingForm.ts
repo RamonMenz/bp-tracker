@@ -4,15 +4,8 @@ import { useMemo, useState } from 'react';
 import { classifyBloodPressure, type BpCategory } from '@/domain/bp-classification';
 import type { Reading } from '@/types/models';
 
-import {
-  DIASTOLIC_MAX,
-  DIASTOLIC_MIN,
-  NOTE_MAX_LENGTH,
-  PULSE_MAX,
-  PULSE_MIN,
-  SYSTOLIC_MAX,
-  SYSTOLIC_MIN,
-} from './reading.schema';
+import { computeBpFieldErrors, isBpPairValid } from './reading-field-errors';
+import { NOTE_MAX_LENGTH } from './reading.schema';
 import { useAddReading } from './useAddReading';
 import { useUpdateReading } from './useUpdateReading';
 
@@ -51,24 +44,14 @@ export interface UseReadingFormResult {
   previewCategory: BpCategory | null;
   /** false enquanto faltar campo obrigatório ou houver erro de faixa — o botão Salvar espelha isto. */
   canSubmit: boolean;
-  /** Cria ou atualiza, conforme o modo. `true` = gravou; é o gancho para a tela navegar depois. */
-  submit: () => Promise<boolean>;
+  /**
+   * Cria ou atualiza, conforme o modo. `success` = gravou; é o gancho para a tela navegar depois.
+   * `readingId` só é preenchido em modo CRIAÇÃO com sucesso; é `null` em modo edição ou em
+   * qualquer falha.
+   */
+  submit: () => Promise<{ success: boolean; readingId: string | null }>;
   isSaving: boolean;
   submitError: string | null;
-}
-
-function rangeError(value: string, min: number, max: number): string | null {
-  if (value === '') {
-    return null;
-  }
-
-  const parsed = Number(value);
-
-  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
-    return `Informe um valor entre ${min} e ${max}.`;
-  }
-
-  return null;
 }
 
 // Mesma regra dos campos numéricos: só acusa erro quando o conteúdo já ultrapassa o limite, nunca
@@ -119,28 +102,17 @@ export function useReadingForm(initialReading?: EditableReading): UseReadingForm
   const [note, setNote] = useState(() => initialReading?.note ?? '');
   const [measuredAt, setMeasuredAt] = useState(() => initialReading?.measuredAt ?? new Date());
 
-  const fieldErrors = useMemo<ReadingFieldErrors>(() => {
-    const systolicRange = rangeError(systolic, SYSTOLIC_MIN, SYSTOLIC_MAX);
-    const diastolicRange = rangeError(diastolic, DIASTOLIC_MIN, DIASTOLIC_MAX);
-
-    // A relação entre os dois só é checável quando ambos estão dentro da própria faixa; senão a
-    // mensagem "menor que a sistólica" apareceria por cima de um valor que já é inválido sozinho.
-    const isPairComparable = systolicRange === null && diastolicRange === null && systolic !== '' && diastolic !== '';
-    const isPairInverted = isPairComparable && Number(systolic) <= Number(diastolic);
-
-    return {
-      systolic: systolicRange,
-      diastolic: diastolicRange ?? (isPairInverted ? 'Deve ser menor que a sistólica.' : null),
-      pulse: rangeError(pulse, PULSE_MIN, PULSE_MAX),
+  // As regras dos três campos numéricos moram em reading-field-errors.ts — as MESMAS que o pop-up
+  // da segunda medição usa, para "sistólica maior que a diastólica" não existir em duas cópias.
+  const fieldErrors = useMemo<ReadingFieldErrors>(
+    () => ({
+      ...computeBpFieldErrors({ systolic, diastolic, pulse }),
       note: noteError(note, NOTE_MAX_LENGTH),
-    };
-  }, [systolic, diastolic, pulse, note]);
+    }),
+    [systolic, diastolic, pulse, note],
+  );
 
-  // O par é classificável assim que os dois campos estão válidos entre si — o pulso, que é
-  // opcional, não entra na conta: um pulso fora de faixa não deve apagar a classificação da
-  // pressão que o usuário acabou de digitar.
-  const isPairValid =
-    systolic !== '' && diastolic !== '' && fieldErrors.systolic === null && fieldErrors.diastolic === null;
+  const isPairValid = isBpPairValid({ systolic, diastolic, pulse }, fieldErrors);
 
   const previewCategory = isPairValid ? classifyBloodPressure(Number(systolic), Number(diastolic)) : null;
 
@@ -150,31 +122,33 @@ export function useReadingForm(initialReading?: EditableReading): UseReadingForm
   // já visível no campo, do que deixar o submit falhar e mostrar o erro genérico do repositório.
   const canSubmit = isPairValid && fieldErrors.pulse === null && fieldErrors.note === null;
 
-  async function submit(): Promise<boolean> {
+  async function submit(): Promise<{ success: boolean; readingId: string | null }> {
     const values = { systolic, diastolic, pulse, note, measuredAt };
 
-    const success =
-      initialReading !== undefined
-        ? await update.updateReading(initialReading.id, values)
-        : await add.addReading(values);
+    if (initialReading !== undefined) {
+      const success = await update.updateReading(initialReading.id, values);
+      return { success, readingId: null };
+    }
+
+    const result = await add.addReading(values);
+    const success = result !== false;
 
     if (success) {
       // Falha de háptico (aparelho sem motor, web) não pode derrubar um salvamento que deu certo.
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
 
-      // Só o modo criação limpa os campos, para o próximo registro começar do zero na mesma tela.
-      // Na edição isso faria o formulário piscar em branco antes da tela sair de cena; quem chamou
-      // decide o que fazer com o `true` devolvido aqui (a rota de edição volta para o histórico).
-      if (initialReading === undefined) {
-        setSystolic('');
-        setDiastolic('');
-        setPulse('');
-        setNote('');
-        setMeasuredAt(new Date());
-      }
+      // Só o modo criação chega até aqui (edição retorna antes, acima) — limpa os campos para o
+      // próximo registro começar do zero na mesma tela. Na edição isso faria o formulário piscar
+      // em branco antes da tela sair de cena; quem chamou decide o que fazer com o `success`
+      // devolvido aqui (a rota de edição volta para o histórico).
+      setSystolic('');
+      setDiastolic('');
+      setPulse('');
+      setNote('');
+      setMeasuredAt(new Date());
     }
 
-    return success;
+    return { success, readingId: success ? result : null };
   }
 
   return {
