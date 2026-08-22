@@ -41,6 +41,10 @@ interface RowItem {
 
 type ListItem = HeaderItem | RowItem;
 
+/** Ver comentário do `handleCommitLayoutEffect` em HistoryScreen — janela de tolerância pra
+ *  reafirmar o scroll depois de excluir uma linha, enquanto a FlashList ainda assenta sozinha. */
+const SCROLL_RESTORE_WINDOW_MS = 600;
+
 function average(values: number[]): number {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
 }
@@ -114,30 +118,36 @@ export default function HistoryScreen() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const flashListRef = useRef<FlashListRef<ListItem>>(null);
-  /** Offset e tamanho de `readings` capturados no instante da exclusão — o que
+  /** Offset, tamanho de `readings` e prazo capturados no instante da exclusão — o que
    *  `handleCommitLayoutEffect` (abaixo) usa pra saber SE e PARA ONDE restaurar o scroll. `null`
    *  quando não há restauração pendente. */
-  const pendingScrollRestoreRef = useRef<{ offset: number; readingsLengthBeforeDelete: number } | null>(
-    null,
-  );
+  const pendingScrollRestoreRef = useRef<
+    { offset: number; readingsLengthBeforeDelete: number; expiresAt: number } | null
+  >(null);
 
   // BUG: excluir uma medição jogava a rolagem para o fundo da lista. `FlashList` tenta preservar
   // a posição sozinho (`maintainVisibleContentPosition`, ligado por padrão), mas esse recurso
   // depende do ScrollView NATIVO entender essa prop — e o ScrollView do react-native-web não a
-  // implementa. Sem esse suporte, a projeção de offset da lib calcula um ajuste errado e roda por
-  // cima do nosso `scrollToOffset` (ela mesma se descreve como assentando de forma assíncrona,
-  // "~200-300ms depois"), então uma correção de uma vez só (ex.: um único requestAnimationFrame)
-  // não bastava — a lib corrigia de novo por cima, ainda levando pro fundo. `disabled` no prop
-  // `maintainVisibleContentPosition` (ver FlashList mais abaixo) desliga essa projeção só na web,
-  // deixando nosso restore como único mecanismo ali; no Android o recurso nativo da lib funciona
-  // de verdade — não desligamos por lá.
+  // implementa. `disabled` no prop `maintainVisibleContentPosition` (ver FlashList mais abaixo)
+  // desliga essa projeção só na web; no Android o recurso nativo da lib funciona de verdade — não
+  // desligamos por lá.
   //
-  // `onCommitLayoutEffect`, e não um rAF avulso, é quem diz com precisão quando o layout da linha
-  // a menos de fato assentou — ele roda de um useLayoutEffect interno da FlashList. Por isso a
-  // captura (em handleConfirmDelete) e a checagem (aqui) SÓ mexem em refs dentro de handlers/
-  // callbacks, nunca no corpo do componente: um useEffect ou uma leitura de ref durante o render
-  // deste componente assentaria DEPOIS do useLayoutEffect da FlashList no mesmo commit (efeito de
-  // filho roda antes do do pai), tarde demais pra este callback já ver a decisão tomada.
+  // Mesmo desligada, uma restauração de UMA VEZ SÓ não basta: confirmado com uma repro isolada
+  // (FlashList + ConfirmDialog reais, fora do app, rodando num navegador de verdade — não dava
+  // pra reproduzir isto só lendo o código-fonte da lib) que, ao remover uma linha, a FlashList
+  // ainda corrige a posição sozinha em MAIS DE UM commit seguinte — ela mesma se descreve como
+  // assentando de forma assíncrona, "~200-300ms depois". Um único `scrollToOffset` (via rAF ou
+  // direto no primeiro commit) fica pra trás: a lib corrige de novo por cima logo depois, ainda
+  // levando pro fundo. Por isso este handler REAFIRMA o offset em TODO commit que a FlashList
+  // reportar enquanto a restauração estiver pendente, não só na primeira vez — só desiste depois
+  // de EXPIRE_MS (a repro mostrou a lib convergir em ~150-200ms; a margem é folga, não medida).
+  //
+  // `onCommitLayoutEffect`, e não um rAF avulso, é quem diz com precisão quando cada um desses
+  // commits assentou — ele roda de um useLayoutEffect interno da FlashList. Por isso a captura
+  // (em handleConfirmDelete) e a checagem (aqui) SÓ mexem em refs dentro de handlers/callbacks,
+  // nunca no corpo do componente: um useEffect ou uma leitura de ref durante o render deste
+  // componente assentaria DEPOIS do useLayoutEffect da FlashList no mesmo commit (efeito de filho
+  // roda antes do do pai), tarde demais pra este callback já ver a decisão tomada.
   function handleCommitLayoutEffect(): void {
     const pending = pendingScrollRestoreRef.current;
 
@@ -145,7 +155,11 @@ export default function HistoryScreen() {
       return;
     }
 
-    pendingScrollRestoreRef.current = null;
+    if (Date.now() > pending.expiresAt) {
+      pendingScrollRestoreRef.current = null;
+      return;
+    }
+
     flashListRef.current?.scrollToOffset({ offset: pending.offset, animated: false });
   }
 
@@ -176,7 +190,11 @@ export default function HistoryScreen() {
       const offset = flashListRef.current?.getAbsoluteLastScrollOffset();
 
       if (offset !== undefined) {
-        pendingScrollRestoreRef.current = { offset, readingsLengthBeforeDelete: readings.length };
+        pendingScrollRestoreRef.current = {
+          offset,
+          readingsLengthBeforeDelete: readings.length,
+          expiresAt: Date.now() + SCROLL_RESTORE_WINDOW_MS,
+        };
       }
     }
 
