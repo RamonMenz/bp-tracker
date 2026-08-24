@@ -1,7 +1,7 @@
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExportCsvDialog } from '@/components/bp/ExportCsvDialog';
@@ -20,6 +20,7 @@ import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
 import { dayKey, dayLabel } from '@/lib/datetime';
+import { focusWithoutScrolling } from '@/lib/focus';
 import { colors } from '@/theme/colors';
 import { useColorScheme } from '@/theme/useColorScheme';
 import { tokens } from '@/theme/tokens';
@@ -40,10 +41,6 @@ interface RowItem {
 }
 
 type ListItem = HeaderItem | RowItem;
-
-/** Ver comentário do `handleCommitLayoutEffect` em HistoryScreen — janela de tolerância pra
- *  reafirmar o scroll depois de excluir uma linha, enquanto a FlashList ainda assenta sozinha. */
-const SCROLL_RESTORE_WINDOW_MS = 600;
 
 function average(values: number[]): number {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
@@ -117,51 +114,9 @@ export default function HistoryScreen() {
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const flashListRef = useRef<FlashListRef<ListItem>>(null);
-  /** Offset, tamanho de `readings` e prazo capturados no instante da exclusão — o que
-   *  `handleCommitLayoutEffect` (abaixo) usa pra saber SE e PARA ONDE restaurar o scroll. `null`
-   *  quando não há restauração pendente. */
-  const pendingScrollRestoreRef = useRef<
-    { offset: number; readingsLengthBeforeDelete: number; expiresAt: number } | null
-  >(null);
-
-  // BUG: excluir uma medição jogava a rolagem para o fundo da lista. `FlashList` tenta preservar
-  // a posição sozinho (`maintainVisibleContentPosition`, ligado por padrão), mas esse recurso
-  // depende do ScrollView NATIVO entender essa prop — e o ScrollView do react-native-web não a
-  // implementa. `disabled` no prop `maintainVisibleContentPosition` (ver FlashList mais abaixo)
-  // desliga essa projeção só na web; no Android o recurso nativo da lib funciona de verdade — não
-  // desligamos por lá.
-  //
-  // Mesmo desligada, uma restauração de UMA VEZ SÓ não basta: confirmado com uma repro isolada
-  // (FlashList + ConfirmDialog reais, fora do app, rodando num navegador de verdade — não dava
-  // pra reproduzir isto só lendo o código-fonte da lib) que, ao remover uma linha, a FlashList
-  // ainda corrige a posição sozinha em MAIS DE UM commit seguinte — ela mesma se descreve como
-  // assentando de forma assíncrona, "~200-300ms depois". Um único `scrollToOffset` (via rAF ou
-  // direto no primeiro commit) fica pra trás: a lib corrige de novo por cima logo depois, ainda
-  // levando pro fundo. Por isso este handler REAFIRMA o offset em TODO commit que a FlashList
-  // reportar enquanto a restauração estiver pendente, não só na primeira vez — só desiste depois
-  // de EXPIRE_MS (a repro mostrou a lib convergir em ~150-200ms; a margem é folga, não medida).
-  //
-  // `onCommitLayoutEffect`, e não um rAF avulso, é quem diz com precisão quando cada um desses
-  // commits assentou — ele roda de um useLayoutEffect interno da FlashList. Por isso a captura
-  // (em handleConfirmDelete) e a checagem (aqui) SÓ mexem em refs dentro de handlers/callbacks,
-  // nunca no corpo do componente: um useEffect ou uma leitura de ref durante o render deste
-  // componente assentaria DEPOIS do useLayoutEffect da FlashList no mesmo commit (efeito de filho
-  // roda antes do do pai), tarde demais pra este callback já ver a decisão tomada.
-  function handleCommitLayoutEffect(): void {
-    const pending = pendingScrollRestoreRef.current;
-
-    if (Platform.OS !== 'web' || pending === null || readings.length >= pending.readingsLengthBeforeDelete) {
-      return;
-    }
-
-    if (Date.now() > pending.expiresAt) {
-      pendingScrollRestoreRef.current = null;
-      return;
-    }
-
-    flashListRef.current?.scrollToOffset({ offset: pending.offset, animated: false });
-  }
+  /** Ponto de pouso do foco enquanto o diálogo de exclusão está aberto — ver
+   *  `handleRequestDelete`. Fica FORA da FlashList de propósito (é irmão dela, não filho). */
+  const deleteFocusAnchorRef = useRef<View>(null);
 
   function handleRequestEdit(readingId: string): void {
     router.push(`/(app)/edit-reading/${readingId}`);
@@ -173,6 +128,26 @@ export default function HistoryScreen() {
     if (deletingId !== null) {
       return;
     }
+
+    // BUG: na web, excluir uma medição deslocava a rolagem da lista. A causa não é a FlashList
+    // nem o navegador limitando o scroll ao conteúdo menor — é o FOCO. Medido num navegador de
+    // verdade: o salto acontece ~250ms DEPOIS da exclusão (a duração do fade-out do Modal), com
+    // milhares de pixels de conteúdo ainda abaixo da posição atual, e some por completo quando a
+    // mesma exclusão roda sem passar pelo diálogo.
+    //
+    // A cadeia é esta: tocar no botão de excluir da linha deixa esse nó como
+    // `document.activeElement`; ao abrir, o `ModalFocusTrap` do react-native-web guarda esse nó
+    // para devolver o foco a ele ao fechar (WCAG 2.4.3) e, no fim da animação, chama `.focus()`
+    // nele. Só que a FlashList RECICLA células: com a linha excluída, aquele mesmo nó do DOM já
+    // está renderizando OUTRA medição, em outra posição — e o navegador rola a lista para
+    // centralizar o nó focado. Daí o deslocamento ser grande e aparentemente aleatório.
+    //
+    // A correção é impedir que o foco esteja numa célula reciclada quando o diálogo abre: o
+    // trap passa a guardar esta âncora (fora da lista, imóvel, sem contribuir para o layout), e
+    // devolver o foco a ela ao fechar não rola nada. Precisa acontecer AQUI, no handler, e não
+    // num efeito: o trap lê o `document.activeElement` ao montar, no mesmo commit que abre o
+    // diálogo — qualquer efeito nosso rodaria tarde demais.
+    focusWithoutScrolling(deleteFocusAnchorRef.current);
 
     setPendingDeleteId(readingId);
   }
@@ -186,27 +161,7 @@ export default function HistoryScreen() {
     setPendingDeleteId(null);
     setDeletingId(readingId);
 
-    if (Platform.OS === 'web') {
-      const offset = flashListRef.current?.getAbsoluteLastScrollOffset();
-
-      if (offset !== undefined) {
-        pendingScrollRestoreRef.current = {
-          offset,
-          readingsLengthBeforeDelete: readings.length,
-          expiresAt: Date.now() + SCROLL_RESTORE_WINDOW_MS,
-        };
-      }
-    }
-
-    const success = await deleteReading(readingId);
-
-    // Exclusão falhou: a linha não vai sumir de `readings`, então a condição de
-    // handleCommitLayoutEffect nunca fecharia sozinha — sem isto o offset capturado aqui ficaria
-    // pendurado à espera de uma exclusão bem-sucedida futura, restaurando o scroll pro momento
-    // errado.
-    if (!success) {
-      pendingScrollRestoreRef.current = null;
-    }
+    await deleteReading(readingId);
 
     setDeletingId(null);
   }
@@ -259,17 +214,15 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
+      {/* Âncora de foco do diálogo de exclusão (ver handleRequestDelete). Vazia, sem tamanho e
+          absoluta: não desenha nada nem ocupa espaço. Vem ANTES da lista para que o próximo Tab,
+          depois de o diálogo fechar, entre no histórico em vez de sair da tela. */}
+      <View ref={deleteFocusAnchorRef} className="absolute h-0 w-0" />
+
       <FlashList
-        ref={flashListRef}
         data={items}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
-        // Ver comentário do restore acima (BUG do scroll indo pro fundo ao excluir): na web a lib
-        // compete com o nosso ajuste manual de scroll e vence, então desligamos a projeção dela
-        // aqui. No Android ela funciona de verdade — o objeto só existe quando `disabled` teria
-        // efeito, para não acender um warning de prop nova por engano num FlashList mais antigo.
-        maintainVisibleContentPosition={Platform.OS === 'web' ? { disabled: true } : undefined}
-        onCommitLayoutEffect={handleCommitLayoutEffect}
         stickyHeaderIndices={stickyHeaderIndices}
         contentContainerStyle={{ paddingBottom: 24 }}
         ListHeaderComponent={
