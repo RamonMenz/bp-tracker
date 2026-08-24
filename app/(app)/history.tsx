@@ -1,7 +1,7 @@
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ExportCsvDialog } from '@/components/bp/ExportCsvDialog';
@@ -40,10 +40,6 @@ interface RowItem {
 }
 
 type ListItem = HeaderItem | RowItem;
-
-/** Ver comentário do `handleCommitLayoutEffect` em HistoryScreen — janela de tolerância pra
- *  reafirmar o scroll depois de excluir uma linha, enquanto a FlashList ainda assenta sozinha. */
-const SCROLL_RESTORE_WINDOW_MS = 600;
 
 function average(values: number[]): number {
   return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
@@ -117,52 +113,6 @@ export default function HistoryScreen() {
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const flashListRef = useRef<FlashListRef<ListItem>>(null);
-  /** Offset, tamanho de `readings` e prazo capturados no instante da exclusão — o que
-   *  `handleCommitLayoutEffect` (abaixo) usa pra saber SE e PARA ONDE restaurar o scroll. `null`
-   *  quando não há restauração pendente. */
-  const pendingScrollRestoreRef = useRef<
-    { offset: number; readingsLengthBeforeDelete: number; expiresAt: number } | null
-  >(null);
-
-  // BUG: excluir uma medição jogava a rolagem para o fundo da lista. `FlashList` tenta preservar
-  // a posição sozinho (`maintainVisibleContentPosition`, ligado por padrão), mas esse recurso
-  // depende do ScrollView NATIVO entender essa prop — e o ScrollView do react-native-web não a
-  // implementa. `disabled` no prop `maintainVisibleContentPosition` (ver FlashList mais abaixo)
-  // desliga essa projeção só na web; no Android o recurso nativo da lib funciona de verdade — não
-  // desligamos por lá.
-  //
-  // Mesmo desligada, uma restauração de UMA VEZ SÓ não basta: confirmado com uma repro isolada
-  // (FlashList + ConfirmDialog reais, fora do app, rodando num navegador de verdade — não dava
-  // pra reproduzir isto só lendo o código-fonte da lib) que, ao remover uma linha, a FlashList
-  // ainda corrige a posição sozinha em MAIS DE UM commit seguinte — ela mesma se descreve como
-  // assentando de forma assíncrona, "~200-300ms depois". Um único `scrollToOffset` (via rAF ou
-  // direto no primeiro commit) fica pra trás: a lib corrige de novo por cima logo depois, ainda
-  // levando pro fundo. Por isso este handler REAFIRMA o offset em TODO commit que a FlashList
-  // reportar enquanto a restauração estiver pendente, não só na primeira vez — só desiste depois
-  // de EXPIRE_MS (a repro mostrou a lib convergir em ~150-200ms; a margem é folga, não medida).
-  //
-  // `onCommitLayoutEffect`, e não um rAF avulso, é quem diz com precisão quando cada um desses
-  // commits assentou — ele roda de um useLayoutEffect interno da FlashList. Por isso a captura
-  // (em handleConfirmDelete) e a checagem (aqui) SÓ mexem em refs dentro de handlers/callbacks,
-  // nunca no corpo do componente: um useEffect ou uma leitura de ref durante o render deste
-  // componente assentaria DEPOIS do useLayoutEffect da FlashList no mesmo commit (efeito de filho
-  // roda antes do do pai), tarde demais pra este callback já ver a decisão tomada.
-  function handleCommitLayoutEffect(): void {
-    const pending = pendingScrollRestoreRef.current;
-
-    if (Platform.OS !== 'web' || pending === null || readings.length >= pending.readingsLengthBeforeDelete) {
-      return;
-    }
-
-    if (Date.now() > pending.expiresAt) {
-      pendingScrollRestoreRef.current = null;
-      return;
-    }
-
-    flashListRef.current?.scrollToOffset({ offset: pending.offset, animated: false });
-  }
-
   function handleRequestEdit(readingId: string): void {
     router.push(`/(app)/edit-reading/${readingId}`);
   }
@@ -186,27 +136,7 @@ export default function HistoryScreen() {
     setPendingDeleteId(null);
     setDeletingId(readingId);
 
-    if (Platform.OS === 'web') {
-      const offset = flashListRef.current?.getAbsoluteLastScrollOffset();
-
-      if (offset !== undefined) {
-        pendingScrollRestoreRef.current = {
-          offset,
-          readingsLengthBeforeDelete: readings.length,
-          expiresAt: Date.now() + SCROLL_RESTORE_WINDOW_MS,
-        };
-      }
-    }
-
-    const success = await deleteReading(readingId);
-
-    // Exclusão falhou: a linha não vai sumir de `readings`, então a condição de
-    // handleCommitLayoutEffect nunca fecharia sozinha — sem isto o offset capturado aqui ficaria
-    // pendurado à espera de uma exclusão bem-sucedida futura, restaurando o scroll pro momento
-    // errado.
-    if (!success) {
-      pendingScrollRestoreRef.current = null;
-    }
+    await deleteReading(readingId);
 
     setDeletingId(null);
   }
@@ -260,16 +190,9 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
       <FlashList
-        ref={flashListRef}
         data={items}
         keyExtractor={(item) => item.key}
         getItemType={(item) => item.type}
-        // Ver comentário do restore acima (BUG do scroll indo pro fundo ao excluir): na web a lib
-        // compete com o nosso ajuste manual de scroll e vence, então desligamos a projeção dela
-        // aqui. No Android ela funciona de verdade — o objeto só existe quando `disabled` teria
-        // efeito, para não acender um warning de prop nova por engano num FlashList mais antigo.
-        maintainVisibleContentPosition={Platform.OS === 'web' ? { disabled: true } : undefined}
-        onCommitLayoutEffect={handleCommitLayoutEffect}
         stickyHeaderIndices={stickyHeaderIndices}
         contentContainerStyle={{ paddingBottom: 24 }}
         ListHeaderComponent={
