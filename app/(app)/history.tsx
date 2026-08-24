@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,6 +20,7 @@ import type { ReadingListItem } from '@/features/readings/useReadings';
 import { useReadings } from '@/features/readings/useReadings';
 import { useReadingsTrend } from '@/features/readings/useReadingsTrend';
 import { dayKey, dayLabel } from '@/lib/datetime';
+import { focusWithoutScrolling } from '@/lib/focus';
 import { colors } from '@/theme/colors';
 import { useColorScheme } from '@/theme/useColorScheme';
 import { tokens } from '@/theme/tokens';
@@ -113,6 +114,10 @@ export default function HistoryScreen() {
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  /** Ponto de pouso do foco enquanto o diálogo de exclusão está aberto — ver
+   *  `handleRequestDelete`. Fica FORA da FlashList de propósito (é irmão dela, não filho). */
+  const deleteFocusAnchorRef = useRef<View>(null);
+
   function handleRequestEdit(readingId: string): void {
     router.push(`/(app)/edit-reading/${readingId}`);
   }
@@ -123,6 +128,26 @@ export default function HistoryScreen() {
     if (deletingId !== null) {
       return;
     }
+
+    // BUG: na web, excluir uma medição deslocava a rolagem da lista. A causa não é a FlashList
+    // nem o navegador limitando o scroll ao conteúdo menor — é o FOCO. Medido num navegador de
+    // verdade: o salto acontece ~250ms DEPOIS da exclusão (a duração do fade-out do Modal), com
+    // milhares de pixels de conteúdo ainda abaixo da posição atual, e some por completo quando a
+    // mesma exclusão roda sem passar pelo diálogo.
+    //
+    // A cadeia é esta: tocar no botão de excluir da linha deixa esse nó como
+    // `document.activeElement`; ao abrir, o `ModalFocusTrap` do react-native-web guarda esse nó
+    // para devolver o foco a ele ao fechar (WCAG 2.4.3) e, no fim da animação, chama `.focus()`
+    // nele. Só que a FlashList RECICLA células: com a linha excluída, aquele mesmo nó do DOM já
+    // está renderizando OUTRA medição, em outra posição — e o navegador rola a lista para
+    // centralizar o nó focado. Daí o deslocamento ser grande e aparentemente aleatório.
+    //
+    // A correção é impedir que o foco esteja numa célula reciclada quando o diálogo abre: o
+    // trap passa a guardar esta âncora (fora da lista, imóvel, sem contribuir para o layout), e
+    // devolver o foco a ela ao fechar não rola nada. Precisa acontecer AQUI, no handler, e não
+    // num efeito: o trap lê o `document.activeElement` ao montar, no mesmo commit que abre o
+    // diálogo — qualquer efeito nosso rodaria tarde demais.
+    focusWithoutScrolling(deleteFocusAnchorRef.current);
 
     setPendingDeleteId(readingId);
   }
@@ -189,6 +214,11 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-light-bg dark:bg-dark-bg">
+      {/* Âncora de foco do diálogo de exclusão (ver handleRequestDelete). Vazia, sem tamanho e
+          absoluta: não desenha nada nem ocupa espaço. Vem ANTES da lista para que o próximo Tab,
+          depois de o diálogo fechar, entre no histórico em vez de sair da tela. */}
+      <View ref={deleteFocusAnchorRef} className="absolute h-0 w-0" />
+
       <FlashList
         data={items}
         keyExtractor={(item) => item.key}
