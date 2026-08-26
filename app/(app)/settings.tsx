@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/icons';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
+import type { PushUnavailableReason } from '@/features/reminders/pushAvailability';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
 import { useThemePreference } from '@/features/theme/useThemePreference';
 import type { ThemePreference } from '@/features/theme/theme-preference.storage';
@@ -63,6 +64,26 @@ type OpenDialog =
   | 'accountDeleted'
   | 'privacyPolicyFailed'
   | null;
+
+/**
+ * Copy do popup exibido quando `pushUnavailableReason` (useReminderSettings) vem preenchido — o
+ * navegador/ambiente, não o usuário, é o motivo de não dar para ativar notificações agora.
+ * Mensagens em terceira pessoa amigável (CLAUDE.md §4.3) e sem jargão técnico ("VAPID key",
+ * "service worker"): quem lê é o usuário final, não quem for depurar (esse já tem a mensagem
+ * técnica original em `error`/nos logs).
+ */
+const PUSH_UNAVAILABLE_COPY: Record<PushUnavailableReason, { title: string; message: string }> = {
+  'not-configured': {
+    title: 'Notificações ainda não disponíveis aqui',
+    message:
+      'Isso não é um problema no seu aparelho: as notificações push da web ainda não foram configuradas neste ambiente. Assim que estiverem prontas, o toque de "Notificações" volta a funcionar sem precisar fazer mais nada aqui.\n\nEnquanto isso, para não esquecer de medir nos horários definidos abaixo, você pode:\n\n• Configurar um alarme no celular para os mesmos horários.\n• Criar lembretes no Google Agenda ou no app de calendário que você já usa.',
+  },
+  'browser-unsupported': {
+    title: 'Este navegador não oferece notificações push',
+    message:
+      'Alguns navegadores — modo anônimo, versões antigas, ou alguns navegadores do iPhone — não têm suporte a notificações push na web.\n\nEnquanto isso, para não esquecer de medir nos horários definidos abaixo, você pode:\n\n• Configurar um alarme no celular para os mesmos horários.\n• Criar lembretes no Google Agenda ou no app de calendário que você já usa.\n• Tentar de novo no Chrome ou no Firefox atualizados, ou instalar o app no Android.',
+  },
+};
 
 const SAVE_TIMES_SUCCESS_MESSAGE = 'Horários salvos.';
 /** Some sozinho depois de um tempo — confirmação é feedback de passagem, não um estado que fica
@@ -125,7 +146,15 @@ function dateToTimeString(date: Date): string {
 export default function SettingsScreen() {
   const router = useRouter();
   const { signOut, isLoading: isSigningOut } = useSession();
-  const { settings, updateReminderTimes, toggleNotifications, isSaving, error } = useReminderSettings();
+  const {
+    settings,
+    updateReminderTimes,
+    toggleNotifications,
+    isSaving,
+    error,
+    pushUnavailableReason,
+    dismissPushUnavailable,
+  } = useReminderSettings();
   const { deleteAccount, isDeleting, error: deleteError } = useDeleteAccount();
   const { preference: themePreference, setPreference: setThemePreference } = useThemePreference();
   const scheme = useColorScheme();
@@ -235,6 +264,11 @@ export default function SettingsScreen() {
       setShowSaveTimesSuccess(true);
     }
   }
+
+  // Truthy check (não `!== null`) de propósito: cobre também `undefined`, o valor que um mock de
+  // teste desatualizado devolveria para um campo novo do hook — evita indexar
+  // PUSH_UNAVAILABLE_COPY com uma chave inexistente e quebrar em runtime.
+  const pushUnavailableCopy = pushUnavailableReason ? PUSH_UNAVAILABLE_COPY[pushUnavailableReason] : null;
 
   const switchTrackColor = { false: palette.border, true: palette.primary };
   // O thumb padrão do react-native-web é verde (#009688) e destoa da trilha azul; fixar em branco
@@ -504,6 +538,16 @@ export default function SettingsScreen() {
         message="Tente novamente mais tarde."
         confirmLabel="OK"
         onConfirm={() => setOpenDialog(null)}
+      />
+
+      {/* Aberto pelo estado do hook (não pelo OpenDialog local), porque quem decide abrir é o
+          resultado assíncrono de toggleNotifications, não um toque direto num botão desta tela. */}
+      <ConfirmDialog
+        visible={pushUnavailableCopy !== null}
+        title={pushUnavailableCopy?.title ?? ''}
+        message={pushUnavailableCopy?.message ?? ''}
+        confirmLabel="Entendi"
+        onConfirm={dismissPushUnavailable}
       />
     </Screen>
   );

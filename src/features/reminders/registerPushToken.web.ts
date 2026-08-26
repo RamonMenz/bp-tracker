@@ -5,6 +5,8 @@ import { getToken } from 'firebase/messaging';
 import { devicesCollectionPath } from '@/lib/firestore-paths';
 import { hashToken } from '@/lib/hash-token';
 import { firestore } from '@/services/firebase';
+
+import { PushUnavailableError } from './pushAvailability';
 // Import explícito do arquivo `.web`, não do barrel `@/services/firebase`: o tsconfig deste
 // projeto usa `moduleSuffixes: ['.native', '']` (ver comentário lá) — de propósito, para resolver
 // pacotes de terceiros com um único shim `.web`. Efeito colateral: ISSO faz o tsc resolver
@@ -71,7 +73,7 @@ export async function registerPushToken(uid: string): Promise<void> {
     const messaging = await getMessagingInstance();
 
     if (messaging === null) {
-      throw new Error(WEB_NOT_SUPPORTED_MESSAGE);
+      throw new PushUnavailableError('browser-unsupported', WEB_NOT_SUPPORTED_MESSAGE);
     }
 
     const extra = Constants.expoConfig?.extra as { firebase?: WebFirebaseConfig } | undefined;
@@ -79,7 +81,7 @@ export async function registerPushToken(uid: string): Promise<void> {
     const vapidKey = firebaseConfig?.vapidKey;
 
     if (firebaseConfig === undefined || vapidKey === undefined) {
-      throw new Error(VAPID_KEY_MISSING_MESSAGE);
+      throw new PushUnavailableError('not-configured', VAPID_KEY_MISSING_MESSAGE);
     }
 
     await ensureNotificationPermission();
@@ -101,9 +103,14 @@ export async function registerPushToken(uid: string): Promise<void> {
       { merge: true },
     );
   } catch (error) {
-    const knownMessages: string[] = [WEB_NOT_SUPPORTED_MESSAGE, VAPID_KEY_MISSING_MESSAGE, PERMISSION_DENIED_MESSAGE];
+    // PushUnavailableError sempre propaga intacto (é o tipo que useReminderSettings usa para
+    // decidir entre o popup explicativo e o InlineFeedback genérico) — só a mensagem de permissão
+    // negada precisa do mesmo tratamento "conhecido, não vira genérico" mas sem o tipo dedicado.
+    if (error instanceof PushUnavailableError) {
+      throw error;
+    }
 
-    if (error instanceof Error && knownMessages.includes(error.message)) {
+    if (error instanceof Error && error.message === PERMISSION_DENIED_MESSAGE) {
       throw error;
     }
 
