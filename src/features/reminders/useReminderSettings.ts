@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from '@/features/auth/useSession';
 
 import { syncLocalReminders } from './localReminders';
+import { PushUnavailableError, type PushUnavailableReason } from './pushAvailability';
 import { registerPushToken } from './registerPushToken';
 import {
   mapReminderSubscribeError,
@@ -17,6 +18,10 @@ export interface UseReminderSettingsResult {
   toggleNotifications: (enabled: boolean) => Promise<boolean>;
   isSaving: boolean;
   error: string | null;
+  /** Motivo do AMBIENTE (não erro transiente) pelo qual o push não pôde ser ativado — a tela usa
+   *  isto para abrir o popup explicativo em vez do InlineFeedback vermelho de `error`. */
+  pushUnavailableReason: PushUnavailableReason | null;
+  dismissPushUnavailable: () => void;
 }
 
 const NOT_SIGNED_IN_MESSAGE = 'Sessão expirada. Faça login novamente.';
@@ -27,6 +32,7 @@ export function useReminderSettings(): UseReminderSettingsResult {
   const [settings, setSettings] = useState<ReminderSettings | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pushUnavailableReason, setPushUnavailableReason] = useState<PushUnavailableReason | null>(null);
 
   useEffect(() => {
     if (user === null) {
@@ -116,12 +122,20 @@ export function useReminderSettings(): UseReminderSettingsResult {
     }
 
     setError(null);
+    setPushUnavailableReason(null);
     setIsSaving(true);
 
     try {
       await registerPushToken(user.uid);
     } catch (registerError) {
-      setError(registerError instanceof Error ? registerError.message : GENERIC_MESSAGE);
+      // PushUnavailableError é do AMBIENTE (navegador sem suporte / VAPID key não configurada) —
+      // vira o popup explicativo, não o InlineFeedback genérico: tentar de novo não resolve.
+      if (registerError instanceof PushUnavailableError) {
+        setPushUnavailableReason(registerError.reason);
+      } else {
+        setError(registerError instanceof Error ? registerError.message : GENERIC_MESSAGE);
+      }
+
       setIsSaving(false);
       return false;
     }
@@ -135,5 +149,17 @@ export function useReminderSettings(): UseReminderSettingsResult {
     return success;
   }
 
-  return { settings, updateReminderTimes, toggleNotifications, isSaving, error };
+  function dismissPushUnavailable(): void {
+    setPushUnavailableReason(null);
+  }
+
+  return {
+    settings,
+    updateReminderTimes,
+    toggleNotifications,
+    isSaving,
+    error,
+    pushUnavailableReason,
+    dismissPushUnavailable,
+  };
 }

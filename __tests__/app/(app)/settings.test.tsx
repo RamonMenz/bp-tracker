@@ -56,6 +56,8 @@ beforeEach(() => {
     toggleNotifications: toggleNotificationsMock,
     isSaving: false,
     error: null,
+    pushUnavailableReason: null,
+    dismissPushUnavailable: jest.fn(),
   });
   useDeleteAccount.mockReturnValue({ deleteAccount: jest.fn(), isDeleting: false, error: null });
   useThemePreference.mockReturnValue({ preference: 'system', setPreference: jest.fn() });
@@ -100,6 +102,8 @@ describe('SettingsScreen — alvo de toque dos switches', () => {
       toggleNotifications: toggleNotificationsMock,
       isSaving: true,
       error: null,
+      pushUnavailableReason: null,
+      dismissPushUnavailable: jest.fn(),
     });
 
     await render(<SettingsScreen />);

@@ -32,6 +32,8 @@ beforeEach(async () => {
     toggleNotifications: jest.fn(),
     isSaving: false,
     error: null,
+    pushUnavailableReason: null,
+    dismissPushUnavailable: jest.fn(),
   });
   useDeleteAccount.mockReturnValue({ deleteAccount: jest.fn(), isDeleting: false, error: null });
 });
