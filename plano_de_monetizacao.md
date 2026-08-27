@@ -3,8 +3,9 @@
 > Análise de 2026-08-26, papel de PM/Tech Lead. Avalia seis estratégias de receita **contra o
 > código que existe hoje**, não contra o plano. Cada estratégia traz: facilidade de implementação,
 > alterações técnicas necessárias, potencial de receita com faixa de preço, e requisitos de
-> conformidade. Complementa `roadmap_futuro.md` (o que falta construir) e `RELEASE_CHECKLIST.md`
-> (o que falta para publicar).
+> conformidade. O §2 lista as nove mudanças transversais que precisam existir antes de qualquer
+> uma delas ganhar código. Complementa `roadmap_futuro.md` (o que falta construir) e
+> `RELEASE_CHECKLIST.md` (o que falta para publicar).
 
 ---
 
@@ -39,7 +40,132 @@ detalhadas em cada seção. São ordens de grandeza para priorizar, **não proje
 
 ---
 
-## 2. Programa de afiliados
+## 2. Pré-requisitos técnicos — antes de implementar qualquer ideia
+
+Levantamento contra o código atual, não contra o plano. Nove mudanças, em ordem de quanto travam
+o resto. Os itens 1, 2, 3, 5 e 6 são pré-requisitos de **qualquer** estratégia paga; 4 e 9 entram
+junto com meta pessoal e janelas longas de tendência (§4); 7 só se a web (§4) também cobrar.
+
+### 1. Um princípio de arquitetura deixa de valer
+
+`CLAUDE.md §1` e `PLAN.md §7` dizem, em letras maiúsculas, que o backend existe para **uma única
+coisa**: disparar lembretes. Todo o resto é client-side. Isso deixa de ser verdade em três lugares
+ao mesmo tempo: webhook HTTP de pagamento (§4), callable de IA (§8) e uma função agendada para
+limpar links de compartilhamento vencidos (§6). Hoje `functions/src/index.ts` exporta 4 gatilhos e
+**nenhuma superfície HTTP**.
+
+Emende a regra explicitamente antes de escrever o primeiro `onRequest`. Sugestão de redação: *"o
+backend existe para o que não pode acontecer no cliente — disparar lembretes, receber confirmação
+de pagamento e guardar segredos"*. Sem isso, cada decisão futura colide com uma regra escrita que
+ninguém atualizou. O mesmo vale para o `§4.4` por causa da IA (§8).
+
+### 2. A cascata de exclusão de conta quebra em silêncio
+
+O item que mais preocupa. `onUserDelete` faz:
+
+```ts
+await db.recursiveDelete(db.doc(userPath(uid)));  // users/ + subcoleções
+await db.doc(schedulePath(uid)).delete();          // fora da árvore → explícito
+```
+
+Tudo que nascer **fora da árvore `users/`** fica órfão: `entitlements/{uid}`, `aiUsage/{uid}` e os
+`shares` do usuário. O próprio comentário do arquivo classifica dado de saúde órfão como "o erro
+mais grave do backend" — e a regressão seria invisível, porque o fluxo continua reportando sucesso.
+
+Duas decisões junto disso: **`shares` precisa de índice por `ownerUid`** para ser enumerado na
+exclusão; e **o que acontece com a assinatura ativa quando a conta é excluída?** Play e Stripe
+continuam cobrando de alguém que não existe mais — precisa de fluxo definido, não de descoberta em
+produção.
+
+### 3. Modelagem: sair do "tudo sob `users/{uid}`"
+
+Hoje há dois padrões: subcoleção do dono, e `schedules/{uid}` server-only. Nascem cinco coisas:
+
+| Coleção | Regra | Para quê |
+|---|---|---|
+| `entitlements/{uid}` | `get` pelo dono, `write: if false` | Plano (§4) — server-only, senão é forjável |
+| `aiUsage/{uid}` | `write: if false` | Cota de IA (§8) |
+| `shares/{shareId}` | `get: if expiresAt > request.time` | Link para o médico (§6) |
+| `catalog/{itemId}` | `read: if signedIn()`, `write: if false` | Afiliados (§3) — ou JSON estático |
+| `users/{uid}/consents/{purposeId}` | dono | **Não existe nada disso hoje** |
+
+O último é o que costuma ser esquecido: o disclaimer atual é um
+`AsyncStorage.setItem('disclaimer-dismissed')` — preferência de UI, não consentimento LGPD. O
+art. 11 pede registro **auditável, versionado e revogável** por finalidade. É modelagem nova, mais
+uma tela em Ajustes.
+
+Cada coleção precisa entrar em `firestore-paths.ts`, nas rules **acima** do `match /{document=**}`
+que nega tudo, e em `tests/firestore.rules.test.ts`. O teste negativo mais importante do projeto
+passa a ser: *usuário tentando escrever o próprio `entitlements/{uid}`*. É ele que separa um
+paywall de um enfeite.
+
+### 4. `hasOnly` no perfil trava dois campos que o freemium vai querer
+
+`validProfile` congela o conjunto de campos de `users/{uid}`. Meta pessoal
+(`targetSystolic`/`targetDiastolic`) e a data de compra do aparelho (lembrete de recalibração, §3)
+exigem alteração coordenada, **no mesmo commit**, em: `models.ts`, o schema Zod, `firestore.rules`
+e o teste.
+
+Atenção à migração: o `hasAll` já precisou incluir `createdAt`/`updatedAt` porque a comparação
+erraria em documentos criados sem eles. Perfis antigos sem os campos novos vão dar o mesmo
+problema.
+
+### 5. Não existe camada de billing no cliente
+
+Zero código. Precisa nascer `src/features/billing/` com `useEntitlement()` seguindo o padrão do
+`SessionProvider` — **context com um listener único**, não um `onSnapshot` por tela.
+
+Duas decisões não-óbvias:
+
+- **Comportamento offline.** O app é offline-first e se orgulha disso. Quando o entitlement vem do
+  cache ou não veio, o estado é "desconhecido" — a regra tem que ser **na dúvida, libere**.
+  Bloquear um assinante sem sinal é o pior resultado possível neste app.
+- **Onde o gate vive.** Gate de UI para o que é gerado no cliente (PDF, gráficos); gate no
+  servidor, dentro da Function com Admin SDK, para o que custa dinheiro por chamada (IA, §8). Como
+  o cliente fala direto com o Firestore, não há terceira opção.
+
+Some uma rota de paywall (`app/(app)/pro.tsx`) e um primitivo de UI de bloqueio consistente.
+
+### 6. Functions precisa virar um projeto de verdade
+
+- **`functions/**` está em `globalIgnores` do `eslint.config.js`** — o backend não é lintado hoje.
+  Com 4 gatilhos passava; com webhook de pagamento e chamada de IA, não passa. Precisa de config
+  ESLint própria dentro de `functions/`.
+- Primeira Function HTTP: assinatura validada com `defineSecret`, **idempotente por ID de evento**
+  (webhook duplicado é o normal, não a exceção).
+- Primeira callable, com App Check em enforce.
+- `firebase.json` não tem bloco `auth` nos emuladores — testar webhook e callable localmente vai
+  precisar.
+
+### 7. A web não tem por onde cobrar
+
+`firebase.json` **não tem bloco `hosting`** (apesar do `RELEASE_CHECKLIST.md` mandar rodar
+`firebase deploy --only hosting` — inconsistência que vale corrigir de passagem). A web é Vercel,
+`expo export -p web`, output `single`.
+
+Stripe Checkout precisa de um endpoint de servidor para criar a sessão. **Recomendo usar a Cloud
+Function**, não Vercel Functions: um backend só, e os segredos já estão no Secret Manager.
+
+Se optar por Vercel mesmo assim: o rewrite catch-all do `vercel.json` engole `/api/*` — o regex de
+exclusão precisa ganhar `api/` junto de `_expo/` e `assets/`, senão as chamadas voltam
+silenciosamente para `index.html`.
+
+### 8. Build e loja, em paralelo ao código
+
+SDK de billing é código nativo: config plugin em `app.config.ts`, novo `eas build`, e faixa de
+teste fechada na Play Console. Antes disso, conta de comerciante e produtos cadastrados — semanas
+de burocracia que rodam em paralelo, não depois.
+
+### 9. O teto de leitura que hoje não incomoda
+
+`useReadings` assina a coleção inteira sem `limit()`. Correto hoje (~1.100 docs/ano). Mas janelas
+de 90/180/365 dias, PDF de períodos longos e principalmente modo cuidador (× número de perfis)
+multiplicam isso. Paginação por janela precisa vir **antes** dessas features, não como correção
+depois.
+
+---
+
+## 3. Programa de afiliados
 
 **Facilidade: 5/5.** Um link de afiliado é `Linking.openURL()` com uma tag na query string. Não
 escreve no Firestore, não precisa de Function, não muda o modelo de dados. Única estratégia
@@ -116,7 +242,7 @@ seis semanas construindo billing.
 
 ---
 
-## 3. Freemium com plano Pro
+## 4. Freemium com plano Pro
 
 ### O que fica grátis — não negociável
 
@@ -186,7 +312,7 @@ Crie `entitlements/{uid}` espelhando `schedules/{uid}`:
 > **Consequência de "o cliente fala direto com o Firestore":** PDF e gráficos são gerados no
 > dispositivo com dados que o usuário já pode ler — o bloqueio é **apenas de interface**. Alguém
 > determinado contorna, e tudo bem. Mas a regra decorrente é rígida: **nunca gate no cliente uma
-> feature que custa dinheiro por uso.** A IA (§7) verifica o entitlement dentro da Function.
+> feature que custa dinheiro por uso.** A IA (§8) verifica o entitlement dentro da Function.
 
 #### Pagamentos
 
@@ -209,7 +335,7 @@ Crie `entitlements/{uid}` espelhando `schedules/{uid}`:
 |---|---|---|
 | Mensal | R$ 11,90 – 14,90 | Existe para ancorar o anual, não para vender |
 | Anual | R$ 69 – 89 | ~45% de desconto; é o plano que você quer vender |
-| Vitalício | R$ 199 – 249 | Ver §4 |
+| Vitalício | R$ 199 – 249 | Ver §5 |
 | Teste grátis | 7 dias | Sem cartão na web; na Play, fluxo padrão |
 
 **Cenário-base:** 10k MAU, conversão 2% (faixa típica em saúde é 1–3%; gatilho forte como "consulta
@@ -230,7 +356,7 @@ quadro geral pressupõe crescimento para 30–50k MAU — objetivo, não ponto d
 
 ---
 
-## 4. Licença vitalícia e doação via Pix
+## 5. Licença vitalícia e doação via Pix
 
 Não são alternativas ao freemium — são degraus dentro dele, para quem recusa assinatura por princípio.
 
@@ -247,7 +373,7 @@ espera modo cuidador e IA em 2029. Por isso ofereça-o **ao lado** do anual, a ~
 Converte quem tem aversão a assinatura, elimina ansiedade de recorrência e antecipa caixa no
 lançamento, sem substituir a receita recorrente.
 
-Tecnicamente é quase de graça depois do §3: mais um produto (não-consumível na Play, pagamento único
+Tecnicamente é quase de graça depois do §4: mais um produto (não-consumível na Play, pagamento único
 no Stripe) escrevendo o mesmo `entitlements/{uid}` com `expiresAt: null`.
 
 ### Doação: Pix, não "Buy Me a Coffee"
@@ -268,7 +394,7 @@ no ano inteiro. Termômetro de afeto, não linha de receita.
 
 ---
 
-## 5. B2B — acompanhamento por médicos
+## 6. B2B — acompanhamento por médicos
 
 ### Por que o modelo atual não comporta
 
@@ -328,7 +454,7 @@ dia, não só o que o app faz.
 
 ---
 
-## 6. Publicidade via AdMob — não fazer
+## 7. Publicidade via AdMob — não fazer
 
 ### A conta que encerra a discussão
 
@@ -359,7 +485,7 @@ cenário:** interstitial, e qualquer anúncio na tela de Registrar.
 
 ---
 
-## 7. Insights com IA
+## 8. Insights com IA
 
 ### Arquitetura
 
@@ -421,22 +547,23 @@ mês" é previsível para os dois lados, e o custo marginal é desprezível.
 
 ---
 
-## 8. Sequência recomendada
+## 9. Sequência recomendada
 
 A ordem importa mais que a escolha: cada fase gera a informação que torna a próxima decidível.
+Os pré-requisitos do §2 aparecem embutidos nas fases abaixo, não como uma fase à parte.
 
 | Fase | O quê | Prazo |
 |---|---|---|
-| **0** | **Destravar o lançamento comercial.** Política de privacidade real substituindo o placeholder de `settings.tsx`; Data Safety; App Check em *enforce*; e **analytics de produto** — sem funil você escolheria o que bloquear no escuro. | 1 semana · **bloqueante** |
+| **0** | **Destravar o lançamento comercial.** Política de privacidade real substituindo o placeholder de `settings.tsx`; Data Safety; App Check em *enforce*; **analytics de produto** — sem funil você escolheria o que bloquear no escuro; e a emenda ao `CLAUDE.md` (§2.1). | 1 semana · **bloqueante** |
 | **1** | **Afiliados e Pix.** Zero infraestrutura. O valor não é a comissão: é a primeira medida real de intenção comercial. | 2–3 dias |
 | **2** | **Relatório em PDF, liberado para todos.** Grátis por 30–60 dias, medindo quantos geram e quando. Teste barato de que o paywall tem âncora, antes de semanas em billing. | 1 semana |
-| **3** | **Infraestrutura de assinatura.** `entitlements/{uid}`, webhook RevenueCat, Play Billing, Stripe, `useEntitlement()`. Só então PDF e janelas longas passam para o Pro — com quem já usava mantendo acesso. | 4–6 semanas |
+| **3** | **Infraestrutura de assinatura.** `entitlements/{uid}` + rules + testes (§2.3), cascata de exclusão corrigida (§2.2), webhook RevenueCat, Play Billing, Stripe, `useEntitlement()` (§2.5). Só então PDF e janelas longas passam para o Pro — com quem já usava mantendo acesso. | 4–6 semanas |
 | **4** | **Link compartilhável para o médico.** Snapshot somente-leitura com validade. A taxa de uso decide se o painel B2B vale ser construído. | 1 semana |
 | **5** | **Modo cuidador e IA.** As duas que sustentam o preço no longo prazo, na ordem que os dados indicarem. | 4–6 semanas |
 
 ---
 
-## 9. Conformidade antes de cobrar o primeiro real
+## 10. Conformidade antes de cobrar o primeiro real
 
 Dado de pressão arterial é dado pessoal **sensível** (LGPD art. 5º, II). O tratamento já é rigoroso —
 o que muda ao monetizar é que finalidades novas exigem bases legais novas, cada uma com seu próprio
@@ -479,7 +606,7 @@ americano concreto.
 
 ---
 
-## 10. As três coisas que eu não faria
+## 11. As três coisas que eu não faria
 
 1. **Cobrar pelos lembretes.** São a razão de existir do produto e o mecanismo de aderência ao
    tratamento. Gatear isso é cobrar por saúde.
