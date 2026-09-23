@@ -20,6 +20,5 @@ jest.rules.config.js
 jest.setup.js
 
 # Documentação
-PLAN.md
-RELEASE_CHECKLIST.md
+docs/plans/
 CLAUDE.md
