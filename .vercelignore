@@ -21,4 +21,6 @@ jest.setup.js
 
 # Documentação
 docs/plans/
+PLAN.md
+RELEASE_CHECKLIST.md
 CLAUDE.md

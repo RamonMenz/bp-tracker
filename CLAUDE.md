@@ -1,7 +1,7 @@
 # CLAUDE.md — Manual de Instruções do Repositório
 
 > Instruções permanentes para o Claude ao trabalhar neste repositório.
-> O plano de desenvolvimento completo (modelagem, security rules, pipeline de lembretes, fases) está em [`docs/plans/PLAN.md`](./docs/plans/PLAN.md) — consulte-o antes de tomar decisões de arquitetura.
+> O plano de desenvolvimento completo (modelagem, security rules, pipeline de lembretes, fases) está em [`PLAN.md`](./PLAN.md) — consulte-o antes de tomar decisões de arquitetura.
 
 ---
 
