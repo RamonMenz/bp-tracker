@@ -96,7 +96,9 @@ código atual (deploy web é via Vercel; estado de UI é Context + hooks locais)
   (`src/services/crashReporter.web.ts`, `@sentry/browser`, `sendDefaultPii: false`, sem
   `Sentry.setUser`) — item que o roadmap listava como pendente, hoje 100% resolvido nas duas
   pontas.
-- **~350 testes** em 38 arquivos (`src/`) + 26 casos de rules + 16 de `nextRun` nas Functions.
+- **294 testes Jest** em 36 suítes (app) + 16 de `nextRun` nas Functions + 26 casos de rules —
+  executados em 2026-10-01: os dois primeiros grupos passam; a suíte de rules falha por
+  configuração (ver item 2 de "Custo de Não Agir").
 
 ### Correções de bugs e UX (auditorias `plano_de_correcoes.md` e `plano_ux_mobile.md`)
 11 de 12 bugs do `plano_de_correcoes.md` corrigidos (o 12º é a URL de política de privacidade,
@@ -131,7 +133,7 @@ modo somente-data, filtro de período em `getAllReadings`/`useExportCsv` reaprov
   `reminderTimes` e o backend (`dispatchReminders`, `computeNextRun`) já suporte N horários —
   `app/(app)/settings.tsx` (`DEFAULT_SLOTS`). Ampliar é uma mudança pequena e o produto já suporta.
 - **CI de qualidade inexistente.** `.github/workflows/` só tem o build manual do EAS
-  (`eas-build.yml`). Os ~350 testes, lint e typecheck existem mas **não rodam automaticamente** em
+  (`eas-build.yml`). Os ~336 testes, lint e typecheck existem mas **não rodam automaticamente** em
   nenhum PR/push — o maior retorno por esforço pendente no repositório.
 - **`functions/` fora do lint.** `eslint.config.js` tem `functions/**` em `globalIgnores` — o
   backend (maior custo de falha silenciosa) é o único código sem verificação estática automatizada.
@@ -259,12 +261,14 @@ jurídica
   linha; o trabalho real é escrever o texto.
 
 **2. CI de qualidade (lint + typecheck + testes)** · esforço baixo
-- **Perda se ficar como está:** os ~350 testes, as 26 regras do Firestore e o typecheck existem,
-  mas **ninguém sabe se estão verdes hoje** — nem esta análise conseguiu rodá-los (sem
-  `node_modules` no ambiente), e o `panorama_do_projeto.md` registrou a mesma limitação. O
-  projeto cresce por sessões de IA independentes; sem CI, uma regressão em `nextRun.ts` (horário
-  de verão) ou nas rules (isolamento entre usuários) só aparece em produção: lembrete na hora
-  errada ou, no pior caso, regra de acesso afrouxada sem ninguém perceber.
+- **Perda se ficar como está:** nada roda sozinho, e o efeito disso já é visível: rodando tudo
+  manualmente em 2026-10-01, lint, typecheck, Jest (294 testes) e Functions (16 testes) passam,
+  mas **a suíte de Security Rules (`npm run test:rules`) falha nos 26 casos** — não por erro nas
+  rules, e sim porque `jest.rules.config.js` usa o preset `jest-expo`, que substitui o `fetch` e
+  impede a suíte de alcançar o emulador. Ou seja: os testes que provam que o usuário A não lê os
+  dados de B **provavelmente nunca rodaram**, e ninguém percebeu. O projeto cresce por sessões de
+  IA independentes; sem CI, uma regressão em `nextRun.ts` (horário de verão) ou nas rules
+  (isolamento entre usuários) só aparece em produção.
 - **Ganho ao corrigir:** todo PR passa a provar que não quebrou nada; o investimento já feito em
   testes começa a render. É o maior retorno por esforço do repositório — um workflow de algumas
   dezenas de linhas protege todo o resto.
