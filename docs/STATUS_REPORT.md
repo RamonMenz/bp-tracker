@@ -96,7 +96,9 @@ código atual (deploy web é via Vercel; estado de UI é Context + hooks locais)
   (`src/services/crashReporter.web.ts`, `@sentry/browser`, `sendDefaultPii: false`, sem
   `Sentry.setUser`) — item que o roadmap listava como pendente, hoje 100% resolvido nas duas
   pontas.
-- **~350 testes** em 38 arquivos (`src/`) + 26 casos de rules + 16 de `nextRun` nas Functions.
+- **294 testes Jest** em 36 suítes (app) + 16 de `nextRun` nas Functions + 26 casos de rules —
+  executados em 2026-10-01: os dois primeiros grupos passam; a suíte de rules falha por
+  configuração (ver item 2 de "Custo de Não Agir").
 
 ### Correções de bugs e UX (auditorias `plano_de_correcoes.md` e `plano_ux_mobile.md`)
 11 de 12 bugs do `plano_de_correcoes.md` corrigidos (o 12º é a URL de política de privacidade,
@@ -131,7 +133,7 @@ modo somente-data, filtro de período em `getAllReadings`/`useExportCsv` reaprov
   `reminderTimes` e o backend (`dispatchReminders`, `computeNextRun`) já suporte N horários —
   `app/(app)/settings.tsx` (`DEFAULT_SLOTS`). Ampliar é uma mudança pequena e o produto já suporta.
 - **CI de qualidade inexistente.** `.github/workflows/` só tem o build manual do EAS
-  (`eas-build.yml`). Os ~350 testes, lint e typecheck existem mas **não rodam automaticamente** em
+  (`eas-build.yml`). Os ~336 testes, lint e typecheck existem mas **não rodam automaticamente** em
   nenhum PR/push — o maior retorno por esforço pendente no repositório.
 - **`functions/` fora do lint.** `eslint.config.js` tem `functions/**` em `globalIgnores` — o
   backend (maior custo de falha silenciosa) é o único código sem verificação estática automatizada.
@@ -232,3 +234,225 @@ planejamento descrevem:
    aceitam até 8 `reminderTimes` e `computeNextRun` já é genérico para N horários, mas a tela de
    Ajustes só oferece 3 slots fixos (manhã/tarde/noite) — um limite de produto, não uma limitação
    técnica herdada do plano original.
+
+---
+
+## Custo de Não Agir × Benefício de Corrigir
+
+Cada item das três seções anteriores, agrupado pelo **momento certo de agir**. Itens que
+apareciam em mais de uma seção (ex.: política de privacidade, slots de lembrete) foram unidos.
+"Esforço" é uma estimativa relativa: **baixo** = horas, **médio** = 1–3 dias, **alto** = semanas
+ou exige decisão de arquitetura antes do código.
+
+Nem todo item vale a pena corrigir agora: para alguns, deixar como está **é** a decisão certa por
+enquanto, e isso está dito explicitamente.
+
+### Nível 1 — Bloqueiam o lançamento ou expõem o projeto a risco
+
+**1. URL da política de privacidade (placeholder)** · esforço baixo no código, depende de decisão
+jurídica
+- **Perda se ficar como está:** o app **não pode ser publicado** na Play Store — app que coleta dado
+  de saúde sem política de privacidade é recusado no Data Safety form. Hoje o link "Política de
+  privacidade" em Ajustes abre um domínio inexistente: se alguém instalar uma build de teste, o
+  primeiro contato com a sua postura de privacidade é uma página de erro, num app que pede dado
+  sensível (LGPD). Também trava toda a monetização, que pressupõe app publicado.
+- **Ganho ao corrigir:** destrava a publicação e o formulário da loja; dá ao usuário a resposta
+  para "onde ficam meus dados?" e cumpre o dever de transparência da LGPD. A troca no código é uma
+  linha; o trabalho real é escrever o texto.
+
+**2. CI de qualidade (lint + typecheck + testes)** · esforço baixo
+- **Perda se ficar como está:** nada roda sozinho, e o efeito disso já é visível: rodando tudo
+  manualmente em 2026-10-01, lint, typecheck, Jest (294 testes) e Functions (16 testes) passam,
+  mas **a suíte de Security Rules (`npm run test:rules`) falha nos 26 casos** — não por erro nas
+  rules, e sim porque `jest.rules.config.js` usa o preset `jest-expo`, que substitui o `fetch` e
+  impede a suíte de alcançar o emulador. Ou seja: os testes que provam que o usuário A não lê os
+  dados de B **provavelmente nunca rodaram**, e ninguém percebeu. O projeto cresce por sessões de
+  IA independentes; sem CI, uma regressão em `nextRun.ts` (horário de verão) ou nas rules
+  (isolamento entre usuários) só aparece em produção.
+- **Ganho ao corrigir:** todo PR passa a provar que não quebrou nada; o investimento já feito em
+  testes começa a render. É o maior retorno por esforço do repositório — um workflow de algumas
+  dezenas de linhas protege todo o resto.
+
+**3. `RELEASE_CHECKLIST.md` desatualizado** · esforço baixo
+- **Perda se ficar como está:** o checklist diz que `package.json` "não existe" e que o
+  **"primeiro passo real" é rodar `npx create-expo-app` na raiz**. Quem seguir isso à risca —
+  você numa semana corrida, ou uma sessão de IA que leia o arquivo como instrução — pode gerar um
+  projeto novo por cima do existente. No mínimo, gasta tempo resolvendo bloqueios que não existem
+  e perde confiança nos itens que **são** reais (keystore, Data Safety, fingerprint SHA-1).
+- **Ganho ao corrigir:** volta a ser um roteiro confiável até a Play Store, com só os bloqueios
+  verdadeiros — quase todos 🔴 (credenciais e decisões suas), o que deixa claro que a
+  engenharia já fez a parte dela.
+
+**4. App Check nativo sem a Function de atestação (Play Integrity)** · esforço médio
+- **Perda se ficar como está:** o enforcement do App Check não pode ser ligado sem derrubar o
+  Android, então o Firestore aceita requisições de **qualquer cliente** que use a config pública
+  com uma conta Google qualquer. As rules continuam isolando os dados por usuário — **não há
+  vazamento entre contas** —, mas qualquer um pode criar contas e escrever volume de dados para
+  inflar sua conta do Firebase ou automatizar abuso. O `PLAN.md` trata o App Check como
+  "complemento obrigatório", e hoje ele protege só a web.
+- **Ganho ao corrigir:** só o seu app (íntegro, instalado pela Play Store) fala com o backend;
+  custo previsível e uma camada a mais de defesa para dado de saúde. Atenção à dependência: só dá
+  para validar depois que o app estiver no Play Console (internal testing) — não é bloqueio do
+  primeiro build, mas deveria entrar logo depois.
+
+### Nível 2 — Baratos e evitam problemas futuros (fazer logo)
+
+**5. Documentação dizendo Firebase Hosting quando o deploy é Vercel** · esforço baixo
+- **Perda se ficar como está:** `firebase deploy --only hosting` falha. Pior: alguém (ou uma sessão
+  de IA seguindo o `CLAUDE.md`) "conserta" adicionando um bloco `hosting` e passa a existir **dois
+  sites web** com versões diferentes — e o domínio do reCAPTCHA Enterprise, o service worker de
+  push e o link da política de privacidade passam a depender de qual URL o usuário abriu.
+- **Ganho ao corrigir:** um único caminho de deploy, documentado como de fato funciona.
+
+**6. Documentação citando Zustand e `src/store/`** · esforço baixo
+- **Perda se ficar como está:** o `CLAUDE.md` é lido como **instrução** por toda sessão de IA. Uma
+  sessão futura que precise de estado global vai seguir o documento, instalar Zustand e criar
+  `src/store/` — uma dependência e um segundo padrão de estado que o app nunca precisou,
+  convivendo com o Context que já funciona.
+- **Ganho ao corrigir:** a documentação descreve o padrão real (Context + hooks por feature) e as
+  próximas mudanças seguem o mesmo caminho.
+
+**7. Planos em `docs/plans/` que se contradizem** · esforço baixo
+- **Perda se ficar como está:** cada documento é um retrato de uma data, e vários dão como pendente
+  algo que já está pronto. Quem abrir um deles isolado (inclusive uma sessão de IA recebendo um
+  prompt antigo) pode reimplementar uma feature existente ou "corrigir" algo já corrigido.
+- **Ganho ao corrigir:** um aviso no topo de cada plano antigo ("registro histórico — estado atual
+  em `docs/STATUS_REPORT.md`") resolve sem reescrever nada.
+
+**8. `users/{uid}` sem schema Zod** · esforço baixo-médio
+- **Perda se ficar como está:** o mesmo documento é validado de três formas diferentes, em dois
+  projetos (app e Functions). Quando o modelo mudar — e muda em qualquer feature do roadmap, como
+  meta pessoal ou monetização —, basta esquecer um dos três lugares para o app aceitar um perfil
+  que o backend trata de outro jeito (ex.: um fuso horário inválido aceito no cliente que faz o
+  lembrete deixar de ser agendado, sem erro visível). Também descumpre uma regra explícita do
+  `CLAUDE.md §3.1`.
+- **Ganho ao corrigir:** uma fonte única de verdade para o perfil, que vira a base segura para
+  qualquer campo novo (meta, plano Pro, preferências).
+
+**9. `functions/` fora do ESLint** · esforço baixo
+- **Perda se ficar como está:** o backend que dispara os lembretes — a razão de ser do produto — é
+  o único código sem verificação automática. As regras que protegem o app (sem `console`, sem
+  `any`, imports organizados) não valem ali; a própria regra do `CLAUDE.md §4.5` (usar o `logger`
+  das Functions, nunca `console`) não é verificada.
+- **Ganho ao corrigir:** o mesmo padrão de qualidade no código com maior custo de falha silenciosa.
+  Combina naturalmente com o item 2 (CI).
+
+**10. Duplicações (`average()` ×2, `getErrorCode()` ×5)** · esforço baixo
+- **Perda se ficar como está:** hoje as duas `average()` são idênticas — o risco é **futuro**: se
+  alguém mudar o arredondamento num lugar só, o cabeçalho do dia no Histórico e o ponto do
+  gráfico passam a mostrar médias diferentes para o mesmo dia, o que destrói a confiança no dado.
+  Com `getErrorCode()` em 5 arquivos, um código de erro novo do Firebase tratado num repositório
+  continua aparecendo como mensagem genérica nos outros.
+- **Ganho ao corrigir:** uma única regra de média e de tradução de erro. Ganho pequeno, mas
+  praticamente sem risco — bom candidato para fazer junto de outra mudança nesses arquivos.
+
+### Nível 3 — Decisões de produto com perda real para o usuário
+
+**11. Segunda medição sobrescreve a primeira com a média** · esforço médio (exige mudar modelo de
+dados + rules + índices, `CLAUDE.md §3.3`)
+- **Perda se ficar como está:** as duas leituras individuais **desaparecem** e o documento salvo
+  não indica que é uma média — no histórico e no CSV que vai para o médico, uma média de 128/84 é
+  indistinguível de uma medição única. Se as duas leituras foram muito diferentes (ex.: 150 e
+  120), essa variação — que pode interessar ao médico — some sem deixar rastro. Também diverge do
+  que o próprio plano da feature prometia ("a média nunca é persistida"). Quanto mais tempo
+  passar, mais dado histórico fica nesse formato e não pode ser recuperado.
+- **Ganho ao corrigir:** registro clínico fiel (as duas leituras + a média identificada como tal),
+  CSV/PDF mais úteis para o médico. Se a decisão for **manter** como está, o ganho mínimo é
+  marcar o documento como média (um campo a mais) — o que já evita a ambiguidade.
+
+**12. Lembretes travados em 3 horários fixos** · esforço baixo-médio (só UI; backend e rules já
+suportam até 8)
+- **Perda se ficar como está:** quem foi orientado a medir 2x ou 4x ao dia, ou em horários que não
+  encaixam em manhã/tarde/noite (turno noturno), não consegue configurar. Hoje é possível
+  **desligar** slots, mas não adicionar. Para o público central (3x/dia), a perda é pequena.
+- **Ganho ao corrigir:** o app atende prescrições diferentes sem nenhuma mudança no backend —
+  aproveita uma capacidade já construída e testada.
+
+**13. Card de média semanal/mensal** · esforço baixo-médio
+- **Perda se ficar como está:** a pergunta que o médico mais faz — "como está sua pressão em
+  média?" — não tem resposta direta no app; o usuário precisa estimar olhando o gráfico ou abrir
+  o CSV numa planilha.
+- **Ganho ao corrigir:** um número único que o usuário mostra na consulta, usando dados e agregação
+  que já existem. Alto valor percebido para pouco código; também é a base do relatório em PDF.
+
+**14. Integração com Google Agenda (Opção A — link)** · esforço baixo
+- **Perda se ficar como está:** na web sem push (iPhone, navegador sem suporte, VAPID ausente) o
+  usuário **não recebe lembrete nenhum** — o objetivo central do produto falha nesse cenário. O
+  popup já sugere "crie lembretes no Google Agenda", mas deixa todo o trabalho com o usuário, e
+  quem precisa criar três eventos recorrentes à mão geralmente não cria.
+- **Ganho ao corrigir:** um toque gera os eventos recorrentes já preenchidos com os horários do
+  usuário, sem OAuth, sem backend novo e sem dado de saúde saindo do app. Fecha a lacuna de
+  lembrete na web por um custo muito baixo.
+
+### Nível 4 — Evolução de produto (depois do lançamento)
+
+**15. Relatório em PDF para o médico** · esforço médio
+- **Perda se ficar como está:** o único formato de saída é CSV, que serve para planilha mas não
+  para uma consulta de 15 minutos; o app não chega de fato ao médico. É também a feature Pro mais
+  natural no plano de monetização.
+- **Ganho ao corrigir:** o dado do usuário vira algo que o médico usa; diferencial claro em relação
+  a anotar no papel.
+
+**16. Meta pessoal + indicador de aderência** · esforço médio
+- **Perda se ficar como está:** o app cobra "meça 3x ao dia" mas nunca mostra se o usuário está
+  conseguindo; sem esse retorno, o hábito perde força, e retenção é exatamente o problema que o
+  produto existe para resolver.
+- **Ganho ao corrigir:** o objetivo central do produto vira algo visível ("5 de 7 dias completos",
+  "dentro da meta do seu médico"), o que tende a sustentar o uso. Depende do item 8 (schema do
+  perfil) para guardar a meta com segurança.
+
+**17. iOS + Sign in with Apple** · esforço alto (conta Apple Developer + pipeline + login novo)
+- **Perda se ficar como está:** o app não alcança quem usa iPhone, parcela relevante do público. Na
+  web do iPhone o push é limitado, então esse usuário hoje fica sem lembrete (ver item 14).
+- **Ganho ao corrigir:** mercado potencial maior. Atenção: a App Store **rejeita** login com Google
+  sem Sign in with Apple, então os dois itens andam juntos e mudam a decisão "Google como provedor
+  único" do `CLAUDE.md` — decidir isso antes de começar.
+
+**18. Widget de tela inicial (Android)** · esforço médio-alto (módulo nativo)
+- **Perda se ficar como está:** pequena — o fluxo atual (notificação → formulário) já cumpre a meta
+  de ≤ 10 s.
+- **Ganho ao corrigir:** registro sem abrir o app e um lembrete visual permanente na tela inicial.
+  Bom, mas não urgente.
+
+**19. Modo cuidador / perfil de terceiro** · esforço alto (decisão de modelagem + revisão completa
+das rules)
+- **Perda se ficar como está:** quem mede a pressão de um pai ou mãe idosos acaba entrando com a
+  conta Google **da outra pessoa** no próprio celular — pior para a segurança e para a privacidade
+  do que uma solução desenhada para isso.
+- **Ganho ao corrigir:** atende um uso real do público. É a mudança de **maior risco de arquitetura**
+  da lista; não começar sem antes decidir o modelo (perfis dentro da conta × convite).
+
+**20. Integração Bluetooth com aparelhos** · esforço alto
+- **Perda se ficar como está:** o usuário continua digitando os números e pode errar a digitação.
+- **Ganho ao corrigir:** menos atrito e menos erro. Mas cada fabricante tem um protocolo, e o
+  schema hoje rejeita qualquer `source` que não seja `'manual'`. **Deixar como está é a decisão
+  certa** até o produto provar retenção com o registro manual.
+
+### Nível 5 — Estratégia de negócio (deixar como está, por ora, é correto)
+
+**21. Monetização** · esforço variável por estratégia
+- **Perda se ficar como está:** zero receita — mas hoje o app nem está publicado, então não há
+  receita possível de qualquer forma.
+- **Ganho ao corrigir:** receita, seguindo a ordem recomendada no próprio plano (afiliados e Pix
+  primeiro, sem infraestrutura nova). Pré-requisito: os itens 1 (política de privacidade) e 8
+  (schema do perfil, base de `entitlements`). Começar antes disso é construir sobre base frágil.
+
+**22. Ecossistema de micro-rotinas** · esforço alto
+- **Perda se ficar como está:** nenhuma no curto prazo. A análise concluiu que não há código
+  compartilhável hoje com o Rastreador de Metas.
+- **Ganho ao corrigir:** só aparece depois que o BP Tracker provar o modelo (lançado, com retenção
+  medida). Extrair um "core" antes disso é abstração prematura. **Deixar como está é o
+  recomendado.**
+
+### Ordem sugerida
+
+| Ordem | Itens | Por quê |
+|---|---|---|
+| 1º | 2 (CI), 3 (checklist), 5–7 (docs) | Horas de trabalho; protegem tudo o que vem depois e evitam que sessões futuras sigam instruções erradas. |
+| 2º | 1 (política de privacidade) | Única coisa entre o código pronto e a loja — depende de você, não de engenharia. |
+| 3º | 8 (Zod do perfil), 9 (lint das Functions), 10 (duplicações) | Base segura antes de qualquer campo novo no perfil. |
+| 4º | 11 (decisão sobre a segunda medição) | Quanto mais tempo passa, mais dado fica sem as leituras individuais. |
+| 5º | 4 (App Check nativo) | Logo depois do primeiro build no Play Console, que é quando passa a ser possível validar. |
+| 6º | 13, 14, 12 | Alto valor para o usuário com pouco código. |
+| Depois | 15–19 | Evolução de produto, já com o app publicado e com dados de uso. |
+| Não agora | 20–22 | Deixar como está é a decisão correta neste momento. |
