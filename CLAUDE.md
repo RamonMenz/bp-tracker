@@ -59,6 +59,7 @@ npm run lint                     # ESLint
 npm run typecheck                # tsc --noEmit
 npm test                         # Jest (jest-expo)
 npm test -- --watch              # modo watch durante o desenvolvimento
+npm run test:rules               # Security Rules no emulador (exige Java 21+)
 ```
 
 ### Build e distribuição
