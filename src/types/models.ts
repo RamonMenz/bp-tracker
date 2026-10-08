@@ -1,5 +1,16 @@
 import type { Timestamp } from 'firebase/firestore';
 
+import type { SessionReading } from '@/domain/session-average';
+
+/**
+ * Uma das duas leituras de uma sessão (protocolo AHA). O formato é definido em
+ * `domain/session-average.ts` — o domínio é puro e não importa de `types/`, então a direção é
+ * esta: aqui só se dá o nome usado pelo modelo de dados.
+ */
+export type SessionReadingValues = SessionReading;
+
+export type SessionReadings = [SessionReadingValues, SessionReadingValues];
+
 /**
  * A categoria (normal/elevada/estágio…) NÃO faz parte do modelo: é derivada de
  * (systolic, diastolic) por `domain/bp-classification.ts` e nunca persistida.
@@ -15,6 +26,11 @@ export interface Reading {
   createdAt: Date;
   note: string | null;
   source: 'manual';
+  /**
+   * null = medição única. Quando presente, systolic/diastolic/pulse do documento são a média
+   * (`computeSessionAverage`) destas duas leituras.
+   */
+  sessionReadings: SessionReadings | null;
 }
 
 /** Payload de criação: `createdAt` não existe ainda — é gerado no servidor via serverTimestamp(). */

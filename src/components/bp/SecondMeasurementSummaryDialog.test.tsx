@@ -41,11 +41,11 @@ describe('SecondMeasurementSummaryDialog — o resumo', () => {
     expect(screen.getByLabelText('Categoria: Estágio 1')).toBeTruthy();
   });
 
-  /** A média substituiu a primeira leitura no mesmo documento — não é um resumo à parte. */
-  it('diz que a média foi salva no histórico', async () => {
+  /** A média fica no documento e as duas leituras junto dela — nada se perde. */
+  it('diz que a média foi salva no histórico, junto com as duas medições', async () => {
     await renderDialog();
 
-    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
+    expect(screen.getByText('A média foi salva no seu histórico, junto com as duas medições.')).toBeTruthy();
   });
 
   it('não mostra o pulso quando a média não tem pulso — nada de "null" na tela', async () => {

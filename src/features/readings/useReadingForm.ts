@@ -69,6 +69,18 @@ function numberToField(value: number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value);
 }
 
+/** Compara como número (o campo é string): '082' e '82' são o mesmo valor; pulso vazio = null. */
+function hasSameBpValues(
+  reading: Reading,
+  values: { systolic: string; diastolic: string; pulse: string },
+): boolean {
+  return (
+    Number(values.systolic) === reading.systolic &&
+    Number(values.diastolic) === reading.diastolic &&
+    (values.pulse === '' ? null : Number(values.pulse)) === reading.pulse
+  );
+}
+
 /**
  * Estado e validação do formulário de medição, em dois modos.
  *
@@ -126,7 +138,10 @@ export function useReadingForm(initialReading?: EditableReading): UseReadingForm
     const values = { systolic, diastolic, pulse, note, measuredAt };
 
     if (initialReading !== undefined) {
-      const success = await update.updateReading(initialReading.id, values);
+      // Se sistólica/diastólica/pulso mudaram, o valor deixou de ser a média daquelas leituras e
+      // vira correção manual — as leituras da sessão saem (null); observação/horário preservam.
+      const sessionReadings = hasSameBpValues(initialReading, values) ? initialReading.sessionReadings : null;
+      const success = await update.updateReading(initialReading.id, { ...values, sessionReadings });
       return { success, readingId: null };
     }
 

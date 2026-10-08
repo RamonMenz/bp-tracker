@@ -17,7 +17,8 @@ export type SecondMeasurementState = 'idle' | 'offer' | 'measuring' | 'summary';
  * A primeira medição da sessão, com o que é preciso para depois ATUALIZAR o mesmo documento com
  * a média (em vez de criar uma segunda leitura separada — ver decisão de escopo no topo deste
  * arquivo). `note`/`measuredAt` são os valores que a atualização preserva; só o par sistólica/
- * diastólica (e o pulso, quando os dois lados o têm) muda para a média.
+ * diastólica (e o pulso, quando os dois lados o têm) muda para a média — e os valores desta
+ * primeira medição entram em `sessionReadings`, junto com os da segunda.
  */
 export interface FirstMeasurement extends SessionReading {
   /** Id do documento já salvo no Firestore (devolvido por useAddReading/submit() no Prompt 4.1). */
@@ -58,8 +59,9 @@ export interface UseSecondMeasurementFlowResult {
    * Chame com a segunda medição (só os 3 campos numéricos — sem passar pelo Firestore como
    * documento próprio). Fora de 'measuring' (ou sem uma primeira medição guardada) é NO-OP e
    * devolve `false` sem chamar updateReading. Em 'measuring', ATUALIZA o documento da primeira
-   * medição (`firstReading.id`) com a média das duas, preservando note/measuredAt originais — não
-   * cria um segundo documento. Sucesso leva measuring→'summary' com a média calculada; falha
+   * medição (`firstReading.id`): a média das duas fica nos campos principais e as duas leituras
+   * individuais ficam preservadas em `sessionReadings` (primeira → segunda), com note/measuredAt
+   * originais — não cria um segundo documento. Sucesso leva measuring→'summary' com a média calculada; falha
    * mantém o estado em 'measuring', com `saveError` preenchido, para o usuário tentar de novo.
    */
   submitSecondMeasurement: (second: SessionReading) => Promise<boolean>;
@@ -88,6 +90,9 @@ export interface UseSecondMeasurementFlowResult {
  * roadmap): idle → offer (primeira medição salva, aguardando decisão) → measuring (usuário
  * aceitou, aguardando a segunda) → summary (média calculada) → idle. Sem UI aqui — a tela
  * consome este hook.
+ *
+ * A média fica no documento da primeira medição, nos campos de sempre; as duas leituras
+ * individuais ficam preservadas em `sessionReadings`.
  *
  * Não bloqueia nada: `secondsRemaining` é só o texto do contador, nunca uma condição de
  * habilitar/desabilitar botão.
@@ -132,8 +137,9 @@ export function useSecondMeasurementFlow(): UseSecondMeasurementFlowResult {
   }
 
   /**
-   * Segunda medição: ATUALIZA o documento da primeira (firstReading.id) com a média das duas, em
-   * vez de criar um segundo documento — note/measuredAt da primeira medição são preservados.
+   * Segunda medição: ATUALIZA o documento da primeira (firstReading.id) com a média das duas nos
+   * campos de sempre e as duas leituras em `sessionReadings`, em vez de criar um segundo
+   * documento — note/measuredAt da primeira medição são preservados.
    */
   async function submitSecondMeasurement(second: SessionReading): Promise<boolean> {
     if (state !== 'measuring' || firstReading === null) {
@@ -148,6 +154,10 @@ export function useSecondMeasurementFlow(): UseSecondMeasurementFlowResult {
       pulse: nextAverage.pulse === null ? '' : String(nextAverage.pulse),
       note: firstReading.note ?? '',
       measuredAt: firstReading.measuredAt,
+      sessionReadings: [
+        { systolic: firstReading.systolic, diastolic: firstReading.diastolic, pulse: firstReading.pulse },
+        { systolic: second.systolic, diastolic: second.diastolic, pulse: second.pulse },
+      ],
     });
 
     if (success) {

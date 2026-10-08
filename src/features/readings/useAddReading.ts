@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ZodError } from 'zod';
 
 import { useSession } from '@/features/auth/useSession';
-import type { ReadingInput } from '@/types/models';
+import type { ReadingInput, SessionReadings } from '@/types/models';
 
 import { parseReadingInput } from './reading.schema';
 import { addReading as persistReading } from './readings.repo';
@@ -13,6 +13,8 @@ export interface ReadingFormValues {
   pulse: string;
   note: string;
   measuredAt: Date;
+  /** Ausente = medição única (null). Só o fluxo da segunda medição e a edição de uma média preenchem. */
+  sessionReadings?: SessionReadings | null;
 }
 
 export interface UseAddReadingResult {
@@ -47,6 +49,7 @@ export function useAddReading(): UseAddReadingResult {
         note: values.note === '' ? null : values.note,
         measuredAt: values.measuredAt,
         source: 'manual' as const,
+        sessionReadings: values.sessionReadings ?? null,
       };
 
       let input: ReadingInput;

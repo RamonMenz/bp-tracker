@@ -69,10 +69,35 @@ service cloud.firestore {
 
       // ---------- MEDIÇÕES ----------
       match /readings/{readingId} {
+        // Uma das duas leituras de uma sessão (protocolo AHA): mesmas faixas e mesma regra
+        // sistólica > diastólica do documento.
+        function validSessionEntry(e) {
+          return e is map
+              && e.keys().hasOnly(['systolic','diastolic','pulse'])
+              && e.keys().hasAll(['systolic','diastolic'])
+              && intBetween(e.systolic, 50, 300)
+              && intBetween(e.diastolic, 30, 200)
+              && e.systolic > e.diastolic
+              && (e.get('pulse', null) == null || intBetween(e.get('pulse', null), 20, 250));
+        }
+
+        // sessionReadings é opcional (null/ausente = medição única). Quando presente, o documento
+        // guarda a média das duas leituras — e as rules NÃO conferem essa média de propósito: o
+        // math.round das rules não tem semântica de arredondamento documentada igual à do
+        // Math.round do JS (computeSessionAverage), e meia unidade de diferença negaria uma
+        // escrita legítima. A média é responsabilidade do cliente; aqui só se valida o formato.
+        function validSessionReadings(d) {
+          return d.get('sessionReadings', null) == null
+              || (d.sessionReadings is list
+                  && d.sessionReadings.size() == 2
+                  && validSessionEntry(d.sessionReadings[0])
+                  && validSessionEntry(d.sessionReadings[1]));
+        }
+
         function validReading(d) {
           return d.keys().hasOnly([
                    'systolic','diastolic','pulse','measuredAt',
-                   'createdAt','note','source'
+                   'createdAt','note','source','sessionReadings'
                  ])
               && d.keys().hasAll(['systolic','diastolic','measuredAt','createdAt','source'])
               && intBetween(d.systolic, 50, 300)
@@ -86,7 +111,8 @@ service cloud.firestore {
               && d.createdAt is timestamp
               && (d.get('note', null) == null
                   || (d.get('note', null) is string && d.get('note', null).size() <= 280))
-              && d.source == 'manual';
+              && d.source == 'manual'
+              && validSessionReadings(d);
         }
 
         allow read:   if isOwner(uid);              // get + list (o export usa list)

@@ -107,6 +107,10 @@ describe('useSecondMeasurementFlow', () => {
         pulse: '75',
         note: 'Antes do café.',
         measuredAt: READING_A.measuredAt,
+        sessionReadings: [
+          { systolic: 120, diastolic: 80, pulse: 70 },
+          { systolic: 130, diastolic: 90, pulse: 80 },
+        ],
       });
     });
 

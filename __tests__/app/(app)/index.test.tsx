@@ -174,7 +174,7 @@ describe('RecordScreen — sugestão de segunda medição', () => {
 
     expect(screen.getByText('Média das duas medições')).toBeTruthy();
     expect(screen.getByText('125/85')).toBeTruthy();
-    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
+    expect(screen.getByText('A média foi salva no seu histórico, junto com as duas medições.')).toBeTruthy();
 
     // 'summary' também é pop-up: o formulário de fundo continua escondido do leitor de tela
     // (CLAUDE.md §4.7), não só nos dois estados anteriores.

@@ -13,6 +13,7 @@ function makeReading(overrides: Partial<Reading> = {}): Reading {
     createdAt: new Date(2026, 0, 5, 8, 7),
     note: null,
     source: 'manual',
+    sessionReadings: null,
     ...overrides,
   };
 }
@@ -21,7 +22,7 @@ describe('readingsToCsv', () => {
   it('gera BOM, diretiva sep=; e cabeçalho para lista vazia', () => {
     const csv = readingsToCsv([]);
 
-    expect(csv).toBe(`${BOM}sep=;\r\ndata;hora;sistolica;diastolica;pulso;categoria;observacao`);
+    expect(csv).toBe(`${BOM}sep=;\r\ndata;hora;sistolica;diastolica;pulso;categoria;observacao;medicoes_da_sessao`);
   });
 
   it('começa com o BOM UTF-8 mesmo com dados', () => {
@@ -39,35 +40,35 @@ describe('readingsToCsv', () => {
     const [directive, header] = csv.split('\r\n');
 
     expect(directive).toBe(`${BOM}sep=;`);
-    expect(header).toBe('data;hora;sistolica;diastolica;pulso;categoria;observacao');
+    expect(header).toBe('data;hora;sistolica;diastolica;pulso;categoria;observacao;medicoes_da_sessao');
   });
 
   it('usa ; como separador e monta a linha na ordem esperada', () => {
     const csv = readingsToCsv([makeReading({ systolic: 110, diastolic: 70, pulse: 70 })]);
     const [, , dataRow] = csv.split('\r\n');
 
-    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;');
+    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;;');
   });
 
   it('deixa o campo de pulso vazio quando pulse é null', () => {
     const csv = readingsToCsv([makeReading({ pulse: null })]);
     const [, , dataRow] = csv.split('\r\n');
 
-    expect(dataRow).toBe('05/01/2026;08:07;110;70;;Normal;');
+    expect(dataRow).toBe('05/01/2026;08:07;110;70;;Normal;;');
   });
 
   it('escapa note contendo ; e aspas duplas, duplicando as aspas internas', () => {
     const csv = readingsToCsv([makeReading({ note: 'Após almoço; tomei "captopril"' })]);
     const [, , dataRow] = csv.split('\r\n');
 
-    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;"Após almoço; tomei ""captopril"""');
+    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;"Após almoço; tomei ""captopril""";');
   });
 
   it('não coloca aspas em note sem caracteres especiais', () => {
     const csv = readingsToCsv([makeReading({ note: 'Sem problemas' })]);
     const [, , dataRow] = csv.split('\r\n');
 
-    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;Sem problemas');
+    expect(dataRow).toBe('05/01/2026;08:07;110;70;70;Normal;Sem problemas;');
   });
 
   it('preserva acentuação (ç, ã) sem escapar', () => {
@@ -111,5 +112,44 @@ describe('readingsToCsv', () => {
     const rows = csv.split('\r\n');
 
     expect(rows).toHaveLength(5); // diretiva sep=; + cabeçalho + 3 linhas
+  });
+
+  it('deixa medicoes_da_sessao vazia na medição única (coluna presente, sem texto)', () => {
+    const csv = readingsToCsv([makeReading()]);
+    const [, , dataRow] = csv.split('\r\n');
+
+    expect(dataRow?.split(';')).toHaveLength(8);
+    expect(dataRow?.endsWith(';')).toBe(true);
+  });
+
+  it('preenche medicoes_da_sessao com as duas leituras e seus pulsos', () => {
+    const csv = readingsToCsv([
+      makeReading({
+        systolic: 135,
+        diastolic: 88,
+        pulse: 71,
+        sessionReadings: [
+          { systolic: 150, diastolic: 95, pulse: 72 },
+          { systolic: 120, diastolic: 80, pulse: 70 },
+        ],
+      }),
+    ]);
+    const [, , dataRow] = csv.split('\r\n');
+
+    expect(dataRow).toBe('05/01/2026;08:07;135;88;71;Estágio 1;;150/95 (72) e 120/80 (70)');
+  });
+
+  it('omite o "(…)" da leitura da sessão que não tem pulso', () => {
+    const csv = readingsToCsv([
+      makeReading({
+        sessionReadings: [
+          { systolic: 150, diastolic: 95, pulse: null },
+          { systolic: 120, diastolic: 80, pulse: 70 },
+        ],
+      }),
+    ]);
+    const [, , dataRow] = csv.split('\r\n');
+
+    expect(dataRow?.endsWith(';150/95 e 120/80 (70)')).toBe(true);
   });
 });

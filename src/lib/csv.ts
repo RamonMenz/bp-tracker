@@ -1,7 +1,8 @@
 import { classifyBloodPressure, type BpCategory } from '@/domain/bp-classification';
+import { formatSessionReadings } from '@/lib/session-readings-format';
 import type { Reading } from '@/types/models';
 
-const CSV_HEADER = 'data;hora;sistolica;diastolica;pulso;categoria;observacao';
+const CSV_HEADER = 'data;hora;sistolica;diastolica;pulso;categoria;observacao;medicoes_da_sessao';
 const SEPARATOR = ';';
 const LINE_BREAK = '\r\n';
 
@@ -52,6 +53,7 @@ function readingToRow(reading: Reading): string {
     reading.pulse === null ? '' : String(reading.pulse),
     CATEGORY_LABEL[category],
     reading.note === null ? '' : reading.note,
+    reading.sessionReadings === null ? '' : formatSessionReadings(reading.sessionReadings),
   ];
 
   return fields.map(escapeCsvField).join(SEPARATOR);

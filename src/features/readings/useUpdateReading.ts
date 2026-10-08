@@ -40,6 +40,7 @@ export function useUpdateReading(): UseUpdateReadingResult {
         note: values.note === '' ? null : values.note,
         measuredAt: values.measuredAt,
         source: 'manual' as const,
+        sessionReadings: values.sessionReadings ?? null,
       };
 
       let input: ReadingInput;

@@ -250,6 +250,77 @@ describe('validação de medições', () => {
   });
 });
 
+describe('sessionReadings — leituras individuais de uma sessão de duas medições', () => {
+  const FIRST = { systolic: 120, diastolic: 80, pulse: 70 };
+  const SECOND = { systolic: 130, diastolic: 90, pulse: 80 };
+  const READING_PATH = `users/${ALICE}/readings/reading-1`;
+
+  it('continua aceitando medição criada sem o campo (medição única)', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(setDoc(doc(db, `users/${ALICE}/readings/sem-sessao`), validReading()));
+  });
+
+  it('permite que o dono atualize a própria medição com a média e as duas leituras', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(
+      updateDoc(doc(db, READING_PATH), {
+        systolic: 125,
+        diastolic: 85,
+        pulse: 75,
+        sessionReadings: [FIRST, { systolic: 130, diastolic: 90 }],
+      }),
+    );
+  });
+
+  it('permite gravar sessionReadings null', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(updateDoc(doc(db, READING_PATH), { sessionReadings: null }));
+  });
+
+  it('nega sessão com uma leitura só', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST] }));
+  });
+
+  it('nega sessão com três leituras', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST, SECOND, FIRST] }));
+  });
+
+  it('nega leitura da sessão com chave extra', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST, { ...SECOND, isAdmin: true }] }),
+    );
+  });
+
+  it('nega leitura da sessão fora da faixa', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST, { ...SECOND, systolic: 999 }] }),
+    );
+  });
+
+  it('nega leitura da sessão com sistólica menor ou igual à diastólica', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      updateDoc(doc(db, READING_PATH), {
+        sessionReadings: [FIRST, { systolic: 90, diastolic: 90, pulse: 70 }],
+      }),
+    );
+  });
+
+  it('nega sessionReadings como map em vez de list', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(updateDoc(doc(db, READING_PATH), { sessionReadings: { 0: FIRST, 1: SECOND } }));
+  });
+
+  it('nega que o usuário B grave sessionReadings numa medição de A', async () => {
+    const db = asGoogleUser(BOB).firestore();
+    await assertFails(updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST, SECOND] }));
+  });
+});
+
 describe('validação de perfil', () => {
   it('nega campo extra não declarado (isAdmin) injetado no perfil', async () => {
     const db = asGoogleUser(BOB).firestore();
