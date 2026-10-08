@@ -244,6 +244,86 @@ describe('useReadingForm — modo edição', () => {
   });
 });
 
+describe('useReadingForm — edição e sessionReadings', () => {
+  const SESSION: Reading['sessionReadings'] = [
+    { systolic: 126, diastolic: 80, pulse: 68 },
+    { systolic: 130, diastolic: 84, pulse: 72 },
+  ];
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockUpdateReading.mockResolvedValue(true);
+  });
+
+  async function submitEdit(
+    reading: EditableReading,
+    change: (form: ReturnType<typeof useReadingForm>) => void,
+  ): Promise<unknown> {
+    const { result } = await renderHook(() => useReadingForm(reading));
+
+    await act(async () => {
+      change(result.current);
+    });
+    await act(async () => {
+      await result.current.submit();
+    });
+
+    return mockUpdateReading.mock.calls[0]?.[1];
+  }
+
+  it('editar só a observação de uma média preserva sessionReadings', async () => {
+    const values = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setNote('Outra nota.'),
+    );
+
+    expect(values).toEqual(expect.objectContaining({ note: 'Outra nota.', sessionReadings: SESSION }));
+  });
+
+  it('editar só o horário de uma média preserva sessionReadings', async () => {
+    const values = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setMeasuredAt(new Date(2026, 7, 13, 9, 0, 0)),
+    );
+
+    expect(values).toEqual(expect.objectContaining({ sessionReadings: SESSION }));
+  });
+
+  it('mudar a sistólica de uma média envia sessionReadings null', async () => {
+    const values = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setSystolic('129'),
+    );
+
+    expect(values).toEqual(expect.objectContaining({ systolic: '129', sessionReadings: null }));
+  });
+
+  it('mudar a diastólica ou o pulso de uma média também envia null', async () => {
+    const diastolicChange = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setDiastolic('81'),
+    );
+    expect(diastolicChange).toEqual(expect.objectContaining({ sessionReadings: null }));
+
+    mockUpdateReading.mockClear();
+
+    const pulseChange = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setPulse(''),
+    );
+    expect(pulseChange).toEqual(expect.objectContaining({ sessionReadings: null }));
+  });
+
+  it('digitar o mesmo valor com zero à esquerda não conta como mudança (comparação numérica)', async () => {
+    const values = await submitEdit(makeEditableReading({ sessionReadings: SESSION }), (form) =>
+      form.setSystolic('0128'),
+    );
+
+    expect(values).toEqual(expect.objectContaining({ sessionReadings: SESSION }));
+  });
+
+  it('edição de medição comum continua enviando sessionReadings null', async () => {
+    const values = await submitEdit(makeEditableReading(), (form) => form.setNote('Só a nota.'));
+
+    expect(values).toEqual(expect.objectContaining({ sessionReadings: null }));
+  });
+});
+
 /** Sem `initialReading` nada muda: é o caminho de registrar da home, que não pode ter regredido. */
 describe('useReadingForm — modo criação continua intacto', () => {
   beforeEach(() => {
