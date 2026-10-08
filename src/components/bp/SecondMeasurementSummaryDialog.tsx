@@ -81,9 +81,10 @@ export function SecondMeasurementSummaryDialog({ visible, average, onDismiss }: 
             <BpCategoryBadge category={category} />
           </View>
 
-          {/* A média não é um resumo à parte: ela SUBSTITUIU a primeira leitura no mesmo documento
-              (ver useSecondMeasurementFlow.submitSecondMeasurement) — o texto precisa dizer isso. */}
-          <Text variant="caption">A média das duas medições foi salva no seu histórico.</Text>
+          {/* A média fica no documento da primeira medição e as duas leituras individuais ficam
+              preservadas em `sessionReadings` (ver useSecondMeasurementFlow.submitSecondMeasurement)
+              — o texto precisa dizer que nada se perdeu. */}
+          <Text variant="caption">A média foi salva no seu histórico, junto com as duas medições.</Text>
 
           <Button label="Concluir" onPress={onDismiss} />
         </Card>

@@ -4,6 +4,7 @@ import { Text } from '@/components/ui/Text';
 import { ClockIcon, TrashIcon } from '@/components/ui/icons';
 import { classifyBloodPressure } from '@/domain/bp-classification';
 import { formatTime } from '@/lib/datetime';
+import { formatSessionReadings, formatSessionReadingsForSpeech } from '@/lib/session-readings-format';
 import { categoryColors, colors } from '@/theme/colors';
 import { useColorScheme } from '@/theme/useColorScheme';
 import type { Reading } from '@/types/models';
@@ -54,9 +55,13 @@ export function ReadingRow({
   // "por", não "/" — leitor de tela deve anunciar "120 por 80", não "120 barra 80" (CLAUDE.md §4.7).
   const pulsePhrase = reading.pulse !== null ? `, pulso ${reading.pulse}` : '';
   const notePhrase = reading.note !== null && reading.note !== '' ? `, observação: ${reading.note}` : '';
+  const sessionPhrase =
+    reading.sessionReadings !== null
+      ? `, média de 2 medições, ${formatSessionReadingsForSpeech(reading.sessionReadings)}`
+      : '';
   const pendingPhrase = hasPendingWrites ? ', pendente de sincronização' : '';
   const deletingPhrase = isDeleting ? ', excluindo' : '';
-  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${notePhrase}${pendingPhrase}${deletingPhrase}`;
+  const accessibilityLabel = `${reading.systolic} por ${reading.diastolic}${pulsePhrase}, ${CATEGORY_LABEL[category].toLowerCase()}, medido às ${formatTime(reading.measuredAt)}${sessionPhrase}${notePhrase}${pendingPhrase}${deletingPhrase}`;
 
   function handleDeletePress(): void {
     onRequestDelete(id);
@@ -123,6 +128,10 @@ export function ReadingRow({
               <Text variant="caption">{formatTime(reading.measuredAt)}</Text>
               {hasPendingWrites ? <Text variant="caption">· Pendente de sincronização</Text> : null}
             </View>
+
+            {reading.sessionReadings !== null ? (
+              <Text variant="caption">Média de 2 medições: {formatSessionReadings(reading.sessionReadings)}</Text>
+            ) : null}
 
             {reading.note !== null && reading.note !== '' ? (
               <Text variant="caption" numberOfLines={1}>

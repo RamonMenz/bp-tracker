@@ -246,3 +246,46 @@ describe('ReadingRow — observação', () => {
     expect(screen.getByLabelText(/observação: Medi após caminhada\./)).toBeTruthy();
   });
 });
+
+describe('ReadingRow — média de uma sessão de duas medições', () => {
+  const SESSION: Reading['sessionReadings'] = [
+    { systolic: 150, diastolic: 95, pulse: 72 },
+    { systolic: 120, diastolic: 80, pulse: null },
+  ];
+
+  function renderRow(reading: Reading) {
+    return render(
+      <ReadingRow
+        id="reading-1"
+        reading={reading}
+        hasPendingWrites={false}
+        onRequestDelete={jest.fn()}
+        onRequestEdit={jest.fn()}
+      />,
+    );
+  }
+
+  it('mostra a legenda com as duas leituras, e o pulso só na leitura que tem', async () => {
+    await renderRow(makeReading({ sessionReadings: SESSION }));
+
+    expect(screen.getByText('Média de 2 medições: 150/95 (72) e 120/80')).toBeTruthy();
+  });
+
+  it('acrescenta ao rótulo acessível a média de 2 medições, com "por" e sem "barra"', async () => {
+    await renderRow(makeReading({ sessionReadings: SESSION }));
+
+    const row = screen.getByLabelText(/128 por 82/);
+    const label = row.props.accessibilityLabel as string;
+
+    expect(label).toContain(', média de 2 medições, 150 por 95 e 120 por 80');
+    expect(label).not.toContain('barra');
+    expect(label).not.toContain('/');
+  });
+
+  it('medição única não tem legenda nem trecho extra no rótulo', async () => {
+    await renderRow(makeReading());
+
+    expect(screen.queryByText(/Média de 2 medições/)).toBeNull();
+    expect(screen.getByLabelText(/128 por 82/).props.accessibilityLabel).not.toContain('média de 2 medições');
+  });
+});

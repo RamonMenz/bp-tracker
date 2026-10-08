@@ -169,7 +169,7 @@ describe('SecondMeasurementCard — estado summary', () => {
   it('diz que a média foi salva no histórico', async () => {
     await renderCard({ state: 'summary', average: AVERAGE, secondsRemaining: 0 });
 
-    expect(screen.getByText('A média das duas medições foi salva no seu histórico.')).toBeTruthy();
+    expect(screen.getByText('A média foi salva no seu histórico, junto com as duas medições.')).toBeTruthy();
   });
 
   it('dispara onDismissSummary ao tocar em "Concluir"', async () => {
