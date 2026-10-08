@@ -59,7 +59,14 @@ beforeEach(() => {
   mockServiceWorkerRegister.mockResolvedValue({ registration: true });
   mockSetDoc.mockResolvedValue(undefined);
 
-  (navigator as any).serviceWorker = { register: mockServiceWorkerRegister };
+  // Define o navigator inteiro em vez de só mutar `navigator.serviceWorker`: o global `navigator`
+  // só existe a partir do Node 21, e o CI roda em Node 20 — lá a mutação dava "navigator is not
+  // defined". `configurable` deixa o próximo beforeEach redefinir.
+  Object.defineProperty(global, 'navigator', {
+    value: { serviceWorker: { register: mockServiceWorkerRegister } },
+    configurable: true,
+    writable: true,
+  });
   (global as any).Notification = { permission: 'granted', requestPermission: jest.fn() };
 });
 

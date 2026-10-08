@@ -2,6 +2,10 @@ module.exports = {
   preset: 'jest-expo',
   testPathIgnorePatterns: ['<rootDir>/node_modules/', '<rootDir>/functions/', '<rootDir>/tests/'],
   setupFiles: ['<rootDir>/jest.setup.js'],
+  // O padrão de 5 s não basta com o cache de transformação frio (sempre no CI): o primeiro teste
+  // de uma suíte de tela paga o Babel dos módulos que só são carregados no primeiro render.
+  // history.test.tsx passava de 5 s em todo push; o teste em si leva ~150 ms com o cache quente.
+  testTimeout: 20000,
   // jest-expo ignora todo node_modules exceto uma lista fixa de pacotes RN/Expo (ver
   // node_modules/jest-expo/jest-preset.js) — firebase/@firebase não está nela, e o SDK modular
   // publica ESM (`export * from ...`) que o require() do CommonJS não entende sem passar pelo
