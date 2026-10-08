@@ -13,6 +13,7 @@ function makeReading(overrides: Partial<Reading> = {}): Reading {
     createdAt: new Date(2026, 0, 5, 8, 7),
     note: null,
     source: 'manual',
+    sessionReadings: null,
     ...overrides,
   };
 }

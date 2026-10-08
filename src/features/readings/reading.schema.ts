@@ -37,26 +37,54 @@ const dateLike = z.preprocess((value) => {
   return value;
 }, z.date({ message: 'Data inválida.' }));
 
+// Faixas compartilhadas entre o documento e cada leitura de `sessionReadings` — uma fonte só.
+const systolicField = z
+  .number({ message: 'Informe a sistólica.' })
+  .int({ message: 'A sistólica deve ser um número inteiro.' })
+  .min(SYSTOLIC_MIN, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` })
+  .max(SYSTOLIC_MAX, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` });
+
+const diastolicField = z
+  .number({ message: 'Informe a diastólica.' })
+  .int({ message: 'A diastólica deve ser um número inteiro.' })
+  .min(DIASTOLIC_MIN, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` })
+  .max(DIASTOLIC_MAX, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` });
+
+const pulseField = z
+  .number()
+  .int({ message: 'O pulso deve ser um número inteiro.' })
+  .min(PULSE_MIN, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
+  .max(PULSE_MAX, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
+  .nullish()
+  .transform((value) => value ?? null);
+
+const SYSTOLIC_GT_DIASTOLIC_RULE = {
+  check: (reading: { systolic: number; diastolic: number }) => reading.systolic > reading.diastolic,
+  message: 'A sistólica deve ser maior que a diastólica.',
+};
+
+const sessionReadingSchema = z
+  .object({ systolic: systolicField, diastolic: diastolicField, pulse: pulseField })
+  .refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
+    message: SYSTOLIC_GT_DIASTOLIC_RULE.message,
+    path: ['systolic'],
+  });
+
+/**
+ * As duas leituras individuais de uma sessão de duas medições; o documento guarda a média delas.
+ * Ausente em documentos anteriores ao campo — `nullish` mantém esses documentos válidos.
+ */
+const sessionReadingsField = z
+  .tuple([sessionReadingSchema, sessionReadingSchema], {
+    message: 'Uma sessão deve ter exatamente duas leituras.',
+  })
+  .nullish()
+  .transform((value) => value ?? null);
+
 const readingShape = z.object({
-  systolic: z
-    .number({ message: 'Informe a sistólica.' })
-    .int({ message: 'A sistólica deve ser um número inteiro.' })
-    .min(SYSTOLIC_MIN, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` })
-    .max(SYSTOLIC_MAX, { message: `A sistólica deve ficar entre ${SYSTOLIC_MIN} e ${SYSTOLIC_MAX}.` }),
-
-  diastolic: z
-    .number({ message: 'Informe a diastólica.' })
-    .int({ message: 'A diastólica deve ser um número inteiro.' })
-    .min(DIASTOLIC_MIN, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` })
-    .max(DIASTOLIC_MAX, { message: `A diastólica deve ficar entre ${DIASTOLIC_MIN} e ${DIASTOLIC_MAX}.` }),
-
-  pulse: z
-    .number()
-    .int({ message: 'O pulso deve ser um número inteiro.' })
-    .min(PULSE_MIN, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
-    .max(PULSE_MAX, { message: `O pulso deve ficar entre ${PULSE_MIN} e ${PULSE_MAX}.` })
-    .nullish()
-    .transform((value) => value ?? null),
+  systolic: systolicField,
+  diastolic: diastolicField,
+  pulse: pulseField,
 
   measuredAt: dateLike.refine((value) => value.getTime() <= Date.now() + FUTURE_TOLERANCE_MS, {
     message: 'A data da medição não pode estar no futuro.',
@@ -71,12 +99,9 @@ const readingShape = z.object({
     .transform((value) => value ?? null),
 
   source: z.literal('manual'),
-});
 
-const SYSTOLIC_GT_DIASTOLIC_RULE = {
-  check: (reading: { systolic: number; diastolic: number }) => reading.systolic > reading.diastolic,
-  message: 'A sistólica deve ser maior que a diastólica.',
-};
+  sessionReadings: sessionReadingsField,
+});
 
 export const readingSchema = readingShape.refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
   message: SYSTOLIC_GT_DIASTOLIC_RULE.message,

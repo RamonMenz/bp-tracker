@@ -44,6 +44,7 @@ const READING: ReadingListItem = {
   createdAt: new Date(2026, 7, 13, 8, 30, 0),
   note: 'Antes do café.',
   source: 'manual',
+  sessionReadings: null,
   hasPendingWrites: false,
 };
 
