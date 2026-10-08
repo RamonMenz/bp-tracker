@@ -79,7 +79,17 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   // no AndroidManifest (obrigatória a partir do Android 13) — sem ela, `requestPermissionsAsync`
   // nunca mostra o popup nativo, só nega em silêncio (é exatamente o sintoma que motivou este
   // comentário: "permissão negada" sem diálogo nenhum na tela).
-  plugins: ['@react-native-firebase/app', '@react-native-firebase/crashlytics', 'expo-notifications'],
+  //
+  // `@react-native-firebase/app-check`: no Android o plugin não altera nada (a dependência nativa
+  // entra por autolinking, e o gradle do google-services já vem do plugin do `app`); ele só
+  // registra o módulo no AppDelegate do iOS. Está aqui para o `ios` declarado abaixo não gerar um
+  // prebuild com o App Check nativo pela metade.
+  plugins: [
+    '@react-native-firebase/app',
+    '@react-native-firebase/app-check',
+    '@react-native-firebase/crashlytics',
+    'expo-notifications',
+  ],
   android: {
     // Não pode mudar depois de publicado na Play Store.
     package: 'com.ramonmenz.bptracker',

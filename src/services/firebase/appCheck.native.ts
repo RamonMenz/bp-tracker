@@ -2,89 +2,50 @@ import { CustomProvider, initializeAppCheck, type AppCheck, type AppCheckToken }
 
 import { logError } from '@/lib/logger';
 
+import { getNativeAppCheckToken } from './appCheckBridge.native';
 import { app } from './firebase';
 
 export interface InitAppCheckOptions {
   /**
-   * Troca uma atestação do Play Integrity por um App Check token, via backend.
-   *
-   * POR QUE ISSO É NECESSÁRIO: o Firebase JS SDK (`firebase/app-check`) expõe apenas
-   * `ReCaptchaV3Provider`, `ReCaptchaEnterpriseProvider` e `CustomProvider` — NÃO existe provider
-   * de Play Integrity. Ele só existe nos SDKs nativos. E inicializar App Check via
-   * `@react-native-firebase/app-check` não resolveria: o token é anexado pelo SDK que faz a
-   * requisição, então ele iria para as chamadas do RNFirebase, e o Firestore deste app (JS SDK)
-   * continuaria saindo sem App Check.
-   *
-   * O fluxo correto com esta stack:
-   *   1. módulo nativo obtém a atestação do Play Integrity;
-   *   2. envia para uma Cloud Function;
-   *   3. a Function VERIFICA a atestação na Play Integrity API — este passo não é opcional:
-   *      `admin.appCheck().createToken()` emite token sem validar nada, então sem a verificação
-   *      qualquer um chama o endpoint e ganha um App Check válido, anulando o recurso;
-   *   4. a Function emite o token com o Admin SDK e devolve `{ token, expireTimeMillis }`.
+   * Substitui a fonte padrão do token (a ponte com o RNFirebase). Existe para o Caminho B do
+   * plano (docs/plans/plano_lacunas_criticas.md, Item 5): se o Firestore recusar o token emitido
+   * para o app Android, a troca passa a ser feita por uma Cloud Function própria — que, nesse
+   * caso, PRECISA verificar a atestação na Play Integrity API antes de emitir o token com
+   * `admin.appCheck().createToken()`, que não valida nada sozinho.
    */
   attestationExchange?: () => Promise<AppCheckToken>;
 }
 
 /**
- * Injeta o debug token no objeto global ANTES de `initializeAppCheck` — o SDK lê
- * `getGlobal().FIREBASE_APPCHECK_DEBUG_TOKEN` uma única vez, na inicialização. Funciona no React
- * Native porque o `getGlobal()` do @firebase/util cai em `global` quando não há `self`/`window`.
+ * Inicializa o App Check do Firebase JS SDK no nativo, com o token vindo do SDK NATIVO de App Check.
  *
- * Por que ler de `process.env` e NÃO de `expoConfig.extra`: o que vai para `extra` é embutido no
- * manifesto do app e viaja em QUALQUER build, inclusive produção. Já `process.env.EXPO_PUBLIC_*`
- * é inlinado pelo Metro como literal, e este bloco inteiro está dentro de `if (__DEV__)` — que em
- * build de produção é `false` constante, então o bloco (e o literal do token dentro dele) é
- * removido por dead code elimination. O token nunca chega ao bundle de produção.
+ * POR QUE A PONTE: o `firebase/app-check` só tem `ReCaptchaV3Provider`,
+ * `ReCaptchaEnterpriseProvider` e `CustomProvider` — não existe provider de Play Integrity no JS
+ * SDK; ele só existe nos SDKs nativos. Por isso `@react-native-firebase/app-check` entra aqui como
+ * FONTE do token, e não como o App Check do app. A diferença importa:
+ *   - INICIALIZAR o App Check pelo RNFirebase e parar aí não protegeria nada deste app: o header
+ *     `X-Firebase-AppCheck` é anexado pelo SDK que faz a requisição, e todo o Firestore/Auth daqui
+ *     sai pelo JS SDK — o token ficaria preso às chamadas do RNFirebase, que não existem.
+ *   - USAR o RNFirebase só para obter o token (provider nativo de Play Integrity, atestação
+ *     validada pelo próprio Firebase) e entregá-lo ao JS SDK por este `CustomProvider` faz o token
+ *     sair nas requisições certas. Ver `appCheckBridge.native.ts`.
  *
- * A segunda barreira é operacional e igualmente importante: `EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN` só
- * pode existir no `.env.local` (gitignored) da máquina do dev — nunca nos secrets do EAS/CI.
- * Um debug token registrado no Console dá acesso irrestrito à sua API: é credencial, não config.
- */
-function applyDebugTokenInDevelopment(): boolean {
-  if (!__DEV__) {
-    return false;
-  }
-
-  const debugToken = process.env.EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN;
-
-  if (debugToken === undefined || debugToken === '') {
-    return false;
-  }
-
-  const globalScope = globalThis as { FIREBASE_APPCHECK_DEBUG_TOKEN?: string | boolean };
-  globalScope.FIREBASE_APPCHECK_DEBUG_TOKEN = debugToken;
-
-  return true;
-}
-
-/**
- * Inicializa o App Check em modo monitor. Retorna `null` (sem lançar) quando não dá para
- * inicializar: enquanto o enforcement estiver desligado no Console, requisição sem token continua
- * passando — derrubar o app por causa disso seria pior que seguir sem App Check.
+ * Debug: um único caminho, o debug provider NATIVO, configurado na ponte. A injeção de
+ * `FIREBASE_APPCHECK_DEBUG_TOKEN` no global do JS SDK que existia aqui foi removida por ficar
+ * redundante — e pior: em modo debug o JS SDK nunca chama o provider, então o dev build não
+ * exercitaria a ponte que vai para produção. Com o debug provider nativo, o dev build passa pelo
+ * mesmo `CustomProvider` → ponte → RNFirebase que o build de produção.
+ *
+ * Roda em modo monitor até o enforcement ser ligado no Console. Retorna `null` (sem lançar) quando
+ * não dá para inicializar — derrubar o app por isso seria pior que seguir sem App Check. Falha ao
+ * OBTER o token não passa por aqui: acontece depois, dentro do provider, que loga
+ * (`appCheck.nativeToken`) e deixa o JS SDK tentar de novo com backoff.
  *
  * Precisa rodar ANTES da primeira chamada a Firestore/Auth, senão as primeiras requisições saem
  * sem o header `X-Firebase-AppCheck`.
  */
 export function initAppCheck(options: InitAppCheckOptions = {}): AppCheck | null {
-  const isDebugMode = applyDebugTokenInDevelopment();
-  const { attestationExchange } = options;
-
-  // Em modo debug o SDK troca o debug token direto no endpoint de exchange e NUNCA chama o
-  // provider — por isso o provider abaixo pode ser um stub que lança: em dev ele não é exercido.
-  if (attestationExchange === undefined && !isDebugMode) {
-    logError(
-      'appCheck.init',
-      new Error('App Check nativo sem attestationExchange e sem debug token — inicialização ignorada'),
-    );
-    return null;
-  }
-
-  const getToken =
-    attestationExchange ??
-    ((): Promise<AppCheckToken> => {
-      throw new Error('attestationExchange não configurado');
-    });
+  const getToken = options.attestationExchange ?? getNativeAppCheckToken;
 
   try {
     return initializeAppCheck(app, {
