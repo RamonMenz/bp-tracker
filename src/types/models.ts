@@ -20,6 +20,21 @@ export interface Reading {
 /** Payload de criação: `createdAt` não existe ainda — é gerado no servidor via serverTimestamp(). */
 export type ReadingInput = Omit<Reading, 'createdAt'>;
 
+/**
+ * Prova do consentimento para tratar dado de saúde (LGPD art. 11, I), como fica gravada em
+ * `users/{uid}`. `acceptedAt` é sempre o horário do SERVIDOR — as rules recusam qualquer outro.
+ */
+export interface PrivacyConsent {
+  version: string;
+  acceptedAt: Timestamp;
+}
+
+/** O mesmo aceite depois do schema Zod: `acceptedAt` vira `Date`, como em `Reading`. */
+export interface AcceptedPrivacyConsent {
+  version: string;
+  acceptedAt: Date;
+}
+
 export interface UserProfile {
   displayName: string | null;
   email: string | null;
@@ -29,4 +44,6 @@ export interface UserProfile {
   reminderTimes: string[];
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  /** Ausente até o primeiro aceite. Revogar = excluir a conta. */
+  privacyConsent?: PrivacyConsent;
 }

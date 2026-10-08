@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Política de Privacidade — BP Tracker</title>
+<!--
+  Página estática servida pela Vercel junto do app web (public/ → dist/). Sem script, sem fonte
+  externa, sem nenhum recurso de terceiro: a página da política não pode ela mesma rastrear quem a
+  lê. Paleta "Medical Clean" (CLAUDE.md §1).
+
+  ANTES DE PUBLICAR: resolver todos os [PREENCHER: ...], remover o aviso de rascunho, remover a
+  meta robots noindex e passar pela REVISÃO JURÍDICA marcada abaixo.
+-->
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #F8FAFC;
+    --surface: #FFFFFF;
+    --text: #1E293B;
+    --muted: #475569;
+    --border: #E2E8F0;
+    --link: #2563EB;
+    --draft-bg: #FEF3C7;
+    --draft-text: #78350F;
+    --draft-border: #F59E0B;
+    --fill-bg: #FDE68A;
+    --fill-text: #78350F;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --text: #F1F5F9;
+      --muted: #CBD5E1;
+      --border: #334155;
+      --link: #93C5FD;
+      --draft-bg: #451A03;
+      --draft-text: #FEF3C7;
+      --draft-border: #F59E0B;
+      --fill-bg: #FDE68A;
+      --fill-text: #451A03;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+  }
+  .draft {
+    margin: 0;
+    padding: 0.875rem 1rem;
+    background: var(--draft-bg);
+    color: var(--draft-text);
+    border-bottom: 3px solid var(--draft-border);
+    font-weight: 700;
+    text-align: center;
+  }
+  main {
+    max-width: 70ch;
+    margin: 1.5rem auto 3rem;
+    padding: 1.5rem 1.25rem 2rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  @media (max-width: 40rem) {
+    main { margin: 0; border: 0; border-radius: 0; padding: 1.25rem 1rem 2rem; }
+  }
+  h1 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 0.5rem; }
+  h2 { font-size: 1.25rem; line-height: 1.3; margin: 2.25rem 0 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+  h3 { font-size: 1.0625rem; margin: 1.5rem 0 0.25rem; }
+  p, ul, ol { margin: 0.5rem 0 1rem; }
+  ul, ol { padding-left: 1.25rem; }
+  li { margin: 0.25rem 0; }
+  a { color: var(--link); text-underline-offset: 2px; }
+  a:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; border-radius: 2px; }
+  .meta { color: var(--muted); margin: 0 0 1.5rem; }
+  .fill {
+    background: var(--fill-bg);
+    color: var(--fill-text);
+    padding: 0 0.25em;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+  .note {
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--link);
+    background: var(--bg);
+    border-radius: 0 8px 8px 0;
+  }
+  nav ol { columns: 2 16rem; column-gap: 2rem; }
+  strong { font-weight: 700; }
+</style>
+</head>
+<body>
+
+<p class="draft">Rascunho — não publicar antes da revisão. Procure por “[PREENCHER” nesta página.</p>
+
+<main>
+<h1>Política de Privacidade — BP Tracker</h1>
+<p class="meta">Vigente a partir de <span class="fill">[PREENCHER: data de vigência]</span>.</p>
+
+<p>Esta política explica, em linguagem direta, quais dados o aplicativo BP Tracker trata, por que trata, com quem, por quanto tempo e como você pode exercer seus direitos, conforme a Lei Geral de Proteção de Dados Pessoais (LGPD — Lei nº 13.709/2018).</p>
+
+<p class="note">O BP Tracker registra suas medições de pressão arterial e <strong>não substitui avaliação médica</strong>. O app não faz diagnóstico nem dá orientação médica. Converse com seu médico sobre os resultados.</p>
+
+<nav aria-label="Sumário">
+<ol>
+  <li><a href="#controlador">Quem é o controlador</a></li>
+  <li><a href="#dados">Quais dados tratamos e para quê</a></li>
+  <li><a href="#base-legal">Base legal</a></li>
+  <li><a href="#compartilhamento">Com quem os dados são tratados</a></li>
+  <li><a href="#transferencia">Transferência internacional</a></li>
+  <li><a href="#armazenamento">Onde os dados ficam</a></li>
+  <li><a href="#retencao">Por quanto tempo</a></li>
+  <li><a href="#seguranca">Segurança</a></li>
+  <li><a href="#direitos">Seus direitos</a></li>
+  <li><a href="#exclusao">Como excluir sua conta e seus dados</a></li>
+  <li><a href="#publico">Público-alvo</a></li>
+  <li><a href="#alteracoes">Alterações desta política</a></li>
+</ol>
+</nav>
+
+<h2 id="controlador">1. Quem é o controlador e como falar com o encarregado</h2>
+<p>O controlador dos dados tratados pelo BP Tracker é <span class="fill">[PREENCHER: nome completo ou razão social do controlador]</span>, <span class="fill">[PREENCHER: CPF ou CNPJ, se aplicável]</span>.</p>
+<p>Para qualquer assunto relacionado a esta política ou aos seus dados pessoais, fale com o encarregado pelo tratamento de dados (DPO) pelo e-mail <span class="fill">[PREENCHER: e-mail do encarregado]</span>.</p>
+
+<h2 id="dados">2. Quais dados tratamos e para quê</h2>
+
+<h3>2.1 Dados da sua conta</h3>
+<p>O login é feito exclusivamente com a sua conta Google. Ao entrar, o app recebe do Google e guarda no seu perfil: <strong>nome</strong>, <strong>endereço de e-mail</strong> e <strong>endereço da foto do perfil</strong>, além de um identificador interno da conta.</p>
+<p><em>Para quê:</em> identificar você, manter seus registros separados dos de outras pessoas e mostrar quem está conectado.</p>
+
+<h3>2.2 Dados de saúde (dado pessoal sensível)</h3>
+<p>Para cada medição que você registra, o app guarda: <strong>pressão sistólica</strong>, <strong>pressão diastólica</strong>, <strong>pulso</strong> (opcional), <strong>data e hora da medição</strong>, <strong>data e hora do registro</strong> e uma <strong>observação livre</strong> (opcional) que você mesmo escreve.</p>
+<p><em>Para quê:</em> exclusivamente para mostrar a você seu histórico, seus gráficos e permitir que você exporte suas medições. A classificação exibida ao lado de cada medição (normal, elevada etc.) é calculada no próprio app e não é armazenada.</p>
+<p>Evite escrever na observação livre informações que você não queira guardar, como nomes de outras pessoas ou dados de terceiros.</p>
+
+<h3>2.3 Preferências</h3>
+<p>No seu perfil ficam também: <strong>fuso horário</strong> do aparelho, os <strong>horários de lembrete</strong> que você escolheu e se os <strong>lembretes estão ativados</strong>.</p>
+<p><em>Para quê:</em> enviar os lembretes de medição no horário certo, no seu fuso.</p>
+
+<h3>2.4 Identificadores do aparelho</h3>
+<p>Quando você ativa os lembretes, o app registra o <strong>código de notificação (token de push)</strong> do aparelho ou navegador, o <strong>tipo de plataforma</strong> (Android ou web) e a <strong>data do último uso</strong> desse aparelho. Uma cópia dos tokens, dos horários e do fuso fica em um índice interno usado pelo servidor para disparar os lembretes, junto com o horário do próximo e do último envio.</p>
+<p><em>Para quê:</em> entregar as notificações de lembrete. O texto da notificação é genérico (“Hora de medir sua pressão”) e <strong>nunca inclui valores de medição</strong>.</p>
+
+<h3>2.5 Dados de diagnóstico de erro</h3>
+<p>Quando ocorre um erro no app, um relatório técnico é enviado para que possamos corrigi-lo: no Android, pelo Firebase Crashlytics; na versão web, pelo Sentry. O relatório contém a descrição técnica do erro, em que parte do app ele ocorreu e informações técnicas do aparelho ou navegador coletadas automaticamente por essas ferramentas (como modelo, versão do sistema e do app).</p>
+<p>O que esses relatórios <strong>não</strong> contêm, por desenho do app:</p>
+<ul>
+  <li>valores de medição, observações, nome, e-mail, foto ou tokens — esses campos são removidos automaticamente antes do envio;</li>
+  <li>identificação do usuário: o app não associa os relatórios à sua conta;</li>
+  <li>na versão web, endereço IP, cookies e cabeçalhos da requisição (a coleta automática desses dados está desligada), nem monitoramento de sessão ou de desempenho.</li>
+</ul>
+<p>Os registros técnicos do servidor (Cloud Functions) podem conter o identificador interno da sua conta, nunca valores de medição.</p>
+<p><em>Para quê:</em> encontrar e corrigir falhas.</p>
+
+<h3>2.6 Dados que ficam só no seu aparelho</h3>
+<p>Algumas preferências são gravadas apenas no armazenamento local do aparelho ou do navegador e <strong>nunca são enviadas</strong> para nossos servidores: o <strong>tema</strong> escolhido (claro, escuro ou automático), se você já viu a <strong>apresentação inicial</strong> e se você dispensou o <strong>aviso</strong> da tela inicial. A sessão de login também fica guardada no aparelho para que você não precise entrar de novo a cada abertura do app.</p>
+<p>O arquivo de exportação (CSV) das suas medições é gerado no próprio aparelho. Depois que você o salva ou compartilha, o destino escolhido por você (e-mail, aplicativo de mensagens etc.) fica fora do controle do BP Tracker.</p>
+
+<h3>2.7 O que o app não faz</h3>
+<ul>
+  <li>Não vende seus dados.</li>
+  <li>Não exibe publicidade e não usa dados para publicidade.</li>
+  <li>Não usa ferramentas de análise de uso (analytics) nem de rastreamento.</li>
+  <li>Não compartilha seus dados com terceiros para finalidades próprias deles.</li>
+</ul>
+
+<h2 id="base-legal">3. Base legal</h2>
+<!-- REVISÃO JURÍDICA: a base escrita abaixo para dado de saúde é o consentimento específico e
+     destacado (LGPD art. 11, I). HOJE O APP NÃO COLETA ESSE CONSENTIMENTO: o usuário faz login e já
+     pode gravar medições, sem nenhuma tela de aceite e sem registro do aceite no servidor. Uma
+     política publicada não substitui o consentimento. A alternativa "tutela da saúde" (art. 11,
+     II, "f") é restrita a profissionais de saúde, serviços de saúde ou autoridade sanitária e
+     provavelmente não se aplica. Decidir antes de publicar esta página: (a) confirmar a base
+     legal; (b) se for consentimento, implementar a coleta e o registro do aceite (Prompt 1.3 do
+     docs/plans/plano_lacunas_criticas.md) ANTES de publicar o texto abaixo; (c) revisar também a
+     base dos dados de conta, preferências, identificadores e diagnóstico. -->
+<ul>
+  <li><strong>Dados de saúde (medições):</strong> seu consentimento específico e destacado, para a finalidade de registrar e consultar suas próprias medições (LGPD, art. 11, I). Você pode revogar o consentimento a qualquer momento excluindo suas medições ou sua conta (veja a seção 10).</li>
+  <li><strong>Dados de conta, preferências e identificadores do aparelho:</strong> necessários para fornecer o serviço que você solicitou ao criar a conta e ativar os lembretes (LGPD, art. 7º, V).</li>
+  <li><strong>Dados de diagnóstico de erro:</strong> legítimo interesse em manter o app funcionando e seguro, limitado a dados técnicos sem identificação do usuário e sem dados de saúde (LGPD, art. 7º, IX).</li>
+</ul>
+
+<h2 id="compartilhamento">4. Com quem os dados são tratados</h2>
+<p>Seus dados não são compartilhados com terceiros para finalidades deles. Eles são processados, em nosso nome, apenas pelos prestadores de infraestrutura abaixo (operadores, na linguagem da LGPD):</p>
+<ul>
+  <li><strong>Google (Firebase)</strong>
+    <ul>
+      <li><em>Firebase Authentication</em> — login com a conta Google;</li>
+      <li><em>Cloud Firestore</em> — banco de dados onde ficam perfil, medições, preferências e identificadores de aparelho;</li>
+      <li><em>Cloud Functions</em> — servidor que agenda e envia os lembretes e apaga seus dados quando você exclui a conta;</li>
+      <li><em>Firebase Cloud Messaging</em> — entrega das notificações de lembrete;</li>
+      <li><em>Firebase Crashlytics</em> — relatórios de erro no Android;</li>
+      <li><em>Firebase App Check</em> — verificação de que as requisições vêm do app legítimo, usando o Play Integrity (Android) e o reCAPTCHA Enterprise (web), ambos do Google.</li>
+    </ul>
+  </li>
+  <li><strong>Vercel</strong> — hospedagem da versão web do app e desta página. Como qualquer servidor web, recebe dados técnicos de acesso (como endereço IP e navegador) ao entregar as páginas.</li>
+  <li><strong>Sentry</strong> — relatórios de erro da versão web, nas condições descritas na seção 2.5.</li>
+</ul>
+
+<h2 id="transferencia">5. Transferência internacional</h2>
+<p>Os prestadores listados acima são empresas com sede nos Estados Unidos e podem processar dados fora do Brasil — em especial a autenticação, o envio de notificações, os relatórios de erro, a verificação do App Check e a hospedagem web. Essas transferências se apoiam nas garantias contratuais oferecidas por esses prestadores (LGPD, art. 33).</p>
+<p>Os relatórios de erro da versão web ficam armazenados na região <span class="fill">[PREENCHER: região da organização no Sentry — EUA ou UE]</span>.</p>
+<!-- REVISÃO JURÍDICA: confirmar o mecanismo de transferência (art. 33) de cada operador —
+     cláusulas-padrão / termos de tratamento de dados de Google Cloud, Vercel e Sentry. -->
+
+<h2 id="armazenamento">6. Onde os dados ficam armazenados</h2>
+<p>Seu perfil, suas medições, suas preferências e os identificadores de aparelho ficam no Cloud Firestore, na região <span class="fill">[PREENCHER: região do Firestore — a confirmar no Console do Firebase; o planejado era southamerica-east1 (São Paulo)]</span>. As funções de servidor do app rodam na região southamerica-east1 (São Paulo).</p>
+
+<h2 id="retencao">7. Por quanto tempo os dados são guardados</h2>
+<ul>
+  <li><strong>Conta, medições, preferências e identificadores de aparelho:</strong> enquanto sua conta existir. Medições que você exclui são apagadas do banco de dados. Ao excluir a conta, tudo é apagado (veja a seção 10).</li>
+  <li><strong>Tokens de push inválidos</strong> (de aparelhos desinstalados ou que revogaram a permissão) são removidos automaticamente do índice de lembretes quando um envio falha.</li>
+  <li><strong>Relatórios de erro:</strong> Crashlytics por <span class="fill">[PREENCHER: prazo de retenção configurado no Crashlytics]</span>; Sentry por <span class="fill">[PREENCHER: prazo de retenção configurado no Sentry]</span>.</li>
+  <li><strong>Registros técnicos do servidor:</strong> pelo prazo de retenção do Cloud Logging do projeto <span class="fill">[PREENCHER: prazo de retenção do Cloud Logging]</span>.</li>
+</ul>
+<p>Cópias residuais nos sistemas dos prestadores (por exemplo, em backups internos do Google) são eliminadas conforme os prazos de exclusão de cada prestador.</p>
+
+<h2 id="seguranca">8. Segurança</h2>
+<ul>
+  <li><strong>Acesso só seu:</strong> regras de acesso no banco de dados garantem que cada conta só consiga ler e gravar os próprios dados. Ninguém que use o app consegue ver dados de outra pessoa.</li>
+  <li><strong>Índice de lembretes</strong> inacessível pelo app: só o servidor pode lê-lo ou alterá-lo.</li>
+  <li><strong>App Check:</strong> verificação de que as requisições ao banco de dados vêm do aplicativo legítimo.</li>
+  <li><strong>Criptografia:</strong> os dados trafegam por conexão criptografada (HTTPS/TLS) e são armazenados criptografados pelo Google. Isso <strong>não</strong> é criptografia de ponta a ponta: o provedor de infraestrutura tecnicamente processa os dados em nosso nome.</li>
+  <li><strong>Logs sem dado de saúde:</strong> valores de medição e dados de identificação são removidos automaticamente de qualquer registro de erro.</li>
+</ul>
+<p>Nenhum sistema é totalmente imune a incidentes. Se ocorrer um incidente de segurança que possa trazer risco ou dano relevante a você, comunicaremos você e a Autoridade Nacional de Proteção de Dados (ANPD), como exige a LGPD (art. 48).</p>
+
+<h2 id="direitos">9. Seus direitos e como exercê-los</h2>
+<p>A LGPD (art. 18) garante a você, entre outros, os direitos de:</p>
+<ul>
+  <li>confirmar se tratamos seus dados e <strong>acessá-los</strong>;</li>
+  <li><strong>corrigir</strong> dados incompletos, inexatos ou desatualizados;</li>
+  <li>pedir <strong>anonimização, bloqueio ou eliminação</strong> de dados desnecessários, excessivos ou tratados em desconformidade com a lei;</li>
+  <li><strong>portabilidade</strong> dos seus dados;</li>
+  <li><strong>eliminação</strong> dos dados tratados com base no seu consentimento;</li>
+  <li>saber com quais entidades seus dados são compartilhados;</li>
+  <li>saber da possibilidade de não fornecer consentimento e das consequências;</li>
+  <li><strong>revogar o consentimento</strong> a qualquer momento;</li>
+  <li>peticionar à ANPD.</li>
+</ul>
+<p>Boa parte desses direitos você exerce direto no app, sem precisar pedir:</p>
+<ul>
+  <li><strong>Acesso:</strong> todas as suas medições aparecem no Histórico.</li>
+  <li><strong>Correção:</strong> você pode editar ou excluir qualquer medição.</li>
+  <li><strong>Portabilidade:</strong> no Histórico, o botão “Exportar CSV” gera um arquivo com suas medições, que abre em qualquer planilha.</li>
+  <li><strong>Eliminação e revogação:</strong> exclua medições individualmente ou a conta inteira (seção 10).</li>
+</ul>
+<p>Para qualquer outro pedido, escreva para <span class="fill">[PREENCHER: e-mail do encarregado]</span>. Responderemos nos prazos da LGPD.</p>
+
+<h2 id="exclusao">10. Como excluir sua conta e todos os seus dados</h2>
+<p>Você pode excluir sua conta a qualquer momento pelo próprio app:</p>
+<ol>
+  <li>Abra <strong>Ajustes</strong>.</li>
+  <li>Toque em <strong>“Excluir minha conta”</strong>.</li>
+  <li>Confirme em <strong>“Excluir definitivamente”</strong>. Se o seu login for antigo, o Google pode pedir que você entre de novo para confirmar sua identidade.</li>
+</ol>
+<p>A exclusão é <strong>definitiva</strong> e apaga sua conta de login, seu perfil, todas as suas medições, seus horários de lembrete, os aparelhos registrados e o índice de lembretes. A limpeza dos dados é feita pelo servidor logo após a exclusão da conta e é repetida automaticamente se falhar por algum erro temporário.</p>
+<p>A exclusão não alcança cópias que você mesmo tenha exportado e guardado fora do app, nem as preferências locais do aparelho (tema, apresentação vista, aviso dispensado) — essas somem ao desinstalar o app ou limpar os dados do navegador.</p>
+
+<h2 id="publico">11. Público-alvo</h2>
+<p>O BP Tracker é destinado a <strong>adultos (18 anos ou mais)</strong>. O app não é direcionado a crianças ou adolescentes e não coleta intencionalmente dados de menores de 18 anos.</p>
+
+<h2 id="alteracoes">12. Alterações desta política</h2>
+<p>Esta política pode ser atualizada para refletir mudanças no app ou na legislação. A data de vigência no topo da página sempre indica a versão atual. Se uma mudança alterar de forma relevante o tratamento dos seus dados — em especial dos dados de saúde —, avisaremos você antes de ela valer, pelo e-mail da sua conta Google ou pelo próprio app.</p>
+
+<p class="meta">Versão vigente a partir de <span class="fill">[PREENCHER: data de vigência]</span>.</p>
+</main>
+</body>
+</html>

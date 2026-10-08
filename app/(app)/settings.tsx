@@ -29,16 +29,15 @@ import {
 } from '@/components/ui/icons';
 import { useDeleteAccount } from '@/features/auth/useDeleteAccount';
 import { useSession } from '@/features/auth/useSession';
+import { usePrivacyConsent } from '@/features/privacy/usePrivacyConsent';
 import type { PushUnavailableReason } from '@/features/reminders/pushAvailability';
 import { useReminderSettings } from '@/features/reminders/useReminderSettings';
 import { useThemePreference } from '@/features/theme/useThemePreference';
 import type { ThemePreference } from '@/features/theme/theme-preference.storage';
+import { formatShortDate } from '@/lib/datetime';
+import { PRIVACY_POLICY_URL } from '@/lib/legal';
 import { colors } from '@/theme/colors';
 import { useColorScheme } from '@/theme/useColorScheme';
-
-// Placeholder deliberado — não é uma URL real. Substitua antes de publicar; até lá, o link abre
-// um endereço que não existe, deixando óbvio (em vez de fingir sucesso) que falta configurar.
-const PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo';
 
 /**
  * Identificador estável do slot, não a posição na lista (CLAUDE.md §3.4 proíbe key por índice).
@@ -145,7 +144,8 @@ function dateToTimeString(date: Date): string {
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const { signOut, isLoading: isSigningOut } = useSession();
+  const { user, signOut, isLoading: isSigningOut } = useSession();
+  const { consent } = usePrivacyConsent(user);
   const {
     settings,
     updateReminderTimes,
@@ -487,6 +487,17 @@ export default function SettingsScreen() {
         <SectionHeader title="Privacidade" icon={ShieldCheckIcon} />
 
         <Disclaimer />
+
+        {consent !== null ? (
+          <Text variant="body">Você autorizou o tratamento dos seus dados de pressão arterial em {formatShortDate(consent.acceptedAt)}.</Text>
+        ) : null}
+
+        {/* Revogar o consentimento = excluir a conta: um caminho só, o que já existe no card Conta.
+            Não há "revogar e manter os dados" — o app não funciona sem a autorização. */}
+        <Text variant="caption">
+          Para revogar essa autorização, exclua sua conta em “Excluir minha conta”, no card Conta acima. Isso apaga
+          definitivamente todas as suas medições.
+        </Text>
 
         <Pressable
           accessibilityRole="link"

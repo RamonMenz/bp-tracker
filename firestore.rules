@@ -23,7 +23,8 @@ service cloud.firestore {
       function validProfile(d) {
         return d.keys().hasOnly([
                  'displayName','email','photoURL','timezone',
-                 'reminderTimes','notificationsEnabled','createdAt','updatedAt'
+                 'reminderTimes','notificationsEnabled','createdAt','updatedAt',
+                 'privacyConsent'
                ])
             // createdAt/updatedAt entram no hasAll: a comparação de createdAt no update
             // erraria (e negaria para sempre) num documento que tivesse sido criado sem eles.
@@ -34,14 +35,36 @@ service cloud.firestore {
             && d.notificationsEnabled is bool
             && d.reminderTimes is list && d.reminderTimes.size() <= 8
             && d.createdAt is timestamp
-            && d.updatedAt is timestamp;
+            && d.updatedAt is timestamp
+            // privacyConsent é opcional: ausente até o primeiro aceite.
+            && (!('privacyConsent' in d) || validConsent(d.privacyConsent));
+      }
+
+      // Prova do consentimento para dado de saúde (LGPD art. 11, I).
+      function validConsent(c) {
+        return c is map
+            && c.keys().hasOnly(['version','acceptedAt'])
+            && c.keys().hasAll(['version','acceptedAt'])
+            && c.version is string && c.version.size() > 0 && c.version.size() <= 32
+            && c.acceptedAt is timestamp;
+      }
+
+      // Todo aceite NOVO carrega o horário do servidor (serverTimestamp() == request.time): o
+      // cliente não pode antedatar nem pós-datar a prova. Um aceite que não mudou passa — é o caso
+      // do merge de ensureUserProfile a cada login, que não toca no campo.
+      function consentStampedNow(d, previous) {
+        return !('privacyConsent' in d)
+            || d.privacyConsent == previous
+            || d.privacyConsent.acceptedAt == request.time;
       }
 
       allow get:    if isOwner(uid);
       allow list:   if false;                       // ninguém enumera usuários
-      allow create: if isOwner(uid) && validProfile(request.resource.data);
+      allow create: if isOwner(uid) && validProfile(request.resource.data)
+                    && consentStampedNow(request.resource.data, null);
       allow update: if isOwner(uid) && validProfile(request.resource.data)
-                    && request.resource.data.createdAt == resource.data.createdAt;
+                    && request.resource.data.createdAt == resource.data.createdAt
+                    && consentStampedNow(request.resource.data, resource.data.get('privacyConsent', null));
       allow delete: if isOwner(uid);                // exclusão de conta (LGPD)
 
       // ---------- MEDIÇÕES ----------
