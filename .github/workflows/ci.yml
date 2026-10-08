@@ -1,0 +1,101 @@
+name: CI
+
+# Verificações a cada PR e a cada push em main. Nenhum job usa `secrets.*` de propósito: os
+# testes mockam o Firebase e as security rules rodam no emulador com um projectId fictício,
+# então nada aqui precisa de .env.local, google-services.json ou token. Se um dia algum job
+# precisar de variáveis, a fonte é a EAS (`eas env:pull`, como em eas-build.yml) — nunca
+# duplicar segredo em GitHub Secrets.
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Um push novo no mesmo PR/branch cancela a execução anterior, ainda em andamento.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (lint, typecheck e testes)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Testes (Jest)
+        run: npm test -- --ci
+
+  functions:
+    name: Cloud Functions (build e testes)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+
+      - name: Instalar dependências das Functions
+        run: npm --prefix functions ci
+
+      - name: Compilar as Functions
+        run: npm --prefix functions run build
+
+      - name: Testes das Functions (Jest)
+        run: npm --prefix functions test
+
+  rules:
+    name: Security Rules (emulador do Firestore)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Configurar Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # O JAR do emulador é baixado na primeira execução. A versão do firebase-tools (e,
+      # portanto, a do emulador) está travada no package-lock.json — por isso a chave do cache.
+      - name: Cache do emulador do Firestore
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Testar security rules
+        run: npm run test:rules
