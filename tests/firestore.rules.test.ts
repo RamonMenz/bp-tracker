@@ -269,6 +269,132 @@ describe('validação de perfil', () => {
   });
 });
 
+describe('consentimento (privacyConsent) — LGPD art. 11, I', () => {
+  const PAST = Timestamp.fromDate(new Date('2026-01-01T00:00:00.000Z'));
+
+  it('permite que o dono grave o aceite com o horário do servidor', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        { privacyConsent: { version: '2026-10-01', acceptedAt: serverTimestamp() }, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('permite o aceite já na criação do perfil, com o horário do servidor', async () => {
+    const db = asGoogleUser(BOB).firestore();
+    await assertSucceeds(
+      setDoc(doc(db, `users/${BOB}`), {
+        ...validProfile(),
+        privacyConsent: { version: '2026-10-01', acceptedAt: serverTimestamp() },
+      }),
+    );
+  });
+
+  it('nega aceite antedatado (acceptedAt no passado, vindo do relógio do cliente)', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        { privacyConsent: { version: '2026-10-01', acceptedAt: PAST }, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('nega aceite antedatado já na criação do perfil', async () => {
+    const db = asGoogleUser(BOB).firestore();
+    await assertFails(
+      setDoc(doc(db, `users/${BOB}`), {
+        ...validProfile(),
+        privacyConsent: { version: '2026-10-01', acceptedAt: PAST },
+      }),
+    );
+  });
+
+  it('nega chave extra dentro do map de aceite', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        {
+          privacyConsent: { version: '2026-10-01', acceptedAt: serverTimestamp(), scope: 'tudo' },
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('nega version maior que 32 caracteres', async () => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        { privacyConsent: { version: 'v'.repeat(33), acceptedAt: serverTimestamp() }, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('nega que o usuário B grave o aceite na conta de A', async () => {
+    const db = asGoogleUser(BOB).firestore();
+    await assertFails(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        { privacyConsent: { version: '2026-10-01', acceptedAt: serverTimestamp() }, updatedAt: serverTimestamp() },
+        { merge: true },
+      ),
+    );
+  });
+
+  it('o merge de cada login (ensureUserProfile) passa e preserva o aceite já gravado', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), `users/${ALICE}`), {
+        privacyConsent: { version: '2026-10-01', acceptedAt: PAST },
+      });
+    });
+
+    const db = asGoogleUser(ALICE).firestore();
+
+    // Mesmo payload de writeUserProfile em login que não é o primeiro: sem privacyConsent.
+    await assertSucceeds(
+      setDoc(
+        doc(db, `users/${ALICE}`),
+        {
+          displayName: 'Alice',
+          email: 'alice@example.com',
+          photoURL: null,
+          timezone: 'America/Sao_Paulo',
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true },
+      ),
+    );
+
+    const snapshot = await getDoc(doc(db, `users/${ALICE}`));
+    expect(snapshot.get('privacyConsent')).toEqual({ version: '2026-10-01', acceptedAt: PAST });
+  });
+
+  it('nega regravar um aceite existente com outro horário que não o do servidor', async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), `users/${ALICE}`), {
+        privacyConsent: { version: '2026-10-01', acceptedAt: PAST },
+      });
+    });
+
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(
+      updateDoc(doc(db, `users/${ALICE}`), {
+        privacyConsent: { version: '2026-10-01', acceptedAt: MEASURED_AT },
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  });
+});
+
 describe('schedules — exclusivo do Admin SDK', () => {
   it('nega escrita direta do cliente no próprio schedules/{uid}', async () => {
     const db = asGoogleUser(ALICE).firestore();

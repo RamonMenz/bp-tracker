@@ -1,4 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Linking } from 'react-native';
+
+import { formatShortDate } from '@/lib/datetime';
+import { PRIVACY_POLICY_URL } from '@/lib/legal';
 
 // Fora de src/ (não elegível para o alias @/) — aponta para o arquivo de rota real em
 // app/(app)/settings.tsx. Este teste vive em __tests__/ (fora da árvore que o Expo Router varre)
@@ -33,6 +37,14 @@ jest.mock('@/features/theme/useThemePreference', () => ({
   useThemePreference: jest.fn(),
 }));
 
+// O aceite vem de um listener do Firestore — fora do escopo destes testes de tela.
+jest.mock('@/features/privacy/usePrivacyConsent', () => ({
+  usePrivacyConsent: jest.fn(),
+}));
+
+const { usePrivacyConsent } = jest.requireMock('@/features/privacy/usePrivacyConsent') as {
+  usePrivacyConsent: jest.Mock;
+};
 const { useSession } = jest.requireMock('@/features/auth/useSession') as {
   useSession: jest.Mock;
 };
@@ -61,6 +73,7 @@ beforeEach(() => {
   });
   useDeleteAccount.mockReturnValue({ deleteAccount: jest.fn(), isDeleting: false, error: null });
   useThemePreference.mockReturnValue({ preference: 'system', setPreference: jest.fn() });
+  usePrivacyConsent.mockReturnValue({ status: 'loading', consent: null });
 });
 
 /**
@@ -130,5 +143,37 @@ describe('SettingsScreen — atalho para reabrir o onboarding', () => {
 
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/onboarding');
+  });
+});
+
+describe('SettingsScreen — card Privacidade', () => {
+  it('mostra quando o usuário autorizou o tratamento dos dados', async () => {
+    const acceptedAt = new Date(2026, 9, 2, 9, 30);
+    usePrivacyConsent.mockReturnValue({ status: 'accepted', consent: { version: '2026-10-01', acceptedAt } });
+
+    await render(<SettingsScreen />);
+
+    expect(
+      screen.getByText(
+        `Você autorizou o tratamento dos seus dados de pressão arterial em ${formatShortDate(acceptedAt)}.`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it('explica que revogar a autorização é excluir a conta', async () => {
+    await render(<SettingsScreen />);
+
+    expect(screen.getByText(/Para revogar essa autorização, exclua sua conta/)).toBeTruthy();
+  });
+
+  it('abre a política de privacidade ao tocar em "Política de privacidade"', async () => {
+    const openURLSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+
+    await render(<SettingsScreen />);
+
+    await fireEvent.press(screen.getByRole('link', { name: 'Abrir política de privacidade' }));
+
+    expect(openURLSpy).toHaveBeenCalledWith(PRIVACY_POLICY_URL);
+    openURLSpy.mockRestore();
   });
 });

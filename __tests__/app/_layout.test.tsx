@@ -8,6 +8,7 @@ import RootLayout from '../../app/_layout';
 const mockUseSession = jest.fn();
 const mockUseAuthRedirect = jest.fn();
 const mockUseOnboardingGate = jest.fn();
+const mockUseConsentGate = jest.fn();
 const mockUseNotificationRedirect = jest.fn();
 const mockUseForegroundPush = jest.fn();
 
@@ -42,6 +43,10 @@ jest.mock('@/features/onboarding/useOnboardingGate', () => ({
   useOnboardingGate: (...args: unknown[]) => mockUseOnboardingGate(...args),
 }));
 
+jest.mock('@/features/privacy/useConsentGate', () => ({
+  useConsentGate: (...args: unknown[]) => mockUseConsentGate(...args),
+}));
+
 jest.mock('@/features/reminders/useNotificationRedirect', () => ({
   useNotificationRedirect: (...args: unknown[]) => mockUseNotificationRedirect(...args),
 }));
@@ -52,6 +57,7 @@ jest.mock('@/features/reminders/useForegroundPush', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUseConsentGate.mockReturnValue({ hasConsent: true });
 });
 
 describe('RootLayout — gate de onboarding', () => {
@@ -76,5 +82,26 @@ describe('RootLayout — gate de onboarding', () => {
     await render(<RootLayout />);
 
     expect(mockUseOnboardingGate).toHaveBeenCalledWith(null, true);
+  });
+});
+
+describe('RootLayout — consentimento antes do onboarding', () => {
+  it('chama useConsentGate com o user e o isLoading da sessão', async () => {
+    const user = { uid: 'user-1' };
+    mockUseSession.mockReturnValue({ user, isLoading: false });
+
+    await render(<RootLayout />);
+
+    expect(mockUseConsentGate).toHaveBeenCalledWith(user, false);
+  });
+
+  it('segura o onboarding (isLoading = true) enquanto não há aceite da versão vigente', async () => {
+    const user = { uid: 'user-1' };
+    mockUseSession.mockReturnValue({ user, isLoading: false });
+    mockUseConsentGate.mockReturnValue({ hasConsent: false });
+
+    await render(<RootLayout />);
+
+    expect(mockUseOnboardingGate).toHaveBeenCalledWith(user, true);
   });
 });

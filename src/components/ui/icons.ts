@@ -31,6 +31,8 @@ export { default as PlusIcon } from 'lucide-react-native/icons/plus';
 export { default as SettingsIcon } from 'lucide-react-native/icons/settings';
 export { default as ShieldCheckIcon } from 'lucide-react-native/icons/shield-check';
 export { default as SmartphoneIcon } from 'lucide-react-native/icons/smartphone';
+export { default as SquareCheckIcon } from 'lucide-react-native/icons/square-check';
+export { default as SquareIcon } from 'lucide-react-native/icons/square';
 export { default as SunIcon } from 'lucide-react-native/icons/sun';
 export { default as SunMoonIcon } from 'lucide-react-native/icons/sun-moon';
 export { default as TrashIcon } from 'lucide-react-native/icons/trash-2';

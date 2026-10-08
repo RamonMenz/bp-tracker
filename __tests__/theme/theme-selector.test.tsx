@@ -10,6 +10,9 @@ import SettingsScreen from '../../app/(app)/settings';
 jest.mock('@/features/auth/useSession', () => ({ useSession: jest.fn() }));
 jest.mock('@/features/reminders/useReminderSettings', () => ({ useReminderSettings: jest.fn() }));
 jest.mock('@/features/auth/useDeleteAccount', () => ({ useDeleteAccount: jest.fn() }));
+jest.mock('@/features/privacy/usePrivacyConsent', () => ({
+  usePrivacyConsent: () => ({ status: 'loading', consent: null }),
+}));
 
 const { useSession } = jest.requireMock('@/features/auth/useSession') as { useSession: jest.Mock };
 const { useReminderSettings } = jest.requireMock('@/features/reminders/useReminderSettings') as {
