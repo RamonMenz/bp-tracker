@@ -1,75 +1,61 @@
 # Checklist de Release — BP Tracker
 
-> Checklist operacional da Fase 7 (PLAN.md). Não é código — é a sequência de passos pra sair
-> daqui até o app instalado da Play Store internal testing, registrando e notificando de ponta a
-> ponta (critério de "pronto" do PLAN §Fase 7).
+> Verificado contra o commit 5b1969a em 2026-10-08. Se o repositório mudou desde então, reconfira
+> antes de confiar.
 >
-> 🔴 = exige credencial, conta ou decisão sua — não posso executar nem inventar o valor.
-> ⚠️ = bloqueio real: verifiquei o repo e o passo **não vai funcionar** no estado atual.
+> Checklist operacional da Fase 7 (PLAN.md): do estado atual do repositório até o app instalado
+> da Play Store (internal testing), registrando e notificando de ponta a ponta.
+>
+> 🔴 = exige credencial, conta ou decisão sua — não dá para executar nem inventar o valor.
+> ⚠️ = bloqueio real, verificado no repositório neste commit.
 
 ---
 
-## 0. Pré-requisitos bloqueantes
+## 0. Pré-requisitos (só o que é seu)
 
-Antes de tentar qualquer item abaixo, isto precisa existir — nenhum dos comandos das seções 1–3
-roda sem isso:
+O projeto já existe: `package.json`, `functions/` (com `src/index.ts`), `eas.json`, `assets/`,
+`public/firebase-messaging-sw.js` e `android.package` (`com.ramonmenz.bptracker`, em
+`app.config.ts`) estão no repositório. **Não rode `npx create-expo-app`** — geraria um projeto por
+cima do existente.
 
-- [ ] ⚠️ **`package.json` não existe.** Nada de `npm install`/`lint`/`typecheck`/`test` roda.
-      Primeiro passo real: `npx create-expo-app` (ou equivalente) na raiz, com Expo Router +
-      NativeWind, conforme PLAN §Fase 1.
-- [ ] ⚠️ **`functions/package.json` não existe.** As Cloud Functions (`dispatchReminders`,
-      `onUserSettingsWrite`, `onDeviceWrite`, `onUserDelete`) têm código e teste, mas não são um
-      projeto Node instalável ainda.
-- [ ] ⚠️ **`functions/src/index.ts` não existe.** Nenhum dos 4 triggers/scheduler está exportado
-      — `firebase deploy --only functions` não teria o que publicar.
-- [ ] ⚠️ **`eas.json` não existe.** Ver seção 2.
-- [ ] ⚠️ **`app.config.ts` não define `android.package` nem `ios.bundleIdentifier`.** 🔴 Decisão
-      sua: o identificador de pacote (ex.: `com.suaempresa.bptracker`) não pode ser trocado
-      depois de publicado na Play Store. Não vou inventar um valor.
-- [ ] ⚠️ **Nenhum ícone/asset existe** (`assets/` não existe no repo). `app.config.ts` não tem
-      campo `icon`/`splash`/`android.adaptiveIcon`. Precisa de artes antes do primeiro build.
-- [ ] ⚠️ **`firebase.json` não tem bloco `hosting`.** `firebase deploy --only hosting` falha até
-      isso existir (ver seção 3).
-- [ ] 🔴 **`google-services.json` não existe** (é gitignored por design — CLAUDE.md §4.4). Baixe
-      do Firebase Console → Configurações do projeto → app Android, depois de registrar o app lá
-      com o `android.package` acima.
-- [ ] 🔴 **`.env.local` com os valores reais do Firebase** — copie de `.env.example` e preencha
-      (Fase 0). Sem isso `app.config.ts` lança erro em `requireEnv` e nada builda.
+- [ ] 🔴 **`google-services.json`** — gitignored por design (CLAUDE.md §4.4). Baixe em Firebase
+      Console → Configurações do projeto → app Android (`com.ramonmenz.bptracker`). Local: na
+      raiz. No EAS: variável de arquivo `GOOGLE_SERVICES_JSON` (é o que `app.config.ts` lê;
+      sem ela, cai em `./google-services.json`).
+- [ ] 🔴 **Variáveis `EXPO_PUBLIC_*` cadastradas na EAS** (`eas env:create`, ambiente
+      `production`; o workflow `eas-build.yml` usa `eas env:pull` do ambiente `development`):
+      `EXPO_PUBLIC_FIREBASE_API_KEY`, `_AUTH_DOMAIN`, `_PROJECT_ID`, `_APP_ID`,
+      `_MESSAGING_SENDER_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` (obrigatórias — `requireEnv`
+      em `app.config.ts` lança erro sem elas) e as opcionais `EXPO_PUBLIC_FIREBASE_VAPID_KEY`,
+      `EXPO_PUBLIC_APPCHECK_RECAPTCHA_SITE_KEY`, `EXPO_PUBLIC_SENTRY_DSN`. O `.env.local` é
+      local e gitignored: a EAS não o lê.
+- [ ] 🔴 **As mesmas variáveis cadastradas na Vercel** (Project Settings → Environment
+      Variables), porque o build web roda lá (`npx expo export -p web`).
+- [ ] 🔴 **`EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN` nunca fora do `.env.local`** — nem na EAS, nem na
+      Vercel, nem em CI. É credencial de desenvolvimento (ver `.env.example`).
+- [ ] 🔴 **`.env.local`** local (copie de `.env.example`) para rodar o app em dev.
 
 ---
 
-## 1. Qualidade — `lint && typecheck && test`
+## 1. Qualidade
 
-- [ ] `npm install` na raiz.
-- [ ] `npm --prefix functions install`.
+Comandos reais (todos existem no `package.json`; os de Functions em `functions/package.json`):
+
+- [ ] `npm install` e `npm --prefix functions install`
 - [ ] `npm run lint`
 - [ ] `npm run typecheck`
 - [ ] `npm test`
-- [ ] `npm --prefix functions run build` (as Functions são um projeto TS isolado — `tsc` próprio).
-- [ ] Rodar a suíte de rules: `firebase emulators:exec --only firestore "npx vitest run"`
-      (`tests/firestore.rules.test.ts`, 24 casos da Fase 3).
+- [ ] `npm run test:rules` — suíte de Security Rules (Jest, `jest.rules.config.js`, em
+      `tests/firestore.rules.test.ts`) no emulador do Firestore; exige Java 21+.
+- [ ] `npm --prefix functions run build`
+- [ ] `npm --prefix functions test`
 
-**Achados já conhecidos que provavelmente vão aparecer aqui** (documentados em fases anteriores
-deste mesmo projeto, verificados contra dependências reais em ambiente isolado — nunca contra o
-projeto de verdade, porque ele ainda não existe):
+**CI:** `.github/workflows/ci.yml` existe neste commit e roda, a cada PR e a cada push em `main`,
+três jobs: app (lint, typecheck, `npm test -- --ci`), Functions (build + testes) e Security Rules
+(`npm run test:rules`, com Java 21). Não usa `secrets.*`. Rode localmente antes de commitar
+(CLAUDE.md §4.2); o CI é a rede de segurança.
 
-- [ ] `useColorScheme() ?? 'light'` (usado em quase toda tela/componente) falha em `strict` contra
-      `react-native@0.86`+: `ColorSchemeName` passou a incluir `'unspecified'`, que o `??` não
-      cobre. Pode não reproduzir se o Expo SDK instalado fixar uma versão mais antiga de RN — só
-      dá pra confirmar depois do `npm install` real.
-- [ ] `className` em `View`/`Text`/`Pressable` (todo `src/components/`) só tipa depois que o setup
-      do NativeWind gerar `nativewind-env.d.ts` — isso faz parte do `npx expo install nativewind`
-      + configuração inicial (PLAN §Fase 1), não uma correção de código.
-- [ ] `@shopify/flash-list@2.3.2` (a versão atual do registry) **removeu** a prop
-      `estimatedItemSize`, que `app/(app)/history.tsx` usa (v2 fez autosizing). Precisa de ajuste
-      quando a versão real for instalada e travada no `package.json`.
-- [ ] `BpNumberInput.tsx` passa `invalid` em `accessibilityState`, chave que pode não existir no
-      tipo `AccessibilityState` da versão de `@types/react-native` que for resolvida.
-
-Nenhum desses é motivo pra pular a Fase 7 — são exatamente o tipo de coisa que só aparece quando
-`npm install` roda pela primeira vez contra versões reais e travadas.
-
-**Só prossiga pra seção 2 com lint/typecheck/test 100% verdes.**
+**Só prossiga para a seção 2 com tudo verde.**
 
 ---
 
@@ -78,178 +64,147 @@ Nenhum desses é motivo pra pular a Fase 7 — são exatamente o tipo de coisa q
 - [x] ✅ **Nativo: resolvido.** `src/services/firebase/index.ts` chama `setCrashReporter(...)` no
       bootstrap (fora de `__DEV__`, antes de `initAppCheck()`) com o adapter
       `src/services/crashReporter.native.ts`, que usa `@react-native-firebase/crashlytics`. Erro de
-      produção no Android agora vira não-fatal no Crashlytics, agrupado pelo `scope` do `logError`,
-      com o contexto já sanitizado como breadcrumb. Coberto por `src/lib/logger.test.ts`.
+      produção no Android vira não-fatal no Crashlytics, agrupado pelo `scope` do `logError`, com
+      o contexto já sanitizado como breadcrumb. Coberto por `src/lib/logger.test.ts`.
 - [ ] 🔴 **Depende de você antes do primeiro build:** o Crashlytics nativo só inicializa com o
-      `google-services.json` no lugar (gitignored por design — ver seção 0). `app.config.ts` já
-      declara os config plugins `@react-native-firebase/app` e `.../crashlytics` e aponta
-      `android.googleServicesFile`; sem o arquivo, o `prebuild`/`eas build` falha com mensagem
-      explícita, que é o comportamento desejado (melhor falhar do que buildar sem coletor).
+      `google-services.json` no lugar (ver seção 0). `app.config.ts` declara os config plugins
+      `@react-native-firebase/app` e `.../crashlytics` e aponta `android.googleServicesFile`; sem
+      o arquivo o `prebuild`/`eas build` falha com mensagem explícita — comportamento desejado.
 - [x] ✅ **Web: resolvido.** `src/services/crashReporter.web.ts` usa `@sentry/browser` (não existe
-      SDK web do Crashlytics, e o Firebase JS SDK não expõe esse produto). Inicializa de forma
-      preguiçosa na primeira chamada de `recordError`, com `sendDefaultPii: false`,
-      `tracesSampleRate: 0` e rastreio de sessão desligado — requisito de LGPD do CLAUDE.md §4.4,
-      já que é mais um processador de dados recebendo stack trace de app de saúde. Coberto por
+      SDK web do Crashlytics). Inicializa de forma preguiçosa na primeira chamada de
+      `recordError`, com `sendDefaultPii: false`, `tracesSampleRate: 0` e rastreio de sessão
+      desligado — requisito de LGPD (CLAUDE.md §4.4). Coberto por
       `src/services/crashReporter.web.test.ts`.
-- [ ] 🔴 **Depende de você antes de gerar sinal de verdade:** o adapter só inicializa com
-      `EXPO_PUBLIC_SENTRY_DSN` preenchida (ver `.env.example`), e essa DSN vem de um projeto criado
-      por você em sentry.io (Settings > Projects > seu projeto > Client Keys). Sem ela, o adapter
-      registra um aviso único e segue como no-op — não quebra o app, só continua sem coletor web,
-      mesmo comportamento do Play Integrity logo abaixo antes do app estar no Play Console.
+- [ ] 🔴 **Depende de você para gerar sinal de verdade:** o adapter web só inicializa com
+      `EXPO_PUBLIC_SENTRY_DSN` preenchida (projeto criado por você em sentry.io → Settings →
+      Projects → Client Keys). Sem ela, registra um aviso único e segue como no-op.
 
 ---
 
-## 2. `eas build --profile production --platform android`
+## 2. Android / EAS — conferir
 
-- [ ] 🔴 `eas login` (conta Expo/EAS sua).
-- [ ] 🔴 `eas build:configure` — gera o `eas.json` inicial. **Não vou criar esse arquivo com
-      valores inventados**; ele precisa ser gerado pela CLI ou escrito por você com os dados reais
-      do projeto EAS.
+O `eas.json` **já existe**. Não rode `eas build:configure` para recriá-lo. Conteúdo atual:
 
-### Campos do `eas.json` pra conferir antes do build de produção
+- `cli.appVersionSource: "remote"` (o `versionCode` é gerenciado pela EAS);
+- perfil `development`: `developmentClient: true`, `distribution: "internal"`;
+- perfil `preview`: `distribution: "internal"`;
+- perfil `production`: `autoIncrement: true` (sem `android.buildType`, sem `env`);
+- `submit.production: {}` (vazio).
 
-- [ ] **`build.production.android.buildType`** — precisa ser `"app-bundle"` (AAB), não `"apk"`. É
-      o formato que a Play Store exige hoje pra apps novos.
-- [ ] **`build.production.env`** (ou `eas secret:create` por variável) — todas as
-      `EXPO_PUBLIC_FIREBASE_*`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`,
-      `EXPO_PUBLIC_APPCHECK_RECAPTCHA_SITE_KEY` precisam estar disponíveis pro build. **O
-      `.env.local` é local e gitignored — o EAS não lê esse arquivo.** Sem isso configurado, o
-      build de produção quebra no mesmo `requireEnv` que quebraria localmente.
-- [ ] **`EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN` NÃO pode existir nos secrets/env do EAS** — é
-      exclusivamente de dev local (`.env.local`), nunca de CI/build (CLAUDE.md §4.4 e o comentário
-      em `appCheck.native.ts`/`appCheck.web.ts`). Confira que não foi adicionado por engano.
-- [ ] **`android.package`** em `app.config.ts` — precisa estar definido antes do primeiro build
-      (bloqueio já listado na seção 0).
-- [ ] **`google-services.json`** — ou commitado como *EAS secret file*
-      (`eas secret:create --type file`) ou referenciado via `android.googleServicesFile` no
-      `app.config.ts`. Nunca commitado no git (já coberto pelo `.gitignore` da Fase 0).
-- [ ] **Credenciais de assinatura (keystore)** — `eas credentials`. Pode deixar o EAS gerenciar
-      (recomendado) ou subir um keystore próprio. 🔴 Decisão sua.
-- [ ] **`versionCode`** — recomendo `"appVersionSource": "remote"` + `autoIncrement: true` no
-      perfil de produção, pra não gerenciar isso manualmente a cada build.
-- [ ] **`submit.production`** (se for usar `eas submit` depois) — precisa da
-      `service-account.json` do Google Play (🔴 gerada no Play Console → Configurações da API).
+Conferir:
 
-### Antes de rodar o build
-
-- [ ] 🔴 **Google Sign-In em produção usa um keystore diferente do de dev.** Pegue o
-      SHA-1/SHA-256 real: `eas credentials` → Android → ver keystore. Adicione essa fingerprint em
-      **Firebase Console → Configurações do projeto → app Android → Adicionar impressão digital**.
-      Sem isso, o login com Google quebra especificamente no build de produção, mesmo funcionando
-      em dev.
-- [ ] 🔴 **Play Integrity (App Check nativo, Fase 6) precisa do app já registrado no Play
-      Console** (ao menos em *internal testing*) antes de poder ser validado de verdade — é uma
-      dependência circular conhecida: o primeiro build de produção provavelmente sai *sem* App
-      Check nativo funcional, e você liga isso numa iteração seguinte. Não é bloqueio pro primeiro
-      build, mas não tente ativar *enforcement* nas rules antes disso.
-
-### Comando
-
-- [ ] `eas build --profile production --platform android`
-- [ ] Acompanhar o build até o fim (link do dashboard EAS aparece no terminal).
-- [ ] Baixar o `.aab` e testar localmente com `bundletool` ou subir direto como *internal testing*
-      release (mais simples — a Play Store instala em dispositivo real a partir daí).
+- [ ] 🔴 `eas login` (conta Expo sua).
+- [ ] **AAB por padrão no perfil `production`?** Registro: **não verificado** — a documentação do
+      EAS (docs.expo.dev) estava inacessível desta sessão e `eas-cli` não está instalado. O que
+      consta na documentação pública, de memória, é que o `production` gera AAB quando
+      `android.buildType` não é definido, mas confirme antes do build. Se quiser eliminar a
+      dúvida, declare `"android": { "buildType": "app-bundle" }` no perfil `production`.
+- [ ] 🔴 Variáveis de ambiente `production` na EAS e `GOOGLE_SERVICES_JSON` (seção 0) — o
+      `eas.json` não define `env`; elas vêm do `eas env:create`.
+- [ ] 🔴 **Keystore:** `eas credentials` (Android). Deixar a EAS gerenciar é o recomendado. Decisão
+      sua.
+- [ ] 🔴 **Fingerprint SHA-1/SHA-256 de produção no Firebase.** Pegue em `eas credentials` e
+      adicione em Firebase Console → Configurações do projeto → app Android → Adicionar impressão
+      digital. Sem isso o Google Sign-In quebra **só no build de produção**. (Se a distribuição
+      for pela Play com assinatura do app pela Google, adicione também a fingerprint da chave de
+      assinatura do Play Console.)
+- [ ] 🔴 **Service account para `eas submit`:** `submit.production` está vazio; gere a chave
+      JSON no Play Console → Configurações da API e configure-a (`eas submit` / `eas credentials`).
+- [ ] 🔴 **Play Integrity / App Check nativo** exige o app registrado no Play Console (ao menos
+      internal testing). Ver seção 5.
+- [ ] `eas build --profile production --platform android`; acompanhe pelo link do dashboard.
+- [ ] Suba o `.aab` como release de *internal testing* e instale num dispositivo real.
 
 ---
 
-## 3. Web: `npx expo export -p web && firebase deploy --only hosting`
+## 3. Web — deploy pela Vercel
 
-- [ ] ⚠️ **`firebase.json` precisa ganhar um bloco `hosting` antes do deploy** — hoje só tem
-      `firestore`/`emulators`. Algo como:
-      ```json
-      "hosting": { "public": "dist", "ignore": ["firebase.json", "**/.*", "**/node_modules/**"] }
-      ```
-      🔴 Confirme o diretório de saída real do `expo export -p web` da versão do Expo SDK que for
-      instalada (mudou de nome entre versões — `web-build` em SDKs mais antigos, `dist` nos
-      recentes). Não vou adivinhar sem o `package.json` existir.
-- [ ] `npx expo export -p web`
-- [ ] Testar o build estático localmente antes de publicar:
-      `npx serve dist` (ou o diretório correto) e navegar pelo fluxo de login → registrar →
-      histórico.
-- [ ] `firebase deploy --only hosting`
-- [ ] 🔴 **Depois do primeiro deploy, o domínio `*.web.app` real fica conhecido.** Volte no Cloud
-      Console → reCAPTCHA Enterprise → sua chave (Fase 6) e adicione esse domínio à lista
-      permitida — a chave foi criada só com `localhost` até aqui.
-- [ ] Confirmar no Firebase Console → App Check que a plataforma web está recebendo tráfego
-      verificado antes de sequer considerar *enforcement*.
-- [ ] 🔴 Se for usar FCM na web: `public/firebase-messaging-sw.js` ainda não existe neste repo
-      (mencionado no PLAN §1.3, nunca implementado). Sem ele, notificação push não funciona na
-      versão web — mas o app funciona normalmente sem essa camada (lembrete local + push Android
-      continuam de pé).
+A web **não** sai pelo Firebase Hosting: `firebase.json` não tem (e não deve ganhar) bloco
+`hosting`. Config em `vercel.json`: `buildCommand` `npx expo export -p web`,
+`outputDirectory` `dist`, `installCommand` `npm ci`, `framework: null`; headers para
+`/firebase-messaging-sw.js` (`Service-Worker-Allowed: /`, sem cache) e cache imutável em
+`/_expo/static/*`; rewrite de SPA para `/index.html`.
+
+- [ ] 🔴 Projeto Vercel conectado ao repositório, com as variáveis da seção 0.
+- [ ] 🔴 **`EXPO_PUBLIC_FIREBASE_VAPID_KEY` no ambiente da Vercel** — sem ela não há push web
+      (`public/firebase-messaging-sw.js` existe, mas a chave é necessária; o app funciona sem
+      a camada de push web).
+- [ ] Testar o build antes de publicar: `npx expo export -p web` e `npx serve dist`; percorra
+      login → registrar → histórico.
+- [ ] 🔴 **Domínio de produção da Vercel** adicionado à lista permitida da chave no Cloud Console
+      → reCAPTCHA Enterprise (a chave foi criada com `localhost`). Adicione também o domínio em
+      Firebase Console → Authentication → Domínios autorizados.
+- [ ] Confirmar no Firebase Console → App Check que a plataforma web recebe tráfego verificado.
 
 ---
 
-## 4. Play Store — política de privacidade, Data Safety, ícone, screenshots
+## 4. Play Store
 
 ### Política de privacidade 🔴
 
-- [ ] **Escrever a política de privacidade de verdade.** Obrigatória pra qualquer app que colete
-      dado de saúde. Precisa cobrir, no mínimo: que dado é coletado (pressão arterial, pulso,
-      horário, e-mail/nome do Google), onde fica armazenado (Firestore, região
-      `southamerica-east1`), que não é compartilhado com terceiros, como o usuário exclui a conta
-      e os dados (já existe, Fase 6 — cite o botão "Excluir minha conta").
-- [ ] Publicar em algum lugar estável (a própria Hosting da seção 3 serve — ex.:
-      `https://seu-projeto.web.app/privacidade`).
-- [ ] ⚠️ **Substituir o placeholder em `app/(app)/settings.tsx`** —
-      `PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo'`
-      pela URL real. Isso É código (uma linha), mas está fora do escopo desta tarefa de checklist
-      — sinalizando aqui pra não esquecer.
-- [ ] Colar a mesma URL no campo **Política de privacidade** do Play Console → Presença na loja.
+- [ ] Escrever e publicar a política, seguindo o plano do item 1
+      (`docs/plans/plano_lacunas_criticas.md`, "Item 1 — Política de privacidade"). Obrigatória
+      para app que coleta dado de saúde.
+- [ ] ⚠️ **Placeholder ainda presente:** `app/(app)/settings.tsx:41` tem
+      `PRIVACY_POLICY_URL = 'https://SUBSTITUIR-PELA-URL-REAL-DA-POLITICA-DE-PRIVACIDADE.exemplo'`.
+      Substituir pela URL real antes de publicar.
+- [ ] Colar a mesma URL em Play Console → Presença na loja → Política de privacidade.
 
-### Data Safety form 🔴 (Play Console → Política → Segurança dos dados)
+### Data Safety 🔴 (Play Console → Política → Segurança dos dados)
 
-Preencher com base no que o app realmente faz — não invento essas respostas por você, mas aqui
-está o mapeamento pro que o código faz hoje:
-
-- [ ] **Tipo de dado coletado:** "Saúde e fitness" → dado de saúde (pressão arterial, pulso).
-      Também "Informações pessoais" (nome, e-mail — vêm do Google Sign-In) e "Identificadores de
-      app" (token FCM).
-- [ ] **Finalidade:** funcionalidade do app (não analytics, não publicidade — confirme que
-      nenhuma dependência adicionada nas fases anteriores contradiz isso).
-- [ ] **Compartilhado com terceiros?** Não — Firestore/FCM são infraestrutura (Firebase é
-      processador de dados, não terceiro que recebe compartilhamento no sentido da Play Store).
-      Confirme esse enquadramento com a política de privacidade escrita acima.
-- [ ] **Dado criptografado em trânsito:** sim (Firestore/FCM usam TLS por padrão).
-- [ ] **Usuário pode pedir exclusão dos dados?** Sim — cite o fluxo de "Excluir minha conta"
-      (Fase 6: `deleteAccount.ts` + trigger `onUserDelete`).
-- [ ] **Dado de saúde exige revisão adicional da Google** — plane um prazo maior de aprovação
-      pra primeira submissão.
+- [ ] **Dados coletados:** "Saúde e fitness" (pressão arterial, pulso); "Informações pessoais"
+      (nome, e-mail — vêm do Google Sign-In); "Identificadores de app" (token FCM).
+- [ ] **Crash data:** relatórios de falha vão para Crashlytics (nativo) e Sentry (web), sem
+      identificar o usuário (sem PII, contexto sanitizado — ver Observabilidade). Declare
+      "Logs de falhas / Diagnóstico" conforme o formulário pedir.
+- [ ] **Finalidade:** funcionalidade do app (não publicidade).
+- [ ] **Compartilhado com terceiros?** Não — Firestore/FCM são infraestrutura (processador).
+      Confirme o enquadramento com a política escrita.
+- [ ] **Criptografado em trânsito:** sim (TLS).
+- [ ] **Exclusão de dados:** sim — "Excluir minha conta" (`deleteAccount.ts` + trigger
+      `onUserDelete`).
+- [ ] Dado de saúde pode exigir revisão adicional da Google — planeje prazo maior.
 
 ### Ícone e assets visuais 🔴
 
-- [ ] Ícone do app (adaptive icon Android: camada de primeiro plano + fundo, 1024×1024 fonte).
-- [ ] Feature graphic da Play Store (1024×500).
-- [ ] Configurar `icon`, `android.adaptiveIcon`, `splash` em `app.config.ts` (hoje nenhum existe
-      — bloqueio já listado na seção 0).
-- [ ] Paleta: teal como cor primária, não vermelho, seguindo CLAUDE.md §1 — evite um ícone que
-      pareça um alerta médico.
+- [x] ✅ Ícone, adaptive icon, splash e favicon já existem em `assets/` e estão referenciados em
+      `app.config.ts` (fundo do adaptive icon `#2563EB`).
+- [ ] 🔴 **Feature graphic 1024×500.**
+- [ ] 🔴 **Screenshots** de telefone (mín. 2, recomendado 4–8; confira o requisito atual no
+      Console). Home com formulário, Histórico, lembretes em Ajustes, badge de categoria. Sem
+      dado de saúde real nas capturas.
 
-### Screenshots 🔴
-
-- [ ] Mínimo 2, recomendado 4–8, telefone Android (a Play Store aceita várias proporções —
-      confira o requisito atual no Console, muda com frequência).
-- [ ] Sugestão de telas pra capturar: Home (formulário com um valor preenchido), Histórico com o
-      gráfico de tendência (Fase 7 parte 2), tela de lembretes em Ajustes, o próprio badge de
-      categoria em destaque.
-- [ ] Sem dado de usuário real nas capturas — gere leituras de exemplo pra não expor dado de
-      saúde de ninguém, nem que seja o seu.
-
-### Outros itens padrão da ficha da loja 🔴
+### Ficha da loja 🔴
 
 - [ ] Questionário de classificação de conteúdo.
-- [ ] Categoria do app (Saúde e fitness / Medicina).
-- [ ] Descrição curta e longa da loja.
-- [ ] Público-alvo / faixa etária — confirme que o app não é direcionado a crianças (afeta
-      obrigações de compliance adicionais se marcado errado).
+- [ ] Categoria (Saúde e fitness / Medicina).
+- [ ] Descrições curta e longa — sem linguagem de diagnóstico (CLAUDE.md §1).
+- [ ] Público-alvo / faixa etária — confirme que não é direcionado a crianças.
+
+---
+
+## 5. App Check — enforcement
+
+- [ ] Só ligue o enforcement do Firestore **depois** que web **e** Android aparecerem como
+      verificados no painel de métricas do App Check. O enforcement vale por serviço, para todas
+      as plataformas: ligar antes derruba quem ainda não envia token.
+- [ ] O Android depende do item 5 do plano (`docs/plans/plano_lacunas_criticas.md`, "Item 5 —
+      App Check nativo"). Neste commit, `appCheck.native.ts` só inicializa se receber um
+      `attestationExchange`, e `src/services/firebase/index.ts` chama `initAppCheck()` sem
+      opções — ou seja, o nativo ainda segue **sem App Check** em produção. ⚠️ Enquanto isso
+      valer, não ligue o enforcement.
+- [ ] 🔴 Play Integrity requer o app registrado no Play Console (seção 2).
 
 ---
 
 ## Ordem recomendada
 
-1. Seção 0 até zerar todos os ⚠️.
-2. Seção 1 até lint/typecheck/test verdes.
-3. Seção 2 (Android) — é o caminho crítico (PLAN: "app instalado da Play Console interna registra
-   e notifica de ponta a ponta" é o critério de pronto da Fase 7).
-4. Seção 3 (web) pode rodar em paralelo com a 2, não depende dela.
-5. Seção 4 (Play Store) começa em paralelo (política de privacidade e assets não dependem de
-   build), mas o *submit* em si só acontece depois do AAB da seção 2 existir.
+1. Seção 0 (credenciais e variáveis).
+2. Seção 1 até tudo verde (e CI verde no PR).
+3. Seção 2 (Android/EAS) — caminho crítico: app instalado via internal testing que registra e
+   notifica de ponta a ponta.
+4. Seção 3 (web) em paralelo com a 2.
+5. Seção 4 (Play Store) em paralelo: política e assets não dependem de build; o submit só depois
+   do AAB.
+6. Seção 5 (App Check) por último: só após o item 5 do plano implementado e web + Android
+   verificados nas métricas.
