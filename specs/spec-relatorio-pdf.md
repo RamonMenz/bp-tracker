@@ -1,7 +1,7 @@
 # Especificação — Relatório em PDF para apresentação em consulta médica
 
 **Projeto:** Aferi — ciclo do 2º semestre de 2026, Universidade Feevale.  
-**Estado:** proposta funcional; escolha de biblioteca de geração de PDF pendente de avaliação técnica.  
+**Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, [constituição do projeto](../constitution.md), [spec de fotografia](./spec-fotografia.md) e [spec de voz](./spec-voz.md).
 
 ## 1. Objetivo e limites
@@ -127,47 +127,44 @@ O módulo estará concluído quando os critérios de aceite tiverem evidências 
 
 ## 7. [DECISÕES DO ENGENHEIRO]
 
-### 7.1 Alternativas de bibliotecas para geração do PDF
+### 7.1 Bibliotecas de geração do PDF escolhidas
 
-As opções abaixo são **candidatas para investigação**, não dependências aprovadas. Compatibilidade com Expo SDK 57, licenças, manutenção, suporte a SVG/fontes, paginação e entrega local devem ser conferidos na documentação vigente e comprovados na prova de conceito. Impactos em tamanho e performance são qualitativos, não medições; não há tamanho de bundle validado nesta spec.
+A decisão é **Expo Print com HTML/CSS autocontido no Android** e **jsPDF com `jspdf-autotable` na Web**, com seleção de dados e cálculos compartilhados. A geração será inteiramente local, sem serviço de PDF ou IA generativa.
 
-| Alternativa | Aplicação possível e prós | Contras e esforço | Performance a medir | Estilização e paginação | Impacto esperado no bundle/app |
-|---|---|---|---|---|---|
-| `expo-print` com HTML autocontido | Android via impressão/renderização do sistema; integração no ecossistema Expo e possível reaproveitamento de HTML/CSS | Confirmar comportamento de geração para arquivo na versão instalada. A Web pode oferecer impressão em vez de bytes de PDF equivalentes; não presumir que a mesma chamada entregue download nas duas plataformas | Custo de inicializar renderizador e compor tabelas; medir relatórios extensos e memória de HTML/gráfico | CSS facilita layout, mas suporte de regras de quebra e cabeçalho depende do motor; validar fontes e SVG locais | Acrescenta módulo nativo e JS, sem pressupor motor PDF inteiro embutido; exige novo Dev Client se não disponível. Medir delta real do build |
-| `react-native-html-to-pdf` | Android; converte template HTML em arquivo local por módulo nativo | Nova bridge/dependência a validar com Expo e arquitetura RN instalada; sem solução Web equivalente garantida. Auditar temporários e permissões | Renderização nativa tende a aproveitar o sistema; custo cresce com HTML e páginas, sem garantia de rapidez | Boa familiaridade com HTML/CSS; limitações do motor de impressão e necessidade de testes de quebra de tabela | Aumenta binário nativo e JS; impacto depende do pacote e dependências. Comparar com `expo-print` em builds equivalentes |
-| `pdf-lib` | Gerador de bytes em JS; candidato para Web e Android sem servidor; controle de texto e primitivas vetoriais | Não é motor HTML/CSS nem resolve tabela multipágina automaticamente. Verificar compatibilidade RN, fontes e conversão de SVG; construir layout exige mais código | Pode evitar WebView e produzir gráfico vetorial leve; medir uso de memória e execução JS para muitos registros | Posicionamento e paginação manuais; boa precisão, menor facilidade de ajustes visuais; fontes com acentos devem ser incluídas/validadas | Sem módulo nativo obrigatório pelo núcleo JS; bibliotecas auxiliares de fonte e assets podem dominar o tamanho. Carregar sob demanda não elimina bytes do pacote Android |
-| `jsPDF` com `jspdf-autotable` | Principalmente Web; tabela paginada pronta, desenho vetorial e geração local para download | Integração RN não deve ser presumida; módulos podem depender de APIs de navegador. Evitar usar conversão HTML que introduza captura raster ou dependências pesadas sem necessidade | Bom candidato para tabelas sem renderizador HTML; medir paginação e tempo na thread JS; usar worker onde viável | AutoTable reduz esforço de cabeçalhos e quebras; gráfico e demais elementos requerem desenho/layout próprios | JS adicional e plugin de tabela; fontes e plugins HTML podem ampliar bastante o bundle. Medir importação efetiva e dependências transitivas |
-| `pdfmake` | Documento declarativo com tabelas, cabeçalhos, rodapés e paginação; candidato forte para Web | Compatibilidade Android/RN, dependências e fontes precisam de prova. Não presumir que build para navegador funcione no Metro sem adaptação | Layout declarativo poupa código, mas pode consumir memória em grandes documentos; medir custo de fontes e tabelas | Mais simples que posicionamento manual; não usa CSS completo. Verificar suporte ao gráfico vetorial e controle de quebras | Motor de layout e fontes embutidas podem aumentar significativamente o bundle; reduzir conjunto de fontes e carregar sob demanda |
-| HTML local com CSS de impressão do navegador | Web; poucas dependências e facilidade de pré-visualização com layout familiar | “Salvar como PDF” depende do diálogo do navegador e da ação do usuário; não equivale necessariamente a gerar um arquivo pronto com nome e bytes controlados. Só atende se satisfizer o fluxo de entrega especificado | Evita biblioteca PDF própria, mas depende do motor de impressão; medir documentos longos e bloqueio de popup/iframe | Estilização simples com CSS; margens, rodapés do navegador e cabeçalhos repetidos podem variar | Baixo JS adicional; template e fontes locais ainda têm custo. Pode exigir motor diferente no Android |
+| Plataforma | Escolha definitiva | Justificativa | Condições de implementação |
+|---|---|---|---|
+| Android | `expo-print`, usando `printToFileAsync` para gerar PDF local a partir de HTML/CSS | Integração no ecossistema Expo e menor esforço para cabeçalho, resumo, gráfico SVG e tabela com estilo consistente | Validar versão compatível com Expo SDK 57, paginação, fontes e SVG no motor do Android. Gerar em cache privado com política de limpeza e compartilhar por `expo-sharing` |
+| Web | `jsPDF` + `jspdf-autotable`, com desenho vetorial direto | Download local de bytes, controle de layout e tabela multipágina sem rasterizar a página inteira | Carregar sob demanda, incluir somente plugins/fontes necessários, validar acentos, paginação e legibilidade. Não presumir compatibilidade React Native nem usar conversão HTML rasterizada |
 
-**Custo:** versões de código aberto/licenças elegíveis dessas alternativas podem permitir **R$ 0 por relatório**, pois a geração é local e não usa API paga. Confirmar licença da biblioteca e das fontes antes da adoção; builds, eventuais componentes comerciais e demais despesas continuam dentro do teto global. Não adotar serviço remoto para contornar uma dificuldade de layout.
+**Custo de geração:** R$ 0,00 por relatório, com bibliotecas e fontes de licença elegível. Demais despesas permanecem no teto global de **R$ 300,00**. Tamanho do app, tempo e memória serão medidos; nenhuma redução de bundle está comprovada por esta decisão.
 
-**Orientação inicial para as provas de conceito:** comparar HTML local no Android com um gerador vetorial JS na Web e avaliar se um único gerador JS atende às duas plataformas com esforço aceitável. A escolha pode variar por plataforma, mas regras de cálculo, conteúdo e critérios de legibilidade devem ser únicos. A preferência por HTML ou vetores deve resultar das medições e do custo de manutenção para uma pessoa, não apenas da aparência de um exemplo curto.
+`pdfmake` foi descartado para esta entrega por acrescentar outro motor de layout/fontes sem necessidade diante dos adaptadores escolhidos; `pdf-lib` exigiria mais código de tabela e paginação. `html2pdf.js` traz rasterização, limites de canvas e menor controle de texto selecionável. Outra bridge HTML-to-PDF duplicaria integração nativa já atendida pelo Expo Print.
 
 ### 7.2 Composição do gráfico e entrega local
 
-- **Gráfico:** preferir SVG autocontido ou primitivas vetoriais do gerador, a partir de dados agregados puros. Não presumir que `TrendChart` de React Native seja renderizável em PDF. Rasterização local é alternativa se a resolução em A4 for suficiente e não exigir screenshot com dados cortados; medir peso do arquivo e legibilidade impressa.
-- **Fontes e estilos:** usar fonte local com suporte a português, incorporada quando necessário e com licença adequada. Não carregar fonte por URL externa. Evitar dependências de ícones ou múltiplos pesos que aumentem o documento sem melhorar a consulta médica.
-- **Android:** avaliar geração em cache privado e compartilhamento pelo sistema com prazo seguro de limpeza; `expo-sharing` já existe, mas não resolve geração nem confirma que o destinatário recebeu o documento. Revisar o uso atual de `expo-file-system/legacy` antes de escolher a API de arquivo.
-- **Web:** avaliar bytes/`Blob`, URL de objeto e pré-visualização local, além da compatibilidade com bloqueio de popup e leitores externos. Uma solução baseada apenas em impressão precisa demonstrar que o usuário consegue salvar o PDF com todas as seções obrigatórias.
-- Não instalar dependências, gerar builds pagos ou mudar o adaptador de CSV nesta etapa. Eventual dependência nativa implica novo build; a decisão deve justificar compatibilidade, tamanho e esforço.
+- **Conteúdo compartilhado:** preparar um único retrato validado do período e um modelo puro com médias, contagens, séries e linhas. As duas renderizações usam esse mesmo modelo e as regras da seção 3, incluindo pulso ausente e sessões de duas leituras.
+- **Gráfico:** gerar SVG autocontido no template Android e primitivas vetoriais do jsPDF na Web, a partir das mesmas coordenadas/dados. Usar escala temporal real, unidades, legenda e distinção legível em escala de cinza. Não capturar o gráfico do Histórico nem adicionar biblioteca pesada de charts para PDF.
+- **Tabela:** usar HTML/CSS de impressão no Android e AutoTable na Web, com cabeçalhos repetidos, linhas completas, tratamento de observações extensas e numeração de páginas. Quebras do motor Android precisam de validação em documento extenso.
+- **Fontes:** usar fonte local licenciada com suporte a português, incorporada quando necessário, com poucos pesos. HTML, SVG, estilos e fontes não carregam recursos remotos. Escapar conteúdo variável e impedir recursos ativos no template.
+- **Android:** gerar em armazenamento privado temporário; entregar URI com permissão de leitura pelo sistema. Limpar somente quando o consumidor não precisar mais do arquivo e tratar resíduos de interrupção. Não copiar para `documentDirectory` como padrão de retenção.
+- **Web:** gerar bytes/`Blob`, abrir pré-visualização local ou baixar por ação do usuário e liberar URL de objeto após o consumo. Não depender do diálogo de impressão como mecanismo principal de geração.
+- **Privacidade:** o PDF exportado por escolha do usuário pode existir como arquivo. Isso não altera a proibição de persistir áudio/fotografia de reconhecimento. Não guardar HTML, PDF, observações ou valores clínicos em logs ou serviços de geração externos.
 
-### 7.3 Método de comparação e seleção
+### 7.3 Validação da decisão
 
-1. Aplicar primeiro os critérios eliminatórios: geração local, ausência de vazamento em logs/rede, conteúdo obrigatório completo, legibilidade, isolamento entre contas, preservação do legado, orçamento global e viabilidade até 15/12/2026.
-2. Comparar pelo menos duas alternativas de geração sobre os mesmos conjuntos sintéticos e layout de referência, registrando versões, fontes e plataformas. O TAP exige comparação de abordagens de reconhecimento; esta avaliação de bibliotecas PDF é uma decisão de engenharia proporcional, sem criar um estudo acadêmico adicional obrigatório.
-3. Usar casos com zero registros, um dia, 7/30 dias, múltiplos anos, pulsos ausentes, sessões de duas leituras, observações extensas, caracteres especiais e registros nas bordas do dia/fuso. Verificar contagens e médias contra resultados calculados independentemente.
-4. Medir tempo de inicialização e geração, pico de memória, número de páginas, tamanho do PDF e responsividade. Comparar frio/aquecido em Android real e navegador móvel, separando tempo de consulta do tempo de renderização; definir limites de volume e timeout antes da validação final.
-5. Medir impacto na build Web e no pacote Android com a mesma base de comparação, incluindo dependências transitivas, fontes e assets. Registrar JS comprimido/transferido, estratégia de carregamento e delta do artefato nativo quando aplicável; não confundir tamanho publicado no npm com tamanho adicionado ao app.
-6. Avaliar facilidade de manutenção: alterações de coluna, inclusão de observação longa, cabeçalhos repetidos, paginação e gráfico em escala de cinza. Inspecionar visualmente PDF em tela e impresso, além de conferir texto extraído, ordem de leitura e ausência de requisições externas.
-7. Formalizar escolha, alternativas descartadas, limitações, política de temporários e diferenças de plataforma. Registrar resultados sem declarar tamanho, performance ou conformidade de acessibilidade que não tenham sido medidos.
+1. Verificar geração local, conteúdo completo, legibilidade, ausência de vazamento em rede/logs, isolamento entre contas e preservação do legado. Renderizadores não podem iniciar consulta ou escrita clínica por conta própria.
+2. Avaliar os dois adaptadores com o mesmo conjunto sintético e layout de referência, registrando versões e fontes. Esta validação proporcional de PDF não cria um estudo acadêmico obrigatório adicional ao comparativo de reconhecimento previsto no TAP.
+3. Cobrir período vazio, um dia, 7/30 dias, múltiplos anos, ausência de pulso, sessões de duas leituras, observações extensas, acentos e bordas de fuso. Conferir contagens e médias com resultados independentes.
+4. Medir inicialização, geração, memória, páginas, tamanho do arquivo e responsividade em Android real e navegador móvel. Separar consulta e renderização; fixar limites de volume e timeout antes da avaliação final, sem omitir dados silenciosamente.
+5. Medir o delta real do pacote Android e do bundle Web, incluindo fontes e dependências transitivas. Carregamento sob demanda reduz inicialização, mas não elimina bytes distribuídos.
+6. Inspecionar tela e impressão A4/escala de cinza, texto selecionável, quebras, cabeçalhos e ordem de leitura. Registrar acessibilidade comprovada sem presumir PDF/UA.
+7. Registrar limitações, ciclo de temporários e diferenças entre plataformas. A escolha está fechada; performance e compatibilidade continuam dependentes de evidências na implementação.
 
-### 7.4 Decisões ainda pendentes
+### 7.4 Integração definitiva e parâmetros de validação
 
-- Biblioteca de geração por plataforma, estratégia de pré-visualização e necessidade de módulo nativo adicional.
-- Renderização vetorial ou raster do gráfico, fonte incorporada, escala dos painéis e limites práticos de paginação.
-- Volume máximo suportado por operação, timeout, execução fora da thread da interface e comportamento explícito para relatórios grandes, sem omissão silenciosa.
-- Forma de comprovar completude da consulta, sinalizar documentos inválidos e identificar registros pendentes/cache sem alterar o comportamento do CSV.
-- Política de vida útil dos temporários e concessões de leitura no Android, compatibilidade de download/preview Web e nível comprovado de acessibilidade do PDF.
+- Isolar renderização/entrega em adaptadores Android/Web e compartilhar o modelo de relatório e os cálculos. Carregar módulos apenas quando solicitados e preservar CSV e gráfico legados.
+- Garantir sinalização explícita de documentos inválidos omitidos pela consulta e de cobertura/cache incompletos; não apresentar subconjunto como histórico completo nem alterar silenciosamente o contrato do CSV.
+- Manter exportação como leitura, sem nova coleção, gravação de médias ou mudança de `source`. Exigir ação explícita para salvar/compartilhar o arquivo; essa ação não substitui a confirmação clínica exigida no registro por foto/voz.
+- Validar volume suportado, timeout, fontes, paginação e ciclo seguro de temporários. Se o volume exceder a capacidade, informar o limite e solicitar período menor, sem truncar registros.
 
-O TAP prevê relatório PDF operante até **24/11/2026**, avaliação final em **08/12** e ajustes até **15/12/2026**. A escolha deve caber no prazo e no desenvolvimento individual, com prioridade para uma entrega legível e correta dos três conteúdos obrigatórios, preservando privacidade e funcionalidades existentes.
+O TAP prevê relatório PDF operante até **24/11/2026**, avaliação final em **08/12** e ajustes até **15/12/2026**. A implementação prioriza os três conteúdos obrigatórios, geração local e desenvolvimento individual dentro de aproximadamente 100 horas totais do ciclo.
