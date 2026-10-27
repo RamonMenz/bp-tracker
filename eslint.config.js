@@ -2,7 +2,7 @@ const expoConfig = require('eslint-config-expo/flat');
 const { defineConfig, globalIgnores } = require('eslint/config');
 
 module.exports = defineConfig([
-  globalIgnores(['dist/**', 'functions/**', 'assets/**', 'ios/**', 'android/**']),
+  globalIgnores(['dist/**', 'demos/**/dist/**', 'demos/**/.expo/**', 'demos/**/android/**', 'demos/web-capture/public/ocr/**', 'native-modules/**/android/build/**', 'functions/**', 'assets/**', 'ios/**', 'android/**']),
   expoConfig,
   {
     // eslint-config-expo só configura o resolver "node" para import/*, que não conhece o alias

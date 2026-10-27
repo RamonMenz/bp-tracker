@@ -1,0 +1,6 @@
+{
+  "name": "aferi-photo-review-demo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.tsx"
+}

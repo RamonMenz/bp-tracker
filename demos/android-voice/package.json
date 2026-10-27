@@ -1,0 +1,33 @@
+{
+  "name": "aferi-android-voice-evaluation",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.tsx",
+  "dependencies": {
+    "expo": "57.0.8",
+    "expo-dev-client": "57.0.13",
+    "react": "19.2.3",
+    "react-native": "0.86.0",
+    "nativewind": "4.2.6",
+    "react-native-reanimated": "4.5.0",
+    "react-native-worklets": "0.10.3",
+    "react-native-safe-area-context": "5.7.0",
+    "@react-native-community/datetimepicker": "9.1.0"
+  },
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "../../native-modules",
+      "searchPaths": [
+        "../../node_modules"
+      ],
+      "exclude": [
+        "@react-native-firebase/app",
+        "@react-native-firebase/app-check",
+        "@react-native-firebase/crashlytics",
+        "@react-native-google-signin/google-signin",
+        "expo-notifications",
+        "aferi-photo-capture"
+      ]
+    }
+  }
+}

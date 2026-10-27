@@ -18,7 +18,7 @@ import { logError } from '@/lib/logger';
 import { firestore } from '@/services/firebase';
 import type { Reading, ReadingInput } from '@/types/models';
 
-import { parseReading } from './reading.schema';
+import { parseReading, parseReadingInput } from './reading.schema';
 
 type ReadingWritePayload = ReadingInput & { createdAt: FieldValue };
 
@@ -46,8 +46,11 @@ function getErrorCode(error: unknown): string | undefined {
 
 export async function addReading(uid: string, input: ReadingInput): Promise<string> {
   try {
+    // Validação também na fronteira do repositório. Campos extras são rejeitados,
+    // inclusive mídia/transcrição/confiança; createdAt continua exclusivo do servidor.
+    const validated = parseReadingInput(input);
     const payload: ReadingWritePayload = {
-      ...input,
+      ...validated,
       createdAt: serverTimestamp(),
     };
 
@@ -70,9 +73,14 @@ export async function addReading(uid: string, input: ReadingInput): Promise<stri
 
 export async function updateReading(uid: string, readingId: string, input: ReadingInput): Promise<void> {
   try {
-    await updateDoc(doc(firestore, readingDocPath(uid, readingId)), input);
+    const validated = parseReadingInput(input);
+    // Os hooks legados validam source manual; atualizar nunca reclassifica a
+    // origem já armazenada, inclusive na edição e média de sessionReadings.
+    const { source: _source, ...changes } = validated;
+    await updateDoc(doc(firestore, readingDocPath(uid, readingId)), changes);
   } catch (error) {
-    logError('readings.update', error, { uid });
+    // Erros de validação/SDK são potencialmente clínicos: não encaminhar o objeto bruto.
+    logError('readings.update', new Error('reading-update-failed'), { uid });
 
     const code = getErrorCode(error);
 
@@ -92,7 +100,7 @@ export async function deleteReading(uid: string, readingId: string): Promise<voi
   try {
     await deleteDoc(doc(firestore, readingDocPath(uid, readingId)));
   } catch (error) {
-    logError('readings.delete', error, { uid });
+    logError('readings.delete', new Error('reading-delete-failed'), { uid });
 
     const code = getErrorCode(error);
 
@@ -129,9 +137,9 @@ export async function getAllReadings(uid: string, range?: ReadingDateRange): Pro
     for (const docSnapshot of snapshot.docs) {
       try {
         readings.push(parseReading(docSnapshot.data()));
-      } catch (parseError) {
+      } catch {
         // Mesma política do useReadings: um documento fora do formato não derruba o export inteiro.
-        logError('readings.parse', parseError, { uid, docId: docSnapshot.id });
+        logError('readings.parse', new Error('reading-parse-failed'), { uid, docId: docSnapshot.id });
       }
     }
 

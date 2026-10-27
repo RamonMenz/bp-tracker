@@ -61,7 +61,7 @@ function validProfile(): Record<string, unknown> {
 
 beforeAll(async () => {
   testEnv = await initializeTestEnvironment({
-    projectId: 'bp-tracker-rules-test',
+    projectId: 'demo-aferi-task11',
     firestore: {
       rules: readFileSync(path.resolve(process.cwd(), 'firestore.rules'), 'utf8'),
       host: '127.0.0.1',
@@ -71,7 +71,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  await testEnv?.cleanup();
 });
 
 beforeEach(async () => {
@@ -318,6 +318,63 @@ describe('sessionReadings — leituras individuais de uma sessão de duas mediç
   it('nega que o usuário B grave sessionReadings numa medição de A', async () => {
     const db = asGoogleUser(BOB).firestore();
     await assertFails(updateDoc(doc(db, READING_PATH), { sessionReadings: [FIRST, SECOND] }));
+  });
+});
+
+describe.each(['manual', 'photo', 'voice'])('TASK-11 — origem %s', source => {
+  const ownPath = `users/${ALICE}/readings/assisted`;
+  async function createOwned() {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertSucceeds(setDoc(doc(db, ownPath), { ...validReading(), source }));
+    return db;
+  }
+  it('cria/lê/lista e edita sem reclassificar origem ou alterar createdAt', async () => {
+    const db = await createOwned();
+    const before = await assertSucceeds(getDoc(doc(db, ownPath)));
+    await assertSucceeds(updateDoc(doc(db, ownPath), { note: 'Sintético', systolic: 130 }));
+    const after = await assertSucceeds(getDoc(doc(db, ownPath)));
+    expect(after.get('source')).toBe(source);
+    expect(after.get('createdAt')).toEqual(before.get('createdAt'));
+    await assertSucceeds(getDocs(collection(db, `users/${ALICE}/readings`)));
+  });
+  it('preserva sessão válida na atualização e rejeita mídia em detalhe', async () => {
+    const db = await createOwned();
+    const first = { systolic: 120, diastolic: 80, pulse: 70 };
+    const second = { systolic: 130, diastolic: 90, pulse: 80 };
+    await assertSucceeds(updateDoc(doc(db, ownPath), { systolic: 125, diastolic: 85,
+      pulse: 75, sessionReadings: [first, second] }));
+    await assertFails(updateDoc(doc(db, ownPath), { sessionReadings: [first, { ...second, audio: 'SENTINELA' }] }));
+    await assertSucceeds(updateDoc(doc(db, ownPath), { sessionReadings: null }));
+  });
+  it.each(['image', 'audio', 'transcript', 'rawText', 'confidence', 'confirmed'])('rejeita campo extra %s em criação e update', async key => {
+    const db = await createOwned();
+    await assertFails(setDoc(doc(db, `users/${ALICE}/readings/extra`), {
+      ...validReading(), source, [key]: 'SENTINELA',
+    }));
+    await assertFails(updateDoc(doc(db, ownPath), { [key]: 'SENTINELA' }));
+  });
+  it('nega leitura/lista/criação/update/exclusão de outra conta e acesso anônimo', async () => {
+    await createOwned();
+    const bob = asGoogleUser(BOB).firestore();
+    await assertFails(getDoc(doc(bob, ownPath)));
+    await assertFails(getDocs(collection(bob, `users/${ALICE}/readings`)));
+    await assertFails(setDoc(doc(bob, `users/${ALICE}/readings/injected`), { ...validReading(), source }));
+    await assertFails(updateDoc(doc(bob, ownPath), { note: 'SENTINELA' }));
+    await assertFails(deleteDoc(doc(bob, ownPath)));
+    await assertFails(getDoc(doc(testEnv.unauthenticatedContext().firestore(), ownPath)));
+  });
+  it('rejeita mudança de origem e de createdAt, mesmo pelo dono', async () => {
+    const db = await createOwned();
+    for (const changed of ['manual', 'photo', 'voice'].filter(value => value !== source)) {
+      await assertFails(updateDoc(doc(db, ownPath), { source: changed }));
+    }
+    await assertFails(updateDoc(doc(db, ownPath), { createdAt: MEASURED_AT }));
+  });
+});
+describe('TASK-11 — origens inválidas', () => {
+  it.each(['cloud', '', null, 1])('rejeita origem %s', async source => {
+    const db = asGoogleUser(ALICE).firestore();
+    await assertFails(setDoc(doc(db, `users/${ALICE}/readings/invalid-source`), { ...validReading(), source }));
   });
 });
 

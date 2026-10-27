@@ -65,6 +65,7 @@ const SYSTOLIC_GT_DIASTOLIC_RULE = {
 
 const sessionReadingSchema = z
   .object({ systolic: systolicField, diastolic: diastolicField, pulse: pulseField })
+  .strict()
   .refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
     message: SYSTOLIC_GT_DIASTOLIC_RULE.message,
     path: ['systolic'],
@@ -98,7 +99,7 @@ const readingShape = z.object({
     .nullish()
     .transform((value) => value ?? null),
 
-  source: z.literal('manual'),
+  source: z.enum(['manual', 'photo', 'voice']),
 
   sessionReadings: sessionReadingsField,
 });
@@ -112,7 +113,7 @@ export const readingSchema = readingShape.refine(SYSTOLIC_GT_DIASTOLIC_RULE.chec
  * Mesma validação de `readingSchema`, sem `createdAt` — no momento da criação esse campo ainda
  * não existe, é gerado no servidor (serverTimestamp), nunca fornecido pelo cliente.
  */
-export const readingInputSchema = readingShape.omit({ createdAt: true }).refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
+export const readingInputSchema = readingShape.omit({ createdAt: true }).strict().refine(SYSTOLIC_GT_DIASTOLIC_RULE.check, {
   message: SYSTOLIC_GT_DIASTOLIC_RULE.message,
   path: ['systolic'],
 });
