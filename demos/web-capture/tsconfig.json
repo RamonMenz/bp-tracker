@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": [
+        "../../src/*"
+      ]
+    }
+  },
+  "include": [
+    "index.tsx",
+    "../../nativewind-env.d.ts",
+    "nativewind-env.d.ts"
+  ]
+}

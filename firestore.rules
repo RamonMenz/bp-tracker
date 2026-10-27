@@ -111,7 +111,7 @@ service cloud.firestore {
               && d.createdAt is timestamp
               && (d.get('note', null) == null
                   || (d.get('note', null) is string && d.get('note', null).size() <= 280))
-              && d.source == 'manual'
+              && d.source in ['manual', 'photo', 'voice']
               && validSessionReadings(d);
         }
 
@@ -119,6 +119,8 @@ service cloud.firestore {
         allow create: if isOwner(uid) && validReading(request.resource.data)
                       && request.resource.data.createdAt == request.time;
         allow update: if isOwner(uid) && validReading(request.resource.data)
+                      // Origem da criação, não proveniência individual dos números da sessão.
+                      && request.resource.data.source == resource.data.source
                       && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if isOwner(uid);
       }
