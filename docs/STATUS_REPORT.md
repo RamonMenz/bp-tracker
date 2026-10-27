@@ -1,5 +1,10 @@
 # Relatório de Status — BP Tracker
 
+> **Registro histórico de 23/09/2026.** Para o acompanhamento do ciclo Aferi em
+> 27/10/2026, consulte [TASK-19: estado real e evidências](task-19-acompanhamento.md),
+> [roteiro de demonstração](task-19-roteiro-demonstracao.md) e [tasks.md](../tasks.md).
+> As conclusões e percentuais abaixo não são o aceite das novas modalidades.
+
 > Gerado em 2026-09-23, cruzando todos os documentos de planejamento em `docs/plans/` (exceto
 > `README.md`/`CLAUDE.md`) com o estado real do código na branch atual (`HEAD` em `f15f01f`, 137
 > commits). Metodologia: leitura integral dos 15 arquivos de plano/prompt, mais `PLAN.md` e
