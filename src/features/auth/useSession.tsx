@@ -30,24 +30,31 @@ function useSessionState(): UseSessionResult {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let active = true;
+    let generation = 0;
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      if (!active) return;
+      const currentGeneration = ++generation;
+      // Retirar a identidade anterior antes de aguardar qualquer sincronização.
+      setUser(null);
       if (nextUser === null) {
-        setUser(null);
         setIsLoading(false);
         return;
       }
+      setIsLoading(true);
 
       // Falha ao sincronizar o perfil não deve travar o login — o próximo
       // onAuthStateChanged (próxima abertura do app) tenta de novo.
       ensureUserProfile(nextUser)
         .catch(() => undefined)
         .finally(() => {
+          if (!active || currentGeneration !== generation) return;
           setUser(nextUser);
           setIsLoading(false);
         });
     });
 
-    return unsubscribe;
+    return () => { active = false; generation++; unsubscribe(); };
   }, []);
 
   async function signIn(): Promise<void> {

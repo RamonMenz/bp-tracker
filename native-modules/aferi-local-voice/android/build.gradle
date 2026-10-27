@@ -1,0 +1,11 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'expo.modules.aferivoice'
+version = '0.1.0'
+android {
+  namespace 'expo.modules.aferivoice'
+  defaultConfig { versionCode 1; versionName '0.1.0' }
+}
+// SpeechRecognizer/AudioManager são APIs do sistema; nenhuma biblioteca STT extra.

@@ -1,0 +1,1 @@
+{ "expo": { "name": "Aferi — captura Web em avaliação", "slug": "aferi-web-capture-evaluation", "platforms": ["web"], "web": { "bundler": "metro", "output": "single" } } }

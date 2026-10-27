@@ -2,6 +2,8 @@
 
 **Revisão inicial:** 26/10/2026, base `7d72cb3347dca04bde9b8a706f523a6da245dea2`. **Retomada:** 27/10/2026, base `7fbe13784afd6b8aee0fea2aa8122150836f1028`, após recebimento do TAP original. **Resultado atual:** fonte primária arquivada e confrontação documental realizada; TASK-02 permanece aberta pelas decisões P01/P02. Nenhuma funcionalidade, dependência ou escolha de motor foi alterada nesta retomada. Os registros de execução das TASK-01/04/05 continuam com seus limites originais.
 
+**Nota de integração em 27/10/2026:** ao reunir esta frente (`ccab9a3`) com `staging` (`aff2b60`, PR #62), foi preservada a preparação posterior de origens, parsers e revisão descrita na [TASK-11](./task-11-persistencia-local.md). Tipos/schema/rules/repositório dessa preparação já admitem manual/photo/voice e preservam origem na atualização; isso materializa localmente a opção conservadora de P01, sem demonstrar aprovação formal, homologação ou ligação do writer às telas clínicas. Os quadros de confronto com o código abaixo descrevem a base da revisão, não desfazem essa evolução. O CI do PR #62 aprovou as regras no emulador; a falha de download local permanece um registro histórico, não ausência de toda evidência remota. A unificação mantém as duas frentes e não altera motores ou aceites de dispositivo.
+
 ## 1. Fontes, versões e limites da revisão
 
 | Fonte | Identificação conhecida e acesso | Uso e limite |
@@ -136,7 +138,7 @@ O exemplo do PDF §3.3 é aritmeticamente coerente: 120/80, 130/90 e 140/100 ger
 
 ### P01 — Origem após edição e em sessões
 
-**Estado: proposta, não aprovada nem implementada.** A inclusão de photo/voice está fechada; falta definir o significado do único `source` de um documento quando a edição é manual ou a segunda leitura usa outro caminho. Hoje todo registro é manual, e os hooks sobrescrevem `source` com esse valor. As specs não autorizam inferir automaticamente a semântica das combinações futuras.
+**Estado na revisão original: proposta, sem aprovação nem implementação nessa frente.** A inclusão de photo/voice está fechada; falta registrar a decisão formal sobre o significado do único `source` quando edição ou segunda leitura usa outro caminho. A base original só admitia manual. A preparação da TASK-11 incorporada pelo PR #62 já implementa localmente a opção conservadora abaixo, preservando source no update; sua existência não será apresentada por esta unificação como aprovação formal ou homologação.
 
 **Proposta para revisão:** definir `source` como o caminho de entrada da **primeira gravação confirmada** do registro. Preservá-lo em edição de nota/data, correção manual de números e cálculo da média da sessão, documentando que o campo não afirma origem individual de cada número nem constitui trilha de auditoria. Segunda leitura manual de registro iniciado por fotografia manteria `source: 'photo'`. Documentos antigos seguem manual; não acrescentar origem por leitura ou campos de mídia. A regra legada de remover `sessionReadings` ao alterar números/pulso continua independente da origem.
 
@@ -147,7 +149,7 @@ O exemplo do PDF §3.3 é aritmeticamente coerente: 120/80, 130/90 e 140/100 ger
 | Números/pulso corrigidos manualmente em registro voice | Mantém voice como origem de criação; remove detalhes de sessão conforme o legado |
 | Primeira leitura photo + segunda manual | Um documento photo, média nos campos principais, duas leituras nos detalhes |
 
-Alternativa seria redefinir origem após correção numérica ou manter proveniência individual de leituras; isso mudaria o contrato e possivelmente o modelo, ampliando casos de migração/regras. A recomendação acima minimiza campos novos, mas requer aceite explícito da semântica antes da TASK-11. Nenhuma das alternativas foi aplicada aos tipos, rules ou specs como decisão definitiva nesta tarefa.
+Alternativa seria redefinir origem após correção numérica ou manter proveniência individual de leituras; isso mudaria o contrato e possivelmente o modelo, ampliando casos de migração/regras. A recomendação minimiza campos novos e já aparece na preparação local da TASK-11; o aceite da semântica e a homologação devem ser registrados antes de habilitar sua integração clínica. Esta revisão não transforma a implementação preparatória em decisão formal definitiva.
 
 Não há evidência nova que justifique trocar ML Kit, Tesseract.js, reconhecedores locais ou bibliotecas PDF. Se uma PoC demonstrar inviabilidade, registrar versão/ambiente e critério eliminatório, apresentar alternativa e impacto em privacidade, cobertura, prazo e orçamento. Isso não autoriza mudar motor ou reduzir escopo: observar P02 e as condições do TAP. Não habilitar caminho incompatível enquanto o encaminhamento estiver pendente.
 

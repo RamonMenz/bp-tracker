@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Aferi — captura em avaliação", "slug": "aferi-android-capture-evaluation",
+    "version": "0.1.0", "scheme": "afericapturetest", "platforms": ["android"],
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.ramonmenz.afericapturetest",
+      "permissions": ["android.permission.CAMERA"],
+      "blockedPermissions": ["android.permission.RECORD_AUDIO", "android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_MEDIA_IMAGES", "android.permission.READ_MEDIA_AUDIO", "android.permission.READ_MEDIA_VIDEO"]
+    },
+    "plugins": ["expo-dev-client"]
+  }
+}

@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:rules": "firebase emulators:exec --only firestore \"jest --config jest.rules.config.js\""
+    "test:rules": "firebase emulators:exec --only firestore --project demo-aferi-task11 \"jest --config jest.rules.config.js\""
   },
   "dependencies": {
     "@firebase/auth": "^1.13.3",
