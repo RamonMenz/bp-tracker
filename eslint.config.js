@@ -2,7 +2,8 @@ const expoConfig = require('eslint-config-expo/flat');
 const { defineConfig, globalIgnores } = require('eslint/config');
 
 module.exports = defineConfig([
-  globalIgnores(['dist/**', 'functions/**', 'assets/**', 'ios/**', 'android/**']),
+  // pocs/ é um aplicativo independente e possui seu próprio comando/config de lint.
+  globalIgnores(['dist/**', 'functions/**', 'pocs/**', 'assets/**', 'ios/**', 'android/**']),
   expoConfig,
   {
     // eslint-config-expo só configura o resolver "node" para import/*, que não conhece o alias

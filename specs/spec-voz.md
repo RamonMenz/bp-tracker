@@ -4,11 +4,13 @@
 **Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, [constituição do projeto](../constitution.md) e [spec de fotografia](./spec-fotografia.md).
 
+**Revisão documental (26/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). A conferência direta com o TAP original está pendente de acesso ao anexo; referências a ele neste documento não constituem nova verificação da fonte primária. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o código legado e a execução efetivamente comprovada.
+
 ## 1. Objetivo e limites
 
 Permitir que o usuário registre uma medição ditando os números em português brasileiro, revisando e confirmando explicitamente os valores antes de salvar.
 
-O fluxo atende Android e Web e complementa o formulário manual existente. Deve interpretar formas usuais como **“doze por oito”** e **“cento e vinte por oitenta”**, produzindo candidatos de **120/80 mmHg**. Pulso é opcional e só deve ser preenchido quando enunciado com identificação inequívoca. O sistema transcreve e organiza números informados pelo usuário, sem estimar valores ausentes, diagnosticar ou prescrever.
+Android e Web são as plataformas alvo; o fluxo de voz complementa o formulário manual e só é habilitado onde o reconhecimento local em pt-BR for comprovado, conforme a seção 7.1. Isso não constitui suporte já verificado em qualquer aparelho ou navegador. Deve interpretar formas usuais como **“doze por oito”** e **“cento e vinte por oitenta”**, produzindo candidatos de **120/80 mmHg**. Pulso é opcional e só deve ser preenchido quando enunciado com identificação inequívoca. O sistema transcreve e organiza números informados pelo usuário, sem estimar valores ausentes, diagnosticar ou prescrever.
 
 Não fazem parte desta especificação: importação de arquivos de áudio, escuta contínua ou em segundo plano, palavra de ativação, comandos falados para salvar, ditado livre de observações, treinamento de modelos do zero, fotografia e geração de PDF. A arquitetura atual de autenticação, persistência e notificações deve ser preservada.
 
@@ -19,7 +21,7 @@ Não fazem parte desta especificação: importação de arquivos de áudio, escu
 - Áudio, transcrição, hipóteses intermediárias e valores clínicos não podem integrar logs, breadcrumbs, relatórios de falha ou telemetria. Mensagens de exceção e respostas do reconhecedor são potencialmente sensíveis; sanitizar apenas o contexto do logger não basta.
 - Nenhum candidato reconhecido é criado ou atualizado no Firestore, inclusive em sua fila offline, antes da confirmação explícita. Resultados parciais do motor nunca autorizam escrita.
 - Permissão negada, ausência de suporte a português brasileiro, falha no reconhecimento, falta de conectividade ou indisponibilidade do provedor não podem bloquear o registro manual.
-- Usar uma API do sistema operacional ou do navegador não comprova processamento local. Qualquer processamento externo deve ser identificado e informado previamente, sem troca silenciosa de modo local para nuvem.
+- Usar uma API do sistema operacional ou do navegador não comprova processamento local. Na arquitetura escolhida na seção 7, áudio e transcrição não são enviados a reconhecedor remoto, nem como alternativa consentida dentro do fluxo. A possibilidade genérica de serviço externo na constituição não altera essa escolha; uma mudança exige proposta e revisão explícitas antes de implementação.
 
 ## 3. Fluxo do usuário
 
@@ -27,7 +29,7 @@ Não fazem parte desta especificação: importação de arquivos de áudio, escu
 
 1. Na tela de registro, o usuário escolhe **“Registrar por voz”**, sem remover ou deslocar o formulário manual a ponto de prejudicar seu uso.
 2. O app explica brevemente: dizer os valores, conferir os campos e confirmar antes de salvar. Oferece exemplos como “doze por oito” e “cento e vinte por oitenta, pulso setenta e dois”.
-3. Se houver processamento externo, informa antes da captura o envio de áudio e sua finalidade. Sem concordância com esse envio, oferece retorno ao manual; não inicia uma alternativa remota automaticamente.
+3. Informa que a modalidade exige reconhecimento local em pt-BR. Se esse caminho não estiver disponível ou comprovado, explica a limitação e oferece registro manual; não inicia captura para um serviço remoto.
 4. Somente após essa ação solicita acesso ao microfone e eventuais permissões de reconhecimento necessárias. A implementação web exige contexto seguro e disponibilidade das APIs escolhidas; a existência de microfone não implica disponibilidade de reconhecimento de fala.
 5. Se a permissão for negada ou a capacidade estiver indisponível, apresenta mensagem em português e ações para voltar ao registro manual ou tentar novamente quando possível. Não repete solicitações automaticamente.
 
@@ -78,14 +80,16 @@ Não fazem parte desta especificação: importação de arquivos de áudio, escu
 2. Persiste somente os dados da medição e eventual origem definida na decisão de modelagem. Nunca anexa áudio, transcrição, hipóteses alternativas, confiança ou características de voz ao documento clínico.
 3. Impede submissão duplicada enquanto a confirmação está em andamento. Em falha, mantém os campos numéricos para nova tentativa explícita, sem repetir a escrita automaticamente por ação da interface e sem reabrir o microfone.
 4. No sucesso, utiliza o feedback existente e mantém o comportamento da sugestão opcional de segunda medição. Qualquer futura entrada por voz nessa segunda leitura também exige revisão e confirmação.
-5. Descarta buffers de áudio e transcrição assim que deixam de ser necessários, cancela operações e ignora respostas tardias após cancelamento, nova captura, saída ou troca de sessão. Não promete sobrescrita física da memória de runtimes gerenciados nem cancelamento retroativo de processamento externo já iniciado.
+5. Descarta buffers de áudio e transcrição assim que deixam de ser necessários, cancela operações e ignora respostas tardias após cancelamento, nova captura, saída ou troca de sessão. Não promete sobrescrita física da memória de runtimes gerenciados.
 
 ## 4. Integração e preservação do legado
 
 - Seguir `app/ → features/ → services/`, com interpretação determinística isolada e testável. Diferenças de microfone e reconhecimento entre Android e Web ficam em adaptadores por plataforma; o contrato comum devolve candidatos e campos incertos, sem persistir.
 - Carregar recursos pesados de áudio e modelos sob demanda, sem inicializar microfone, workers ou motores durante o uso manual. O cache permitido de um modelo estático não autoriza cache de áudio ou transcrição.
 - O modelo atual, o schema Zod e as Security Rules aceitam apenas `source: 'manual'`. A origem escolhida é `source: 'voice'`, conforme a seção de decisões; sua inclusão exige atualização coordenada na implementação; não basta enviar um novo valor de `source` ao repositório.
+- Os hooks atuais de criação e atualização também fixam `source: 'manual'`. A semântica da origem após edição e em sessões com entradas distintas precisa ser explicitada antes da TASK-11; a [proposta P01 da revisão](../docs/revisao-specs.md#p01-origem) ainda não foi adotada. A segunda leitura deve continuar atualizando o mesmo documento com média arredondada e detalhes; editar apenas nota/data preserva os detalhes, enquanto corrigir números/pulso os remove no legado.
 - Caso o modelo mude, atualizar coordenadamente tipos, schema, rules e testes negativos, revisando a necessidade de índices. Documentos antigos devem continuar legíveis, editáveis e exportáveis, incluindo `sessionReadings`.
+- Data e observação preservam o contrato atual: até 280 caracteres de nota, tolerância de futuro de 60 segundos no Zod e de 5 minutos nas rules. Essas tolerâncias existentes não autorizam extrair data da fala ou relaxar validações.
 - A persistência do registro confirmado continua seguindo o comportamento existente. Não presumir persistência offline de Firestore no Android: o código atual usa o SDK JS com `getFirestore`; a garantia deve ser verificada na plataforma. Reconhecimento offline e sincronização offline são capacidades distintas.
 - Os controles mantêm alvos de toque de pelo menos 48 dp, texto de corpo de pelo menos 16 px, escala de fonte, contraste AA, rótulos para leitores de tela e acesso por teclado na Web. Estados de escuta e campos incertos não dependem somente de cor ou som. Validar interação com TalkBack e leitor de tela Web para que anúncios do próprio app não sejam interpretados como fala clínica.
 
@@ -104,10 +108,10 @@ Não fazem parte desta especificação: importação de arquivos de áudio, escu
 | VOZ-09 | Cancelar durante captura, reconhecimento ou revisão | Nenhuma medição é criada/alterada; microfone e mídia transitória são liberados; respostas tardias não restauram o fluxo. |
 | VOZ-10 | Repetir toques em iniciar/terminar fala ou confirmação | Não cria sessões concorrentes nem registros duplicados. |
 | VOZ-11 | Capturar silêncio, ruído, falha do motor, duração excessiva ou timeout | Não salva; apresenta ausência de resultado ou erro amigável e permite nova tentativa ou manual. Incluir casos negativos na avaliação do motor. |
-| VOZ-12 | Ficar sem rede ou sem pacote local de português brasileiro | Expõe a indisponibilidade e oferece manual; não envia áudio a outro serviço silenciosamente. |
+| VOZ-12 | Testar sem rede com recursos locais disponíveis e sem pacote local de português brasileiro | Com recursos locais disponíveis, reconhecimento independe do envio de áudio pela rede; sem suporte/pacote local, expõe indisponibilidade e oferece manual. Não usa reconhecedor remoto. |
 | VOZ-13 | Inspecionar captura, conversão, reconhecimento, falhas e encerramento nas duas plataformas | Nenhum áudio é persistido, inclusive em arquivos temporários, caches ou componentes de terceiros; persistência inevitável reprova a abordagem. |
 | VOZ-14 | Inspecionar logs e relatórios com transcrição e exceção contendo dados clínicos | Áudio, transcrição e valores clínicos não são enviados aos coletores. |
-| VOZ-15 | Usar reconhecedor do sistema, navegador ou nuvem | O local de processamento é conhecido; envio externo é informado previamente e há evidência de conformidade com retenção, logs e teto global. |
+| VOZ-15 | Inspecionar reconhecedor local do sistema/navegador e tentativas de iniciar sem comprovação de localidade | Há evidência de processamento local em pt-BR, sem armazenamento de áudio/transcrição ou envio a reconhecimento remoto. Onde isso for desconhecido ou indisponível, não habilita voz; oferecer consentimento de envio não substitui a escolha local. |
 | VOZ-16 | Consultar, editar e exportar registros antigos e sessões de duas leituras | Mantém compatibilidade e comportamento do legado; isolamento entre contas continua protegido pelas rules. |
 | VOZ-17 | Navegar por teclado/leitor de tela, ampliar fonte e usar o fluxo com TalkBack | Captura, estados, revisão, correção, cancelamento e confirmação permanecem operáveis; não exige resposta apenas sonora. |
 | VOZ-18 | Comparar o registro manual antes e depois da integração em condições equivalentes | Não há perda funcional nem degradação atribuível à nova modalidade; registrar tempos e condições da comparação. |
@@ -132,7 +136,9 @@ A decisão é **Android `SpeechRecognizer` explicitamente no dispositivo** e **W
 
 **Custo de inferência:** R$ 0,00. Modelos do sistema, quando necessários, podem exigir instalação prévia; o áudio de uso não pode ser persistido. Builds, distribuição e equipamentos permanecem no teto global de **R$ 300,00**.
 
-Whisper.cpp multilíngue fica como **comparador acadêmico e contingência documentada**, sem integrar o fluxo de produção escolhido. Seu modelo, memória, bateria e integração nativa/WASM ampliam o esforço para aproximadamente 100 horas totais. Eventual adoção futura exige revisão explícita desta decisão com evidências. APIs OpenAI/Google/Azure e hospedagem própria foram descartadas do fluxo principal por transmissão de voz, condições de retenção e manutenção adicionais.
+Esse valor descreve a ausência planejada de tarifa de API por inferência local, não despesa realizada, saldo disponível ou medição de custo total. Horas/despesas reais permanecem **não informado**, conforme a TASK-01. Versões do serviço/bridge, navegador e modelo efetivamente usados serão registradas na PoC; fontes documentais da revisão da TASK-02 não comprovam compatibilidade executada.
+
+Whisper.cpp multilíngue fica como **comparador acadêmico e contingência documentada**, sem integrar o fluxo de produção escolhido. Modelo, memória, bateria e integração nativa/WASM exigem avaliação dentro da capacidade planejada de aproximadamente 100 horas para o ciclo inteiro; não há estimativa medida de esforço adicional ou realizado dessa alternativa. Eventual adoção futura exige revisão explícita desta decisão com evidências. APIs OpenAI/Google/Azure e hospedagem própria foram descartadas do fluxo principal por transmissão de voz, condições de retenção e manutenção adicionais.
 
 A disponibilidade de voz será declarada por dispositivo/navegador. Onde o caminho local não puder ser comprovado, a modalidade fica indisponível; eventual entrega parcial será registrada conforme o TAP, priorizando fotografia completa. A API escolhida, isoladamente, não prova ausência de persistência interna pelo fornecedor.
 

@@ -4,6 +4,8 @@
 **Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, [constituição do projeto](../constitution.md), [spec de fotografia](./spec-fotografia.md) e [spec de voz](./spec-voz.md).
 
+**Revisão documental (26/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). A conferência direta com o TAP original está pendente de acesso ao anexo; referências a ele neste documento não constituem nova verificação da fonte primária. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o código legado e a execução efetivamente comprovada.
+
 ## 1. Objetivo e limites
 
 Permitir que o usuário gere um relatório de suas medições em PDF, legível na tela e em impressão, para apresentação em consulta médica. O documento oferece uma alternativa formatada à limitação prática do CSV, que permanece disponível e funcional.
@@ -85,6 +87,7 @@ Não fazem parte desta especificação: geração em servidor, armazenamento de 
 
 - Seguir `app/ → features/ → services/`, com seleção e agregação puras separadas de renderização e entrega por plataforma. O relatório consome registros validados pelo repositório e não importa Firebase diretamente em componentes.
 - Reaproveitar o filtro por `measuredAt` e o padrão de seleção de período do CSV sem alterar seu comportamento. O `getAllReadings` atual omite documentos inválidos individualmente: antes de reutilizá-lo no PDF, garantir uma forma explícita de sinalizar omissões; não exportar um subconjunto como se estivesse completo.
+- O reuso é do padrão de interface e do campo filtrado, não de todos os cálculos: CSV subtrai 7/30 períodos de 24 horas, enquanto o PDF usa os dias civis e o fuso fixado da seção 3.2. Não mudar o CSV para torná-lo igual ao PDF. O retorno atual de `getAllReadings` também não expõe IDs, metadados de cache/pendência nem omissões; o caminho de leitura do PDF precisa disponibilizar essas informações para cumprir desempate, cobertura e retrato consistente, preservando o contrato legado do CSV.
 - O `computeDailyTrend` atual atende janelas de 7/30 dias e arredonda para inteiros. Não o usar sem adaptação como fonte universal do PDF. Uma eventual generalização deve preservar o contrato e os resultados do gráfico legado, com verificação de regressão.
 - Carregar a biblioteca de PDF, fontes e renderizador sob demanda. Evitar trabalho pesado na thread da interface; usar worker na Web ou execução compatível no Android quando necessário. Não capturar a tela do Histórico como substituto de um documento paginado.
 - A geração é uma operação de leitura e não demanda campo novo no modelo clínico, mudança de `source`, coleção de relatórios ou gravação de médias no Firestore. Caso a implementação introduza mudanças de modelo, justificar separadamente e revisar tipos, schema, rules, índices e testes negativos.
@@ -137,6 +140,8 @@ A decisão é **Expo Print com HTML/CSS autocontido no Android** e **jsPDF com `
 | Web | `jsPDF` + `jspdf-autotable`, com desenho vetorial direto | Download local de bytes, controle de layout e tabela multipágina sem rasterizar a página inteira | Carregar sob demanda, incluir somente plugins/fontes necessários, validar acentos, paginação e legibilidade. Não presumir compatibilidade React Native nem usar conversão HTML rasterizada |
 
 **Custo de geração:** R$ 0,00 por relatório, com bibliotecas e fontes de licença elegível. Demais despesas permanecem no teto global de **R$ 300,00**. Tamanho do app, tempo e memória serão medidos; nenhuma redução de bundle está comprovada por esta decisão.
+
+Esse valor descreve a ausência planejada de tarifa de API de geração local, não despesa realizada ou saldo disponível. Horas/despesas reais permanecem **não informado**, conforme a TASK-01. `expo-print`, `jspdf` e `jspdf-autotable` ainda não constam nas dependências desta base; versões e fonte tipográfica a adotar devem ser registradas e validadas. As fontes da revisão da TASK-02 não comprovam compatibilidade executada com Expo 57 nem qualidade do PDF.
 
 `pdfmake` foi descartado para esta entrega por acrescentar outro motor de layout/fontes sem necessidade diante dos adaptadores escolhidos; `pdf-lib` exigiria mais código de tabela e paginação. `html2pdf.js` traz rasterização, limites de canvas e menor controle de texto selecionável. Outra bridge HTML-to-PDF duplicaria integração nativa já atendida pelo Expo Print.
 

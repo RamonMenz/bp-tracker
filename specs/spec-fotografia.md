@@ -4,6 +4,8 @@
 **Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, e [constituição do projeto](../constitution.md).
 
+**Revisão documental (26/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). A conferência direta com o TAP original está pendente de acesso ao anexo; referências a ele neste documento não constituem nova verificação da fonte primária. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o código legado e a execução efetivamente comprovada.
+
 ## 1. Objetivo e limites
 
 Permitir que o usuário registre uma medição a partir de uma fotografia do display de um aparelho de pressão arterial, revisando e confirmando explicitamente os valores antes de salvar.
@@ -19,13 +21,14 @@ Não fazem parte desta especificação: importação da galeria, reconhecimento 
 - Imagem, texto extraído e valores clínicos não podem integrar logs, breadcrumbs, relatórios de falha ou telemetria. A mensagem de uma exceção do OCR também deve ser tratada como potencial conteúdo sensível; sanitizar apenas o contexto do logger não basta.
 - Nenhum candidato reconhecido é criado ou atualizado no Firestore, inclusive em sua fila offline, antes da confirmação explícita.
 - Permissão negada, falha no OCR, falta de conectividade ou indisponibilidade do provedor não podem bloquear o registro manual.
+- A arquitetura escolhida na seção 6 processa as imagens localmente, sem envio a serviço de reconhecimento. A possibilidade genérica de serviço externo na constituição não autoriza um caminho remoto nesta entrega; uma mudança dessa escolha exige proposta e revisão explícitas antes de implementação.
 
 ## 3. Fluxo do usuário
 
 ### 3.1 Entrada
 
 1. Na tela de registro, o usuário escolhe **“Registrar por fotografia”**, sem remover ou deslocar o formulário manual a ponto de prejudicar seu uso.
-2. O app explica brevemente: fotografar apenas o display, conferir os números e confirmar antes de salvar. Se houver processamento externo, informa previamente o envio e sua finalidade; sem concordância com esse envio, oferece retorno ao manual.
+2. O app explica brevemente: fotografar apenas o display, processar no próprio dispositivo, conferir os números e confirmar antes de salvar. Falta de recursos locais oferece retorno ao manual; não inicia envio externo como alternativa.
 3. Somente após essa ação solicita acesso à câmera. A implementação web exige contexto seguro e disponibilidade da API de câmera.
 4. Se a permissão for negada ou a câmera estiver indisponível, apresenta mensagem em português e ações para voltar ao registro manual ou tentar novamente quando possível. Não repete solicitações automaticamente.
 
@@ -68,7 +71,9 @@ Não fazem parte desta especificação: importação da galeria, reconhecimento 
 - Seguir `app/ → features/ → services/`, com interpretação determinística isolada e testável. Diferenças de câmera e OCR entre Android e Web ficam em adaptadores por plataforma.
 - Carregar recursos pesados de captura/OCR sob demanda, sem inicializar câmera ou modelos durante o uso manual.
 - O modelo atual, o schema Zod e as Security Rules aceitam apenas `source: 'manual'`. A origem escolhida é `source: 'photo'`, conforme a seção de decisões; sua inclusão exige atualização coordenada na implementação; não basta enviar um novo valor de `source` ao repositório.
+- Os hooks atuais de criação e atualização também fixam `source: 'manual'`. A semântica da origem após edição e em sessões com entradas distintas precisa ser explicitada antes da TASK-11; a [proposta P01 da revisão](../docs/revisao-specs.md#p01-origem) ainda não foi adotada. A segunda leitura deve continuar atualizando o mesmo documento com média arredondada e detalhes; editar apenas nota/data preserva os detalhes, enquanto corrigir números/pulso os remove no legado.
 - Caso o modelo mude, atualizar coordenadamente tipos, schema, rules e testes negativos, revisando a necessidade de índices. Documentos antigos devem continuar legíveis, editáveis e exportáveis, incluindo `sessionReadings`.
+- Data e observação preservam o contrato atual: até 280 caracteres de nota, tolerância de futuro de 60 segundos no Zod e de 5 minutos nas rules. Essas tolerâncias existentes não são autorização para inferir data a partir do display ou relaxar validações.
 - A persistência do registro confirmado continua seguindo o comportamento existente. Não presumir persistência offline de Firestore no Android: o código atual usa o SDK JS com `getFirestore`; a garantia deve ser verificada na plataforma.
 - Os controles mantêm alvos de toque de pelo menos 48 dp, texto de corpo de pelo menos 16 px, escala de fonte, contraste AA, rótulos para leitores de tela e acesso por teclado na Web. Estados de erro e campos incertos não dependem somente de cor.
 
@@ -84,10 +89,10 @@ Não fazem parte desta especificação: importação da galeria, reconhecimento 
 | FOT-06 | Corrigir um candidato e confirmar | Salva os valores revisados pelo usuário, uma única vez, usando o repositório existente. |
 | FOT-07 | Cancelar durante captura, processamento ou revisão | Nenhuma medição é criada/alterada; câmera e mídia transitória são liberadas; respostas tardias não restauram o fluxo. |
 | FOT-08 | Repetir toques em captura ou confirmação | Não cria processamentos concorrentes nem registros duplicados. |
-| FOT-09 | OCR falhar, exceder o limite de tempo ou provedor externo ficar sem rede | Mensagem amigável permite nova tentativa ou manual; nenhum candidato é salvo. |
+| FOT-09 | OCR falhar, exceder o limite de tempo ou recursos locais necessários estarem indisponíveis | Mensagem amigável permite nova tentativa ou manual; nenhum candidato é salvo nem enviado a reconhecedor remoto. |
 | FOT-10 | Inspecionar captura, pré-processamento, falhas e encerramento nas duas plataformas | Nenhuma mídia é persistida, inclusive em arquivos temporários, caches ou componentes de terceiros. Se houver persistência inevitável, a abordagem é reprovada. |
 | FOT-11 | Inspecionar logs e relatórios de falha com entrada reconhecida e exceção contendo dados clínicos | Imagem, texto extraído e valores clínicos não são enviados aos coletores. |
-| FOT-12 | Usar serviço externo candidato | O envio é informado antes de ocorrer; há evidência de atendimento às restrições de processamento, retenção e logs, além de custo compatível com o teto global. |
+| FOT-12 | Inspecionar rede no caminho local escolhido, incluindo falhas e falta de conectividade | Nenhuma imagem, texto extraído ou valor candidato é enviado a serviço de reconhecimento. Distinguir download de assets estáticos, serviços legados e escrita Firestore posterior à confirmação; indisponibilidade não ativa nuvem. |
 | FOT-13 | Consultar, editar e exportar registros anteriores e sessões de duas leituras | Mantém compatibilidade e comportamento do legado; isolamento entre contas continua protegido pelas rules. |
 | FOT-14 | Navegar por teclado/leitor de tela e ampliar fonte | Captura, erros, revisão, correção, cancelamento e confirmação permanecem compreensíveis e operáveis. |
 | FOT-15 | Comparar o registro manual antes e depois da integração em condições equivalentes | Não há perda funcional nem degradação atribuível à nova modalidade; registrar tempos e condições da comparação. |
@@ -107,6 +112,8 @@ A decisão de arquitetura é **Google ML Kit Text Recognition com modelo latino 
 | Web | Tesseract.js, modelo LSTM pré-treinado e execução em Web Worker | OCR neural local, sem API paga; worker isola o processamento da interface | Receber canvas/`ImageBitmap` ou buffer compatível, carregar motor/modelo sob demanda e validar memória em navegador móvel. Cache de assets estáticos não pode incluir fotografias ou resultados |
 
 **Custo de inferência:** R$ 0,00 por leitura. Distribuição de assets, builds, equipamentos e demais despesas continuam sujeitos ao teto global de **R$ 300,00**. Não há contratação de OCR em nuvem nesta arquitetura.
+
+Esse valor descreve a ausência planejada de tarifa de API por inferência local, não despesa realizada, saldo disponível ou medição de custo total. Horas/despesas reais permanecem **não informado**, conforme a TASK-01; versões do motor, binding e modelo efetivamente adotadas serão registradas na PoC. As fontes consultadas estão na revisão da TASK-02 e não comprovam compatibilidade executada.
 
 APIs Cloud Vision, Gemini e Claude foram descartadas do fluxo clínico por introduzirem transmissão de imagens, dependência de rede e condições de retenção. Modelos multimodais locais, como LLaVA e Moondream, acrescentam memória e esforço incompatíveis com a prioridade deste ciclo individual de aproximadamente 100 horas. Digital Ink não atende fotografias: sua entrada são traços de escrita.
 

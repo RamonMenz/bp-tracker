@@ -72,6 +72,25 @@ firebase deploy --only hosting                       # publicar web
 
 **Regra:** ao adicionar um script novo ao `package.json`, atualize esta seção no mesmo commit.
 
+### PoCs isoladas de fotografia e voz
+
+Executar a partir da raiz; dependências, entrada e lock ficam em `pocs/`, sem Firebase ou persistência. Não usar Expo Go nem build pago. Instruções de dispositivos, limites e evidências em [`docs/pocs-fotografia-voz.md`](./docs/pocs-fotografia-voz.md).
+
+```bash
+npm --prefix pocs ci                    # instalar dependências próprias
+npm --prefix pocs run export:web        # preparar assets OCR e exportar Web
+npm --prefix pocs run serve:web         # abrir http://localhost:8095 neste computador
+npm --prefix pocs run web               # alternativa: Metro Web :8090
+npm --prefix pocs run android -- --device # build/instalação local no aparelho
+npm --prefix pocs run prebuild:android  # gerar projeto nativo, sem compilar
+npm --prefix pocs start                 # Metro para Dev Client já instalado
+npm --prefix pocs run prepare:ocr       # copiar somente assets estáticos locais
+npm --prefix pocs run lint
+npm --prefix pocs run typecheck
+npm --prefix pocs test
+npm --prefix pocs run test:web          # técnico: exige servidor :8095 e Chromium CDP :9222
+```
+
 ---
 
 ## 3. Regras de Arquitetura e Estilo de Código
