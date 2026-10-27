@@ -4,7 +4,7 @@
 **Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, e [constituição do projeto](../constitution.md).
 
-**Revisão documental (26/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). A conferência direta com o TAP original está pendente de acesso ao anexo; referências a ele neste documento não constituem nova verificação da fonte primária. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o código legado e a execução efetivamente comprovada.
+**Revisão documental (26/10, retomada em 27/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). O [TAP original](../docs/fontes/Termo_de_Abertura_Aferi.docx) foi recebido e confrontado; P01 (origem após edição/sessão) e P02 (marco de decisão sem revisão posterior) permanecem pendentes. Recebimento não comprova aprovação. A [baseline](../docs/baseline-legado.md) e o [relatório das PoCs](../docs/pocs-fotografia-voz.md) delimitam código e execução comprovada; a integração ao produto continua pendente.
 
 ## 1. Objetivo e limites
 
@@ -21,7 +21,7 @@ Não fazem parte desta especificação: importação da galeria, reconhecimento 
 - Imagem, texto extraído e valores clínicos não podem integrar logs, breadcrumbs, relatórios de falha ou telemetria. A mensagem de uma exceção do OCR também deve ser tratada como potencial conteúdo sensível; sanitizar apenas o contexto do logger não basta.
 - Nenhum candidato reconhecido é criado ou atualizado no Firestore, inclusive em sua fila offline, antes da confirmação explícita.
 - Permissão negada, falha no OCR, falta de conectividade ou indisponibilidade do provedor não podem bloquear o registro manual.
-- A arquitetura escolhida na seção 6 processa as imagens localmente, sem envio a serviço de reconhecimento. A possibilidade genérica de serviço externo na constituição não autoriza um caminho remoto nesta entrega; uma mudança dessa escolha exige proposta e revisão explícitas antes de implementação.
+- A arquitetura escolhida na seção 6 processa as imagens localmente, sem envio a serviço de reconhecimento. A possibilidade genérica de serviço externo na constituição não autoriza um caminho remoto nesta entrega. Propor alternativa não autoriza adotá-la: observar o congelamento da decisão do TAP e o encaminhamento P02 antes de qualquer mudança, sem alterar a escolha vigente nesta revisão.
 
 ## 3. Fluxo do usuário
 
@@ -131,7 +131,7 @@ A escolha não comprova acurácia em displays de sete segmentos. Nenhuma confian
 
 1. Validar primeiro os critérios eliminatórios: captura e processamento em memória, ausência de logs clínicos, inferência local, confirmação obrigatória, compatibilidade com o legado, orçamento e prazo até 15/12/2026. Se a integração falhar nesses critérios, não habilitar o caminho incompatível nem recorrer à nuvem automaticamente.
 2. Comparar pelo menos duas abordagens viáveis sobre o mesmo conjunto rotulado, sem obrigar dois motores em produção. Usar ML Kit e Tesseract.js em ambientes compatíveis e registrar diferenças de hardware e plataforma, sem atribuir toda diferença de resultado apenas ao motor.
-3. Construir casos próprios com pelo menos dois modelos de aparelho, variando iluminação, inclinação, reflexo, foco, ausência de pulso e números acessórios. Separar ajuste de regras e avaliação final; não usar capturas de usuários do produto como dataset.
+3. Construir casos próprios com pelo menos dois modelos de aparelho, exigência expressa em Premissas do TAP (P107), variando iluminação, inclinação, reflexo, foco, ausência de pulso e números acessórios. Separar ajuste de regras e avaliação final; não usar capturas de usuários do produto como dataset. Procedimentos envolvendo terceiros dependem de aprovação prévia da orientadora (P048); a PoC com recursos próprios e entradas sintéticas não comprova essa autorização.
 4. Medir acerto exato por campo e do par sistólica/diastólica, trocas, reconhecimento incorreto apresentado como válido, ausência de resultado, inicialização, latência, memória e tamanho adicionado ao app. Registrar p50/p95 quando a amostra permitir, versões, configurações e resultados por aparelho/plataforma.
 5. Fixar metas quantitativas e timeout a partir da prova de conceito, antes da avaliação final. Esses parâmetros são resultados de validação; a decisão de arquitetura está fechada, mas não implica desempenho já medido.
 6. Incorporar comparação, limitações, custos e cobertura comprovada ao relatório técnico final. O prazo do TAP permanece: integração em 27/10, comparação em 10/11 e conclusão em 15/12/2026; a escolha registrada agora não deve ser retrodatada para o marco de 06/10.

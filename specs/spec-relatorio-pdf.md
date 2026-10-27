@@ -4,7 +4,7 @@
 **Estado:** decisões técnicas definidas; implementação e validação pendentes.
 **Referências:** TAP v1.0, de 22/09/2026, [constituição do projeto](../constitution.md), [spec de fotografia](./spec-fotografia.md) e [spec de voz](./spec-voz.md).
 
-**Revisão documental (26/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). A conferência direta com o TAP original está pendente de acesso ao anexo; referências a ele neste documento não constituem nova verificação da fonte primária. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o código legado e a execução efetivamente comprovada.
+**Revisão documental (26/10, retomada em 27/10/2026):** [TASK-02: fontes, rastreabilidade, correções e pendências](../docs/revisao-specs.md). O [TAP original](../docs/fontes/Termo_de_Abertura_Aferi.docx) foi recebido e confrontado. Conteúdo obrigatório, prazo de 24/11 e exclusões foram conferidos; o recebimento não comprova aprovação. P02 registra o marco de decisão sem revisão posterior; nenhuma biblioteca foi trocada ou validada por essa conferência. A [baseline da TASK-01](../docs/baseline-legado.md) delimita o legado e sua execução comprovada.
 
 ## 1. Objetivo e limites
 
