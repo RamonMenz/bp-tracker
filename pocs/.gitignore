@@ -1,0 +1,9 @@
+node_modules/
+.expo/
+/android/
+/ios/
+/dist/
+/public/ocr/
+modules/**/android/build/
+.gradle/
+*.log

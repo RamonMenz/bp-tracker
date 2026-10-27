@@ -1,6 +1,6 @@
 # Constituição do projeto Aferi
 
-Este documento estabelece as regras imutáveis do ciclo de evolução do Aferi (anteriormente BP Tracker), correspondente ao 2º semestre de 2026 na Universidade Feevale. Sua referência é o Termo de Abertura de Projeto (TAP), versão 1.0, de 22/09/2026.
+Este documento estabelece as regras imutáveis do ciclo de evolução do Aferi (anteriormente BP Tracker), correspondente ao 2º semestre de 2026 na Universidade Feevale. Sua referência é o [Termo de Abertura de Projeto (TAP)](./docs/fontes/Termo_de_Abertura_Aferi.docx), versão 1.0, de 22/09/2026, recebido e confrontado na [TASK-02](./docs/revisao-specs.md) em 27/10/2026.
 
 Estas regras orientam todas as especificações, decisões técnicas e implementações deste ciclo. Nenhuma entrega, dependência ou otimização pode contrariá-las.
 
@@ -37,4 +37,8 @@ Estas regras orientam todas as especificações, decisões técnicas e implement
 
 ## Aplicação
 
-Uma entrega que viole qualquer uma destas regras não pode ser considerada concluída ou aceita. Conflitos de implementação devem ser resolvidos pela escolha de outra abordagem ou pela redução de escopo permitida pelo TAP, preservando estas regras.
+Conforme Designação do Gerente ([TAP P048](./docs/fontes/tap-aferi-v1.0.md#p048)), alterações de escopo, procedimentos envolvendo terceiros e prazos de entrega dependem de aprovação prévia da professora orientadora. Consentimento de locutor não substitui essa aprovação. O arquivo recebido não é, por si só, comprovação de aprovação; não contratar recursos externos ou presumir extensão de prazo.
+
+O Cronograma ([TAP P103](./docs/fontes/tap-aferi-v1.0.md#p103)) exige decisão técnica formalizada até 06/10/2026, “sem revisão posterior”. Correções documentais e resultados de validação não autorizam substituir a stack escolhida nem retrodatar decisões. O conflito entre esse marco e as evidências posteriores deve seguir o encaminhamento P02 da revisão, antes de qualquer mudança de decisão; nenhuma exceção foi concedida por esta atualização.
+
+Uma entrega que viole qualquer uma destas regras não pode ser considerada concluída ou aceita. Conflitos de implementação exigem proposta de tratamento, preservando estas regras e a governança acima. Outra abordagem ou redução de escopo não pode ser adotada automaticamente; deve respeitar o congelamento da decisão, as aprovações aplicáveis e os limites de corte do TAP.
