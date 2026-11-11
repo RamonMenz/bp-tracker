@@ -7,6 +7,10 @@
 > arquivados complementam esta etapa histórica. TASK-07 permanece parcial;
 > documentação publicada não aplica as correções ao app nem homologa privacidade.
 
+> **Integração posterior — 11/11/2026:** [correções portadas para código, checks e
+> protocolo no Samsung](task-07-integracao-android.md), sobre staging `6f7a249`
+> após o merge do PR #64. O relato abaixo permanece histórico; TASK-07 aberta.
+
 Atualização posterior: a [TASK-09](task-09-interpretacao-fotografia.md) ampliou a
 interpretação compartilhada por rótulos/layout. As referências à interpretação
 mínima abaixo descrevem o alcance original da TASK-07; suas pendências nativas

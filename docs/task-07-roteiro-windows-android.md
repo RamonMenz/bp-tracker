@@ -26,8 +26,12 @@ incrementais nem o consolidado sobre ela. O consolidado arquivado é para o Code
 integrar/revisar em uma base limpa compatível com `d94e5f3`, não uma instrução para
 alterar a cópia que funciona.
 
-A raiz deste checkout de documentação (`work`/`3f8220f`) não contém a implementação
-da demo. Copiar apenas estes documentos para aquela base não instala a TASK-07.
+O checkout inicial do arquivamento (`work`/`3f8220f`) não continha a demo.
+Posteriormente, o PR #64 foi mesclado em staging (`6f7a249`), somente com documentos.
+A [integração funcional](task-07-integracao-android.md) usa a branch
+`fix/task-07-captura-android` baseada nessa staging e explica como preservar a
+cópia Windows já testada. Consultar o PR da integração antes de presumir que as
+correções estão em staging.
 
 ## 2. Pré-requisitos e dependências
 
@@ -172,10 +176,9 @@ clínico. Compartilhar apenas erros/estados/metadados necessários e sanitizados
 
 ## 8. Próximo roteiro, ainda pendente
 
-Preparar com o Codex os cenários de cancelar em cada fase, Home/troca de app,
-bloqueio/rotação, concorrência, confirmação em memória e negativa/revogação de
-permissão. Depois, inspeção segura de armazenamento/rede e amostras rotuladas.
-Não tratar as três repetições do cartão como aprovação desses cenários.
+Executar os [casos S01–S09, inspeção de armazenamento/rede e modelo de devolução](task-07-integracao-android.md#protocolo-no-samsung--execução-pendente)
+preparados na integração funcional. O protocolo identifica fonte/APK e resultado
+por cenário. As três repetições do cartão não aprovam esses casos.
 
 Antes de homologação clínica, faltam também integração Git, identidade final de
 fonte/APK, contexto de conta/consentimento, schemas/rules, legado/acessibilidade

@@ -1,3 +1,5 @@
+import { Text as NativeText, View } from 'react-native';
+
 import { CandidateReadingReview } from '@/components/bp/CandidateReadingReview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -13,7 +15,8 @@ const PHASES = {
   cancelled: 'Captura cancelada.', failed: 'Tentativa encerrada.', blocked: 'Recursos ainda não liberados; saia do fluxo.',
 };
 export function AndroidPhotoCaptureScreen() {
-  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy } = useAndroidPhotoReview();
+  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy,
+    diagnostics, diagnosticVersion, diagnosticAppState, diagnosticNativeRevision } = useAndroidPhotoReview();
   const Camera = binding?.Camera;
   const active = ['opening', 'ready', 'recognizing'].includes(captureState.phase);
   return (
@@ -31,6 +34,20 @@ export function AndroidPhotoCaptureScreen() {
         <Button label="Cancelar captura" variant="ghost" onPress={review.cancel} />
         <Text accessibilityLiveRegion="polite">{PHASES[captureState.phase]}</Text>
         {captureState.issue ? <Text accessibilityRole="alert">{PHOTO_MESSAGES[captureState.issue]}</Text> : null}
+        <View style={{ padding: 12, borderWidth: 1, borderColor: '#94a3b8', backgroundColor: '#f8fafc' }}>
+          <NativeText style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>
+            Diagnostico da captura: {diagnosticVersion}
+          </NativeText>
+          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+            App: {diagnosticAppState} | Fase: {captureState.phase}
+          </NativeText>
+          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+            Nativo: {diagnosticNativeRevision}
+          </NativeText>
+          <NativeText selectable style={{ fontSize: 14, color: '#0f172a' }}>
+            {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
+          </NativeText>
+        </View>
       </Card>
       <CandidateReadingReview review={review} />
     </Screen>

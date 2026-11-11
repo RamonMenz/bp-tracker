@@ -1,11 +1,43 @@
 import '../../global.css';
 
 import { registerRootComponent } from 'expo';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useCallback, useEffect, useState } from 'react';
+import { Text as NativeText, View } from 'react-native';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AndroidPhotoCaptureScreen } from '@/screens/AndroidPhotoCaptureScreen';
 
-function AndroidCaptureEvaluation() {
-  return <SafeAreaProvider><AndroidPhotoCaptureScreen /></SafeAreaProvider>;
+// Diagnostico temporario do cliente isolado: nenhum logger, Firebase ou writer.
+function CaptureContent({ onReady }: { onReady: () => void }) {
+  useEffect(() => { onReady(); }, [onReady]);
+  return <AndroidPhotoCaptureScreen />;
 }
+
+function AndroidCaptureEvaluation() {
+  const [contentMounted, setContentMounted] = useState(false);
+  const markReady = useCallback(() => { setContentMounted(true); }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+      <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
+        <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
+          Aferi: diagnostico de captura 5
+        </NativeText>
+        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+          JavaScript iniciou.
+        </NativeText>
+        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+          {initialWindowMetrics ? 'Medidas iniciais: disponiveis.' : 'Medidas iniciais: ausentes.'}
+        </NativeText>
+        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+          {contentMounted ? 'Conteudo da area segura: montado.' : 'Conteudo da area segura: aguardando.'}
+        </NativeText>
+      </View>
+      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={{ flex: 1 }}>
+        <CaptureContent onReady={markReady} />
+      </SafeAreaProvider>
+    </View>
+  );
+}
+
 registerRootComponent(AndroidCaptureEvaluation);

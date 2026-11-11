@@ -4,12 +4,16 @@ import java.nio.ByteBuffer;
 
 /** Cópia YUV_420_888 -> NV21 em RAM. Independente de Android para testar strides reais. */
 public final class FrameBytes {
+  public static final int MAX_FRAME_PIXELS = 1920000;
   private FrameBytes() {}
+  public static boolean acceptsDimensions(int width, int height) {
+    return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0
+        && (long) width * height <= MAX_FRAME_PIXELS;
+  }
   public static byte[] nv21(int width, int height,
       ByteBuffer y, int yRow, int yPixel, ByteBuffer u, int uRow, int uPixel,
       ByteBuffer v, int vRow, int vPixel) {
-    if (width <= 0 || height <= 0 || (width & 1) != 0 || (height & 1) != 0
-        || (long) width * height > 1920000) throw new IllegalArgumentException("frame-size");
+    if (!acceptsDimensions(width, height)) throw new IllegalArgumentException("frame-size");
     if (yRow <= 0 || yPixel <= 0 || uRow <= 0 || uPixel <= 0 || vRow <= 0 || vPixel <= 0)
       throw new IllegalArgumentException("frame-stride");
     byte[] bytes = new byte[width * height * 3 / 2];

@@ -11,10 +11,13 @@ import android.view.ViewGroup.LayoutParams
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.TextRecognizer
@@ -30,8 +33,13 @@ import java.nio.ByteBuffer
 private object PhotoLease { var owner: AferiPhotoView? = null }
 
 class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
+  // PreviewView adiciona TextureView depois do bind. O requestLayout desses
+  // filhos precisa medir/layout Android, mesmo sem outro commit de layout Yoga.
+  override val shouldUseAndroidLayout: Boolean = true
   private val onStatus by EventDispatcher()
   private val preview = PreviewView(context)
+  private var previewObserver: Observer<PreviewView.StreamState>? = null
+  private var previewReady = false
   private val handler = Handler(Looper.getMainLooper())
   private var provider: ProcessCameraProvider? = null
   private var frames: ImageAnalysis? = null
@@ -51,9 +59,10 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
   var requestedActive = false
   var attemptId = 0
 
-  init { addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)) }
-  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-    preview.layout(0, 0, right - left, bottom - top)
+  init {
+    // TextureView compoe o preview dentro da hierarquia React/ScrollView.
+    preview.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+    addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
   }
   private fun status(code: String) {
     if (!disposed) onStatus(mapOf("status" to code, "attemptId" to boundAttempt))
@@ -82,8 +91,14 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
         if (owner == null) { fail("camera-failed"); return@addListener }
         provider = future.get()
         surface = Preview.Builder().build().also { it.setSurfaceProvider(preview.surfaceProvider) }
-        @Suppress("DEPRECATION")
-        val analysis = ImageAnalysis.Builder().setTargetResolution(Size(1280, 960))
+        // O tamanho alvo antigo era uma preferencia, nao um teto. Filtrar antes
+        // do bind para nunca selecionar um quadro que o copiador recusaria.
+        val selector = ResolutionSelector.Builder()
+          .setResolutionStrategy(ResolutionStrategy(Size(1280, 960), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
+          .setResolutionFilter { sizes, _ -> sizes.filter { FrameBytes.acceptsDimensions(it.width, it.height) } }
+          .build()
+        val analysis = ImageAnalysis.Builder().setResolutionSelector(selector)
+          .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
           .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
         frames = analysis
         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -95,16 +110,33 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
           val height = frame.height
           val rotation = frame.imageInfo.rotationDegrees
           val capturedAtMs = System.currentTimeMillis()
+          // Somente metadados tecnicos; nunca bytes, pixels ou texto reconhecido.
+          val diagnostic = mutableMapOf<String, Any?>("revision" to "frame-1",
+            "width" to width, "height" to height, "format" to frame.format,
+            "rotation" to rotation, "maxPixels" to FrameBytes.MAX_FRAME_PIXELS)
           ownedBytes = null
           try {
             val p = frame.planes
+            diagnostic["planeCount"] = p.size
+            diagnostic["planes"] = p.take(3).map { plane ->
+              val buffer = plane.buffer
+              mapOf("rowStride" to plane.rowStride, "pixelStride" to plane.pixelStride,
+                "position" to buffer.position(), "limit" to buffer.limit())
+            }
             if (frame.format != ImageFormat.YUV_420_888 || p.size != 3) throw IllegalArgumentException("frame-format")
             ownedBytes = FrameBytes.nv21(width, height,
               p[0].buffer, p[0].rowStride, p[0].pixelStride,
               p[1].buffer, p[1].rowStride, p[1].pixelStride,
               p[2].buffer, p[2].rowStride, p[2].pixelStride)
-          } catch (_: Exception) {
-            settle(mapOf("code" to "frame-failed"))
+          } catch (error: Exception) {
+            diagnostic["reason"] = when (error.message) {
+              "frame-format" -> "frame-format"
+              "frame-size" -> "frame-size"
+              "frame-stride" -> "frame-stride"
+              "frame-plane" -> "frame-plane"
+              else -> "frame-copy"
+            }
+            settle(mapOf("code" to "frame-failed", "frameDiagnostic" to diagnostic.toMap()))
           } finally { frame.close() }
           // O ImageProxy já está fechado. A câmera pode ser liberada imediatamente,
           // pois o ML Kit lerá apenas nossa cópia NV21, sem URI/arquivo.
@@ -145,12 +177,22 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
           }
         }
         provider!!.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, surface!!, analysis)
-        status("ready")
+        // Em modo COMPATIBLE, STREAMING confirma que o preview iniciou.
+        // Bind concluido sozinho nao garante imagem e nao habilita o obturador.
+        val observer = Observer<PreviewView.StreamState> { state ->
+          if (active && generation == epoch && !disposed) {
+            val wasReady = previewReady
+            previewReady = state == PreviewView.StreamState.STREAMING
+            if (previewReady && !wasReady) status("ready")
+          }
+        }
+        previewObserver = observer
+        preview.previewStreamState.observe(owner, observer)
       } catch (_: Exception) { fail("camera-failed") }
     }, ContextCompat.getMainExecutor(context))
   }
   fun recognize(promise: Promise) {
-    if (!active || frames == null || processing || requested || result != null) {
+    if (!active || !previewReady || frames == null || processing || requested || result != null) {
       promise.resolve(mapOf("code" to "resource-busy")); return
     }
     result = promise; requested = true
@@ -171,6 +213,8 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
   private fun fail(code: String) { settle(mapOf("code" to code)); cancel(); status(code) }
   private fun stopCamera(): Boolean {
     return try {
+      previewObserver?.let { preview.previewStreamState.removeObserver(it) }
+      previewObserver = null; previewReady = false
       frames?.clearAnalyzer()
       val uses = listOfNotNull(frames, surface)
       if (uses.isNotEmpty()) provider?.unbind(*uses.toTypedArray())
