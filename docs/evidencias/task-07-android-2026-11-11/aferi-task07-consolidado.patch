@@ -1,0 +1,853 @@
+diff --git a/demos/android-capture/index.tsx b/demos/android-capture/index.tsx
+--- a/demos/android-capture/index.tsx
++++ b/demos/android-capture/index.tsx
+@@ -1,11 +1,43 @@
+ import '../../global.css';
+ 
+ import { registerRootComponent } from 'expo';
+-import { SafeAreaProvider } from 'react-native-safe-area-context';
++import { useCallback, useEffect, useState } from 'react';
++import { Text as NativeText, View } from 'react-native';
++import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
+ 
+ import { AndroidPhotoCaptureScreen } from '@/screens/AndroidPhotoCaptureScreen';
+ 
++// Diagnostico temporario do cliente isolado: nenhum logger, Firebase ou writer.
++function CaptureContent({ onReady }: { onReady: () => void }) {
++  useEffect(() => { onReady(); }, [onReady]);
++  return <AndroidPhotoCaptureScreen />;
++}
++
+ function AndroidCaptureEvaluation() {
+-  return <SafeAreaProvider><AndroidPhotoCaptureScreen /></SafeAreaProvider>;
++  const [contentMounted, setContentMounted] = useState(false);
++  const markReady = useCallback(() => { setContentMounted(true); }, []);
++
++  return (
++    <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
++      <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
++        <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
++          Aferi: diagnostico de captura 5
++        </NativeText>
++        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++          JavaScript iniciou.
++        </NativeText>
++        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++          {initialWindowMetrics ? 'Medidas iniciais: disponiveis.' : 'Medidas iniciais: ausentes.'}
++        </NativeText>
++        <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++          {contentMounted ? 'Conteudo da area segura: montado.' : 'Conteudo da area segura: aguardando.'}
++        </NativeText>
++      </View>
++      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={{ flex: 1 }}>
++        <CaptureContent onReady={markReady} />
++      </SafeAreaProvider>
++    </View>
++  );
+ }
++
+ registerRootComponent(AndroidCaptureEvaluation);
+diff --git a/demos/android-capture/tailwind.config.js b/demos/android-capture/tailwind.config.js
+new file mode 100644
+--- /dev/null
++++ b/demos/android-capture/tailwind.config.js
+@@ -0,0 +1,3 @@
++// O CLI do NativeWind procura a configuracao Tailwind na pasta da demo.
++// Reutiliza os caminhos absolutos para os componentes compartilhados de src/.
++module.exports = require('../photo-review/tailwind.config');
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+@@ -12,6 +12,7 @@
+   private val cameras = mutableSetOf<AferiPhotoView>()
+   override fun definition() = ModuleDefinition {
+     Name("AferiPhotoCapture")
++    Constants("captureRevision" to "preview-1")
+     AsyncFunction("requestCameraPermission") { promise: Promise ->
+       val context = appContext.reactContext
+       val permissions = appContext.permissions
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+@@ -11,10 +11,13 @@
+ import androidx.camera.core.CameraSelector
+ import androidx.camera.core.ImageAnalysis
+ import androidx.camera.core.Preview
++import androidx.camera.core.resolutionselector.ResolutionSelector
++import androidx.camera.core.resolutionselector.ResolutionStrategy
+ import androidx.camera.lifecycle.ProcessCameraProvider
+ import androidx.camera.view.PreviewView
+ import androidx.core.content.ContextCompat
+ import androidx.lifecycle.LifecycleOwner
++import androidx.lifecycle.Observer
+ import com.google.mlkit.vision.common.InputImage
+ import com.google.mlkit.vision.text.TextRecognition
+ import com.google.mlkit.vision.text.TextRecognizer
+@@ -30,8 +33,13 @@
+ private object PhotoLease { var owner: AferiPhotoView? = null }
+ 
+ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
++  // PreviewView adiciona TextureView depois do bind. O requestLayout desses
++  // filhos precisa medir/layout Android, mesmo sem outro commit de layout Yoga.
++  override val shouldUseAndroidLayout: Boolean = true
+   private val onStatus by EventDispatcher()
+   private val preview = PreviewView(context)
++  private var previewObserver: Observer<PreviewView.StreamState>? = null
++  private var previewReady = false
+   private val handler = Handler(Looper.getMainLooper())
+   private var provider: ProcessCameraProvider? = null
+   private var frames: ImageAnalysis? = null
+@@ -51,9 +59,10 @@
+   var requestedActive = false
+   var attemptId = 0
+ 
+-  init { addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)) }
+-  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+-    preview.layout(0, 0, right - left, bottom - top)
++  init {
++    // TextureView compoe o preview dentro da hierarquia React/ScrollView.
++    preview.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
++    addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+   }
+   private fun status(code: String) {
+     if (!disposed) onStatus(mapOf("status" to code, "attemptId" to boundAttempt))
+@@ -82,8 +91,14 @@
+         if (owner == null) { fail("camera-failed"); return@addListener }
+         provider = future.get()
+         surface = Preview.Builder().build().also { it.setSurfaceProvider(preview.surfaceProvider) }
+-        @Suppress("DEPRECATION")
+-        val analysis = ImageAnalysis.Builder().setTargetResolution(Size(1280, 960))
++        // O tamanho alvo antigo era uma preferencia, nao um teto. Filtrar antes
++        // do bind para nunca selecionar um quadro que o copiador recusaria.
++        val selector = ResolutionSelector.Builder()
++          .setResolutionStrategy(ResolutionStrategy(Size(1280, 960), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
++          .setResolutionFilter { sizes, _ -> sizes.filter { FrameBytes.acceptsDimensions(it.width, it.height) } }
++          .build()
++        val analysis = ImageAnalysis.Builder().setResolutionSelector(selector)
++          .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+           .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+         frames = analysis
+         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+@@ -95,16 +110,33 @@
+           val height = frame.height
+           val rotation = frame.imageInfo.rotationDegrees
+           val capturedAtMs = System.currentTimeMillis()
++          // Somente metadados tecnicos; nunca bytes, pixels ou texto reconhecido.
++          val diagnostic = mutableMapOf<String, Any?>("revision" to "frame-1",
++            "width" to width, "height" to height, "format" to frame.format,
++            "rotation" to rotation, "maxPixels" to FrameBytes.MAX_FRAME_PIXELS)
+           ownedBytes = null
+           try {
+             val p = frame.planes
++            diagnostic["planeCount"] = p.size
++            diagnostic["planes"] = p.take(3).map { plane ->
++              val buffer = plane.buffer
++              mapOf("rowStride" to plane.rowStride, "pixelStride" to plane.pixelStride,
++                "position" to buffer.position(), "limit" to buffer.limit())
++            }
+             if (frame.format != ImageFormat.YUV_420_888 || p.size != 3) throw IllegalArgumentException("frame-format")
+             ownedBytes = FrameBytes.nv21(width, height,
+               p[0].buffer, p[0].rowStride, p[0].pixelStride,
+               p[1].buffer, p[1].rowStride, p[1].pixelStride,
+               p[2].buffer, p[2].rowStride, p[2].pixelStride)
+-          } catch (_: Exception) {
+-            settle(mapOf("code" to "frame-failed"))
++          } catch (error: Exception) {
++            diagnostic["reason"] = when (error.message) {
++              "frame-format" -> "frame-format"
++              "frame-size" -> "frame-size"
++              "frame-stride" -> "frame-stride"
++              "frame-plane" -> "frame-plane"
++              else -> "frame-copy"
++            }
++            settle(mapOf("code" to "frame-failed", "frameDiagnostic" to diagnostic.toMap()))
+           } finally { frame.close() }
+           // O ImageProxy já está fechado. A câmera pode ser liberada imediatamente,
+           // pois o ML Kit lerá apenas nossa cópia NV21, sem URI/arquivo.
+@@ -145,12 +177,22 @@
+           }
+         }
+         provider!!.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, surface!!, analysis)
+-        status("ready")
++        // Em modo COMPATIBLE, STREAMING confirma que o preview iniciou.
++        // Bind concluido sozinho nao garante imagem e nao habilita o obturador.
++        val observer = Observer<PreviewView.StreamState> { state ->
++          if (active && generation == epoch && !disposed) {
++            val wasReady = previewReady
++            previewReady = state == PreviewView.StreamState.STREAMING
++            if (previewReady && !wasReady) status("ready")
++          }
++        }
++        previewObserver = observer
++        preview.previewStreamState.observe(owner, observer)
+       } catch (_: Exception) { fail("camera-failed") }
+     }, ContextCompat.getMainExecutor(context))
+   }
+   fun recognize(promise: Promise) {
+-    if (!active || frames == null || processing || requested || result != null) {
++    if (!active || !previewReady || frames == null || processing || requested || result != null) {
+       promise.resolve(mapOf("code" to "resource-busy")); return
+     }
+     result = promise; requested = true
+@@ -171,6 +213,8 @@
+   private fun fail(code: String) { settle(mapOf("code" to code)); cancel(); status(code) }
+   private fun stopCamera(): Boolean {
+     return try {
++      previewObserver?.let { preview.previewStreamState.removeObserver(it) }
++      previewObserver = null; previewReady = false
+       frames?.clearAnalyzer()
+       val uses = listOfNotNull(frames, surface)
+       if (uses.isNotEmpty()) provider?.unbind(*uses.toTypedArray())
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
+@@ -4,12 +4,16 @@
+ 
+ /** Cópia YUV_420_888 -> NV21 em RAM. Independente de Android para testar strides reais. */
+ public final class FrameBytes {
++  public static final int MAX_FRAME_PIXELS = 1920000;
+   private FrameBytes() {}
++  public static boolean acceptsDimensions(int width, int height) {
++    return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0
++        && (long) width * height <= MAX_FRAME_PIXELS;
++  }
+   public static byte[] nv21(int width, int height,
+       ByteBuffer y, int yRow, int yPixel, ByteBuffer u, int uRow, int uPixel,
+       ByteBuffer v, int vRow, int vPixel) {
+-    if (width <= 0 || height <= 0 || (width & 1) != 0 || (height & 1) != 0
+-        || (long) width * height > 1920000) throw new IllegalArgumentException("frame-size");
++    if (!acceptsDimensions(width, height)) throw new IllegalArgumentException("frame-size");
+     if (yRow <= 0 || yPixel <= 0 || uRow <= 0 || uPixel <= 0 || vRow <= 0 || vPixel <= 0)
+       throw new IllegalArgumentException("frame-stride");
+     byte[] bytes = new byte[width * height * 3 / 2];
+diff --git a/native-modules/aferi-photo-capture/checks/FrameBytesTest.java b/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
+--- a/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
++++ b/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
+@@ -4,6 +4,11 @@
+ import java.util.Arrays;
+ 
+ public final class FrameBytesTest {
++  private static int dimensionChecks = 0;
++  private static void dimensions(int width, int height, boolean accepted) {
++    if (FrameBytes.acceptsDimensions(width, height) != accepted) throw new AssertionError("frame-dimension-policy");
++    dimensionChecks++;
++  }
+   private static void equal(byte[] actual, byte[] expected) {
+     if (!Arrays.equals(actual, expected)) throw new AssertionError("synthetic-frame-mismatch");
+   }
+@@ -30,6 +35,17 @@
+     fails(() -> FrameBytes.nv21(4,2,y,100,1,u,2,1,v,2,1));
+     fails(() -> FrameBytes.nv21(4,2,y,4,0,u,2,1,v,2,1));
+     equal(FrameBytes.nv21(4,2,y.asReadOnlyBuffer(),4,1,u,2,1,v,2,1), expected);
+-    System.out.println("FrameBytes: 8 checks passed (synthetic buffers; no camera/ML Kit proof)");
++    dimensions(1280, 960, true);
++    dimensions(1440, 1080, true);
++    dimensions(1600, 1200, true);
++    dimensions(1920, 1000, true);
++    dimensions(1920, 1080, false);
++    dimensions(1922, 1000, false);
++    dimensions(1920, 1440, false);
++    dimensions(0, 960, false);
++    dimensions(-2, 960, false);
++    dimensions(1279, 960, false);
++    dimensions(2147483646, 2147483646, false);
++    System.out.println("FrameBytes: 8 buffer checks and " + dimensionChecks + " dimension checks passed (synthetic; no camera/ML Kit proof)");
+   }
+ }
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.test.ts b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.test.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+@@ -1,4 +1,5 @@
+ import { act, renderHook } from '@testing-library/react-native';
++import type { EffectCallback } from 'react';
+ import { AppState, type AppStateStatus } from 'react-native';
+ 
+ import { loadAndroidPhotoBinding } from '@/services/recognition/photo-android';
+@@ -14,14 +15,44 @@
+ const fixture = { kind: 'ocr', coordinateSpace: 'upright-frame', capturedAtMs: 1793001600000,
+   tokens: ['SYS 120', 'DIA 80', 'PUL 72'].map(text => ({ text, confidence: null, box: { x: 0, y: 0, width: 1, height: 0.1 } })) };
+ let listeners: ((state: AppStateStatus) => void)[];
++const originalCurrentState = Object.getOwnPropertyDescriptor(AppState, 'currentState');
++function setCurrentState(state: AppStateStatus) {
++  Object.defineProperty(AppState, 'currentState', { configurable: true, writable: true, value: state });
++}
+ beforeEach(() => {
+   jest.clearAllMocks(); listeners = [];
++  setCurrentState('active');
+   jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, listener) => {
+     listeners.push(listener); return { remove: jest.fn() };
+   });
+ });
+-afterEach(() => jest.restoreAllMocks());
++afterEach(() => {
++  jest.restoreAllMocks();
++  if (originalCurrentState) Object.defineProperty(AppState, 'currentState', originalCurrentState);
++});
+ async function flush() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
++
++// Reproduz cleanup/setup preservando o estado, como ocorre em Fast Refresh.
++function trackEffectRestarts() {
++  const react = jest.requireActual<typeof import('react')>('react');
++  const useEffect = react.useEffect;
++  const runs: { setup: EffectCallback; cleanup: ReturnType<EffectCallback> }[] = [];
++  jest.spyOn(react, 'useEffect').mockImplementation((setup, dependencies) => {
++    useEffect(() => {
++      const run = { setup, cleanup: setup() };
++      runs.push(run);
++      return () => { if (typeof run.cleanup === 'function') run.cleanup(); };
++    }, dependencies);
++  });
++  return async () => {
++    await act(async () => {
++      for (const run of runs) if (typeof run.cleanup === 'function') run.cleanup();
++      for (const run of runs) run.cleanup = run.setup();
++      await flush();
++    });
++  };
++}
++
+ async function setup() {
+   const permission = jest.fn(async () => true);
+   const handle = { recognize: jest.fn(async (): Promise<unknown> => fixture), cancelCapture: jest.fn(async () => true) };
+@@ -86,3 +117,121 @@
+   expect(t.result.current.review.state.confirmed?.systolic).toBe(120);
+   expect(t.result.current.review.isPreviewOnly).toBe(true);
+ });
++
++test('reinicio dos efeitos cria uma sessao nova em vez de reutilizar a descartada', async () => {
++  const restartEffects = trackEffectRestarts();
++  const t = await setup();
++  await restartEffects();
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).toHaveBeenCalledTimes(1);
++  expect(t.result.current.captureState.phase).toBe('opening');
++  await act(async () => { t.result.current.review.cancel(); await flush(); });
++});
++
++test('concessao depois de background nao retoma; novo gesto explicito pode iniciar', async () => {
++  const t = await setup();
++  let grant!: (allowed: boolean) => void;
++  t.permission.mockImplementationOnce(() => new Promise(resolve => { grant = resolve; }));
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.result.current.captureState.phase).toBe('permission');
++  await act(async () => {
++    setCurrentState('background');
++    listeners.forEach(listener => listener('background'));
++    await flush();
++    grant(true);
++    setCurrentState('active');
++    listeners.forEach(listener => listener('active'));
++    await flush();
++  });
++  expect(t.result.current.captureState.phase).toBe('cancelled');
++  expect(t.permission).toHaveBeenCalledTimes(1);
++  expect(t.handle.recognize).not.toHaveBeenCalled();
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).toHaveBeenCalledTimes(2);
++  expect(t.result.current.captureState.phase).toBe('opening');
++  await act(async () => { t.result.current.review.cancel(); await flush(); });
++});
++
++test('nao inicia em segundo plano e voltar nao abre camera automaticamente', async () => {
++  const t = await setup();
++  setCurrentState('background');
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).not.toHaveBeenCalled();
++  setCurrentState('active');
++  await act(async () => { listeners.forEach(listener => listener('active')); await flush(); });
++  expect(t.permission).not.toHaveBeenCalled();
++});
++
++test('reinicio aguarda cleanup anterior e exige novo gesto apos liberar', async () => {
++  const restartEffects = trackEffectRestarts();
++  const t = await setup();
++  await ready(t);
++  let release!: (value: boolean) => void;
++  t.handle.cancelCapture.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
++  await restartEffects();
++  expect(t.result.current.captureState.phase).toBe('closing');
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).toHaveBeenCalledTimes(1);
++  await act(async () => { release(true); await flush(); });
++  expect(t.result.current.captureState.phase).toBe('idle');
++  expect(t.permission).toHaveBeenCalledTimes(1);
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).toHaveBeenCalledTimes(2);
++  await act(async () => { t.result.current.review.cancel(); await flush(); });
++});
++
++test('falha de cleanup continua bloqueando apos reiniciar efeitos', async () => {
++  const restartEffects = trackEffectRestarts();
++  const t = await setup();
++  await ready(t);
++  t.handle.cancelCapture.mockResolvedValue(false);
++  await restartEffects();
++  expect(t.result.current.captureState).toMatchObject({ phase: 'blocked', issue: 'cleanup-failed' });
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.permission).toHaveBeenCalledTimes(1);
++});
++
++test('diagnostico identifica toque recusado pelo estado do app', async () => {
++  const t = await setup();
++  setCurrentState('background');
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.result.current.diagnosticVersion).toBe('captura-5');
++  expect(t.result.current.diagnostics).toEqual(expect.arrayContaining([
++    'toque:iniciar', 'app-no-toque:background', 'bloqueio:app-nao-ativo',
++  ]));
++  expect(t.permission).not.toHaveBeenCalled();
++});
++
++test('diagnostico e limitado e nao inclui saida OCR ou status nativo desconhecido', async () => {
++  const t = await setup();
++  await ready(t);
++  await act(async () => {
++    t.result.current.onStatus(t.result.current.captureState.attemptId, 'SENTINELA 120/80');
++    t.result.current.capture();
++    await flush();
++  });
++  expect(t.result.current.review.state.draft).toMatchObject({ systolic: '120', diastolic: '80', pulse: '72' });
++  const output = JSON.stringify(t.result.current.diagnostics);
++  expect(output).not.toContain('SENTINELA');
++  expect(output).not.toMatch(/120|80|72/);
++  await act(async () => {
++    for (let i = 0; i < 30; i++) t.result.current.review.cancel();
++    await flush();
++  });
++  expect(t.result.current.diagnostics.length).toBeLessThanOrEqual(18);
++});
++
++test('falha do quadro mostra metadados tecnicos sem criar candidatos', async () => {
++  const t = await setup();
++  t.handle.recognize.mockResolvedValue({ code: 'frame-failed', frameDiagnostic: {
++    revision: 'frame-1', reason: 'frame-plane', width: 1280, height: 960,
++    format: 35, rotation: 90, planeCount: 3, planes: [], text: 'SENTINELA',
++  } });
++  await ready(t);
++  await act(async () => { t.result.current.capture(); await flush(); });
++  expect(t.result.current.captureState).toMatchObject({ phase: 'failed', issue: 'frame-failed' });
++  expect(t.result.current.diagnostics).toContain('quadro:motivo=frame-plane');
++  expect(JSON.stringify(t.result.current.diagnostics)).not.toContain('SENTINELA');
++  expect(t.result.current.review.state.draft).toBeNull();
++  expect(t.result.current.review.state.confirmed).toBeNull();
++});
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.ts b/src/features/assisted-entry/useAndroidPhotoReview.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.ts
+@@ -1,11 +1,23 @@
+-import { useEffect, useState } from 'react';
++import { useCallback, useEffect, useRef, useState } from 'react';
+ import { AppState } from 'react-native';
+ 
+ import { createAndroidPhotoSession, type PhotoCaptureState } from '@/services/recognition/android-photo-session';
+ import { loadAndroidPhotoBinding, type AndroidPhotoBinding } from '@/services/recognition/photo-android';
++import { describeFrameFailure } from '@/services/recognition/frame-diagnostic';
+ import type { AndroidCameraHandle } from '@/services/recognition/photo-capture-contract';
+ 
+ import { useCandidateReview } from './useCandidateReview';
++
++type PhotoSession = ReturnType<typeof createAndroidPhotoSession>;
++
++function safeAppState(value: unknown): string {
++  return value === 'active' || value === 'background' || value === 'inactive'
++    || value === 'unknown' || value === 'extension' ? value : 'indefinido';
++}
++function safeNativeStatus(value: unknown): string {
++  return value === 'ready' || value === 'resource-busy' || value === 'permission-denied'
++    || value === 'camera-failed' || value === 'cleanup-failed' ? value : 'outro';
++}
+ 
+ // Recursos opacos em closures privadas; apenas fases/candidatos vão ao estado de UI.
+ function createViewAccess() {
+@@ -24,32 +36,128 @@
+   const [captureState, setCaptureState] = useState<PhotoCaptureState>({ phase: 'idle', attemptId: 0, issue: null });
+   const [binding, setBinding] = useState<AndroidPhotoBinding | null>(null);
+   const [access] = useState(createViewAccess);
+-  const [session] = useState(() => createAndroidPhotoSession({
+-    requestPermission: () => access.binding()!.requestPermission(),
+-    open: () => { /* A fase opening monta/ativa a view com attemptId. */ },
+-    recognize: () => access.camera()?.recognize() ?? Promise.reject(new Error('camera-unavailable')),
+-    close: () => access.camera()?.cancelCapture() ?? Promise.resolve(true),
+-  }, setCaptureState, (_attemptId, candidates) => { review.receive(access.attempt(), candidates); }));
++  const [sessions] = useState(() => ({ current: null as PhotoSession | null,
++    retirement: null as Promise<boolean> | null }));
++  // Somente codigos de controle limitados a 18 entradas em memoria. Nunca incluir
++  // observacoes, candidatos, texto OCR, valores clinicos ou excecoes de SDK.
++  const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
++  const diagnosticMounted = useRef(true);
++  const record = useCallback((code: string) => {
++    if (diagnosticMounted.current) setDiagnostics(previous => [...previous.slice(-17), code]);
++  }, []);
+   useEffect(() => {
++    diagnosticMounted.current = true;
++    return () => { diagnosticMounted.current = false; };
++  }, []);
++  const attachCamera = useCallback((value: AndroidCameraHandle | null) => {
++    access.attachCamera(value);
++    record(value ? 'view:referencia-presente' : 'view:referencia-removida');
++  }, [access, record]);
++  useEffect(() => {
++    // Recursos pertencem ao efeito. Strict Effects/Fast Refresh preservam estado,
++    // mas executam cleanup/setup: nao reutilizar uma sessao ja descartada.
++    const session = createAndroidPhotoSession({
++      requestPermission: async () => {
++        record('permissao:verificando');
++        try {
++          const allowed = await access.binding()!.requestPermission();
++          record(allowed ? 'permissao:concedida' : 'permissao:negada');
++          return allowed;
++        } catch {
++          record('permissao:falha');
++          throw new Error('camera-permission-failed');
++        }
++      },
++      open: () => { record('view:montagem-solicitada'); },
++      recognize: async () => {
++        const camera = access.camera();
++        if (!camera) throw new Error('camera-unavailable');
++        const raw: unknown = await camera.recognize();
++        if (raw && typeof raw === 'object' && 'frameDiagnostic' in raw) {
++          for (const line of describeFrameFailure(raw.frameDiagnostic)) record(line);
++        }
++        return raw;
++      },
++      close: () => access.camera()?.cancelCapture() ?? Promise.resolve(true),
++    }, next => {
++      if (sessions.current === session) {
++        record(`fase:${next.phase}`);
++        if (next.issue) record(`falha:${next.issue}`);
++        setCaptureState(next);
++      }
++    }, (_attemptId, candidates) => {
++      if (sessions.current === session) review.receive(access.attempt(), candidates);
++    });
++    sessions.current = session;
++    record('sessao:criada');
++    const retirement = sessions.retirement;
++    if (retirement) {
++      // Nao abrir nova camera enquanto a sessao anterior ainda libera recursos.
++      // eslint-disable-next-line react-hooks/set-state-in-effect
++      setCaptureState({ phase: 'closing', attemptId: 0, issue: null });
++      void retirement.then(released => {
++        if (sessions.current !== session || sessions.retirement !== retirement) return;
++        if (released) {
++          sessions.retirement = null;
++          setCaptureState({ phase: 'idle', attemptId: 0, issue: null });
++        } else {
++          setCaptureState({ phase: 'blocked', attemptId: 0, issue: 'cleanup-failed' });
++        }
++      });
++    }
+     const listener = AppState.addEventListener('change', state => {
+-      if (state !== 'active') { review.cancel(); void session.cancel(); }
++      record(`app:${safeAppState(state)}`);
++      if (state !== 'active') {
++        record('cancelamento:mudanca-do-app');
++        review.cancel(); void session.cancel();
++      }
+     });
+-    return () => { listener.remove(); session.dispose(); };
++    return () => {
++      listener.remove();
++      if (sessions.current === session) sessions.current = null;
++      session.dispose();
++      const previous = sessions.retirement ?? Promise.resolve(true);
++      // Preservar a barreira inclusive em varios ciclos de cleanup/setup.
++      sessions.retirement = Promise.all([previous, session.settled()])
++        .then(([released]) => released && session.isReleased(), () => false);
++    };
+     // Métodos da revisão acessam refs síncronas; identidade fixa por montagem.
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [session]);
++  }, [access, sessions, record]);
+   function start(): number {
++    record('toque:iniciar');
++    record(`app-no-toque:${safeAppState(AppState.currentState)}`);
++    const session = sessions.current;
++    if (!session) { record('bloqueio:sem-sessao'); return access.attempt(); }
++    if (sessions.retirement) { record('bloqueio:limpeza-pendente'); return access.attempt(); }
++    if (AppState.currentState !== 'active') { record('bloqueio:app-nao-ativo'); return access.attempt(); }
+     try {
+       if (!access.binding()) {
+-        const loaded = loadAndroidPhotoBinding();
++        const loaded = loadAndroidPhotoBinding(route => record(route === 'already-granted'
++          ? 'permissao:ja-concedida-sem-dialogo' : 'permissao:dialogo-necessario'));
+         access.setBinding(loaded); setBinding(loaded);
++        record('modulo:carregado');
++        record(`modulo-nativo:${loaded.nativeRevision ?? 'anterior'}`);
+       }
+-      if (session.start()) access.setAttempt(review.recapture());
+-    } catch { setCaptureState({ phase: 'failed', attemptId: 0, issue: 'unsupported' }); }
++      const accepted = session.start();
++      record(accepted ? 'inicio:aceito' : 'inicio:recusado');
++      if (accepted) access.setAttempt(review.recapture());
++    } catch {
++      record('modulo:falha');
++      setCaptureState({ phase: 'failed', attemptId: 0, issue: 'unsupported' });
++    }
+     return access.attempt();
+   }
+-  function cancel() { review.cancel(); void session.cancel(); }
++  function cancel() { record('toque:cancelar'); review.cancel(); void sessions.current?.cancel(); }
++  const onStatus = useCallback((attemptId: number, code: string) => {
++    record(`nativo:${safeNativeStatus(code)}`);
++    sessions.current?.status(attemptId, code);
++  }, [record, sessions]);
+   const busy = ['permission', 'opening', 'ready', 'recognizing', 'closing', 'blocked'].includes(captureState.phase);
+   return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+-    binding, attachCamera: access.attachCamera, start, capture: session.capture, onStatus: session.status, busy };
++    binding, attachCamera, start,
++    capture: () => { record('toque:capturar'); return sessions.current?.capture() ?? false; },
++    onStatus, busy, diagnostics, diagnosticVersion: 'captura-5' as const,
++    diagnosticNativeRevision: binding?.nativeRevision ?? 'nao-carregado',
++    diagnosticAppState: safeAppState(AppState.currentState) };
+ }
+diff --git a/src/screens/AndroidPhotoCaptureScreen.tsx b/src/screens/AndroidPhotoCaptureScreen.tsx
+--- a/src/screens/AndroidPhotoCaptureScreen.tsx
++++ b/src/screens/AndroidPhotoCaptureScreen.tsx
+@@ -1,3 +1,5 @@
++import { Text as NativeText, View } from 'react-native';
++
+ import { CandidateReadingReview } from '@/components/bp/CandidateReadingReview';
+ import { Button } from '@/components/ui/Button';
+ import { Card } from '@/components/ui/Card';
+@@ -13,7 +15,8 @@
+   cancelled: 'Captura cancelada.', failed: 'Tentativa encerrada.', blocked: 'Recursos ainda não liberados; saia do fluxo.',
+ };
+ export function AndroidPhotoCaptureScreen() {
+-  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy } = useAndroidPhotoReview();
++  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy,
++    diagnostics, diagnosticVersion, diagnosticAppState, diagnosticNativeRevision } = useAndroidPhotoReview();
+   const Camera = binding?.Camera;
+   const active = ['opening', 'ready', 'recognizing'].includes(captureState.phase);
+   return (
+@@ -31,6 +34,20 @@
+         <Button label="Cancelar captura" variant="ghost" onPress={review.cancel} />
+         <Text accessibilityLiveRegion="polite">{PHASES[captureState.phase]}</Text>
+         {captureState.issue ? <Text accessibilityRole="alert">{PHOTO_MESSAGES[captureState.issue]}</Text> : null}
++        <View style={{ padding: 12, borderWidth: 1, borderColor: '#94a3b8', backgroundColor: '#f8fafc' }}>
++          <NativeText style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>
++            Diagnostico da captura: {diagnosticVersion}
++          </NativeText>
++          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++            App: {diagnosticAppState} | Fase: {captureState.phase}
++          </NativeText>
++          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++            Nativo: {diagnosticNativeRevision}
++          </NativeText>
++          <NativeText selectable style={{ fontSize: 14, color: '#0f172a' }}>
++            {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
++          </NativeText>
++        </View>
+       </Card>
+       <CandidateReadingReview review={review} />
+     </Screen>
+diff --git a/src/services/recognition/android-photo-session.ts b/src/services/recognition/android-photo-session.ts
+--- a/src/services/recognition/android-photo-session.ts
++++ b/src/services/recognition/android-photo-session.ts
+@@ -96,5 +96,6 @@
+     return completion;
+   }
+   function dispose() { disposed = true; void cancel(); }
+-  return { start, capture, status, cancel, dispose, settled: () => completion };
++  return { start, capture, status, cancel, dispose, settled: () => completion,
++    isReleased: () => current === null && state.phase !== 'blocked' };
+ }
+diff --git a/src/services/recognition/frame-diagnostic.test.ts b/src/services/recognition/frame-diagnostic.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/frame-diagnostic.test.ts
+@@ -0,0 +1,31 @@
++import { describeFrameFailure } from './frame-diagnostic';
++
++const sample = () => ({ revision: 'frame-1', reason: 'frame-size', width: 1920, height: 1080,
++  format: 35, rotation: 90, planeCount: 3,
++  planes: [{ rowStride: 1920, pixelStride: 1, position: 0, limit: 2073600 }],
++});
++
++test('projeta somente motivo, dimensoes e strides tecnicos', () => {
++  const lines = describeFrameFailure({ ...sample(), text: 'SENTINELA', image: 'SENTINELA', systolic: 120 });
++  expect(lines).toEqual([
++    'quadro:motivo=frame-size',
++    'quadro:1920x1080; formato=35; planos=3; rot=90',
++    'plano0:linha=1920; pixel=1; pos=0; limite=2073600',
++  ]);
++  expect(JSON.stringify(lines)).not.toContain('SENTINELA');
++});
++
++test.each([null, 'SENTINELA', {}, { ...sample(), reason: 'SENTINELA' },
++  { ...sample(), width: '1920' }, { ...sample(), height: NaN },
++  { ...sample(), rotation: '90' }, { ...sample(), revision: 'unknown' },
++])('metadado malformado nao e serializado', value => {
++  expect(describeFrameFailure(value)).toEqual([]);
++});
++
++test('limita os planos e rejeita campo textual de buffer', () => {
++  const data = sample();
++  expect(describeFrameFailure({ ...data, planes: Array(50).fill(data.planes[0]) })).toHaveLength(5);
++  const result = describeFrameFailure({ ...data, planes: [{ ...data.planes[0], limit: 'SENTINELA' }] });
++  expect(result).toHaveLength(2);
++  expect(JSON.stringify(result)).not.toContain('SENTINELA');
++});
+diff --git a/src/services/recognition/frame-diagnostic.ts b/src/services/recognition/frame-diagnostic.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/frame-diagnostic.ts
+@@ -0,0 +1,22 @@
++/** Projecao limitada de metadados nativos. Nao serializar objetos/erros do SDK. */
++export function describeFrameFailure(value: unknown): readonly string[] {
++  if (!value || typeof value !== 'object') return [];
++  const data = value as Record<string, unknown>;
++  const reasons = ['frame-format', 'frame-size', 'frame-stride', 'frame-plane', 'frame-copy'];
++  if (data.revision !== 'frame-1' || typeof data.reason !== 'string' || !reasons.includes(data.reason)) return [];
++  const integer = (v: unknown, maximum: number): v is number => typeof v === 'number'
++    && Number.isInteger(v) && v >= 0 && v <= maximum;
++  if (!integer(data.width, 100000) || !integer(data.height, 100000)
++    || !integer(data.format, 1000) || !integer(data.planeCount, 8)
++    || ![0, 90, 180, 270].includes(data.rotation as number)) return [];
++  const lines = [`quadro:motivo=${data.reason}`,
++    `quadro:${data.width}x${data.height}; formato=${data.format}; planos=${data.planeCount}; rot=${data.rotation}`];
++  if (Array.isArray(data.planes)) for (const [index, item] of data.planes.slice(0, 3).entries()) {
++    if (!item || typeof item !== 'object') continue;
++    const plane = item as Record<string, unknown>;
++    const fields = ['rowStride', 'pixelStride', 'position', 'limit'] as const;
++    if (!fields.every(key => integer(plane[key], 2147483647))) continue;
++    lines.push(`plano${index}:linha=${plane.rowStride}; pixel=${plane.pixelStride}; pos=${plane.position}; limite=${plane.limit}`);
++  }
++  return lines;
++}
+diff --git a/src/services/recognition/photo-android.native.test.ts b/src/services/recognition/photo-android.native.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/photo-android.native.test.ts
+@@ -0,0 +1,78 @@
++import { requireNativeView, requireOptionalNativeModule } from 'expo';
++import { PermissionsAndroid } from 'react-native';
++
++import { loadAndroidPhotoBinding } from './photo-android.native';
++
++jest.mock('expo', () => ({
++  requireNativeView: jest.fn(() => () => null),
++  requireOptionalNativeModule: jest.fn(),
++}), { virtual: true });
++jest.mock('react-native', () => ({ PermissionsAndroid: {
++  PERMISSIONS: { CAMERA: 'android.permission.CAMERA' }, check: jest.fn(),
++} }));
++
++beforeEach(() => jest.clearAllMocks());
++function setup() {
++  const requestCameraPermission = jest.fn(async () => true);
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ requestCameraPermission });
++  const route = jest.fn();
++  const binding = loadAndroidPhotoBinding(route);
++  return { binding, route, requestCameraPermission };
++}
++
++test('carregar binding nao verifica nem solicita permissao ou abre captura', () => {
++  const t = setup();
++  expect(PermissionsAndroid.check).not.toHaveBeenCalled();
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++  expect(requireNativeView).toHaveBeenCalledWith('AferiPhotoCapture');
++  expect(t.binding.nativeRevision).toBe('anterior');
++});
++
++test.each(['frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: revision, requestCameraPermission: jest.fn() });
++  expect(loadAndroidPhotoBinding().nativeRevision).toBe(revision);
++  expect(PermissionsAndroid.check).not.toHaveBeenCalled();
++});
++
++test('nao exibe constante nativa arbitraria', () => {
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: 'SENTINELA', requestCameraPermission: jest.fn() });
++  expect(loadAndroidPhotoBinding().nativeRevision).toBe('anterior');
++});
++
++test('permissao ja concedida evita a solicitacao nativa e outro dialogo', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(true);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(PermissionsAndroid.check).toHaveBeenCalledWith('android.permission.CAMERA');
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++  expect(t.route).toHaveBeenCalledWith('already-granted');
++});
++
++test('sem permissao solicita uma vez e retorna o resultado real', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++  expect(t.route).toHaveBeenCalledWith('request-required');
++});
++
++test('recusa continua falsa sem retry automatico', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(false);
++  t.requestCameraPermission.mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(false);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++});
++
++test('falha na consulta nao inicia dialogo como fallback', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockRejectedValue(new Error('query-failed'));
++  await expect(t.binding.requestPermission()).rejects.toThrow('query-failed');
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++});
++
++test('aceite anterior nao e cacheado: revogacao entre tentativas volta a ser verificada', async () => {
++  const t = setup();
++  jest.mocked(PermissionsAndroid.check).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
++  t.requestCameraPermission.mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(await t.binding.requestPermission()).toBe(false);
++  expect(PermissionsAndroid.check).toHaveBeenCalledTimes(2);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++});
+diff --git a/src/services/recognition/photo-android.native.ts b/src/services/recognition/photo-android.native.ts
+--- a/src/services/recognition/photo-android.native.ts
++++ b/src/services/recognition/photo-android.native.ts
+@@ -1,6 +1,6 @@
+ import { requireNativeView, requireOptionalNativeModule } from 'expo';
+ import type { ComponentType, Ref } from 'react';
+-import type { NativeSyntheticEvent, ViewProps } from 'react-native';
++import { PermissionsAndroid, type NativeSyntheticEvent, type ViewProps } from 'react-native';
+ 
+ import { PhotoCaptureError, type AndroidCameraHandle } from './photo-capture-contract';
+ 
+@@ -11,13 +11,25 @@
+   onStatus: (event: NativeSyntheticEvent<{ status: string; attemptId: number }>) => void;
+ }
+ export interface AndroidPhotoBinding {
++  nativeRevision?: 'preview-1' | 'frame-1' | 'anterior';
+   requestPermission(): Promise<boolean>;
+   Camera: ComponentType<CameraPreviewProps>;
+ }
+ /** Executar somente ao entrar explicitamente na modalidade Android. */
+-export function loadAndroidPhotoBinding(): AndroidPhotoBinding {
+-  const native = requireOptionalNativeModule<{ requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
++export function loadAndroidPhotoBinding(onPermissionRoute?: (route: 'already-granted' | 'request-required') => void): AndroidPhotoBinding {
++  const native = requireOptionalNativeModule<{ captureRevision?: unknown; requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
+   if (!native) throw new PhotoCaptureError('unsupported');
+-  return { requestPermission: () => native.requestCameraPermission(),
++  return { nativeRevision: native.captureRevision === 'preview-1' || native.captureRevision === 'frame-1'
++    ? native.captureRevision : 'anterior',
++    requestPermission: async () => {
++      // Consultar nao abre Activity/dialogo nem inicia camera. Reutilizar o aceite
++      // atual evita pedir novamente e interromper a tentativa por AppState.
++      if (await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA)) {
++        onPermissionRoute?.('already-granted');
++        return true;
++      }
++      onPermissionRoute?.('request-required');
++      return native.requestCameraPermission();
++    },
+     Camera: requireNativeView<CameraPreviewProps>('AferiPhotoCapture') };
+ }
+diff --git a/src/services/recognition/photo-capture-contract.ts b/src/services/recognition/photo-capture-contract.ts
+--- a/src/services/recognition/photo-capture-contract.ts
++++ b/src/services/recognition/photo-capture-contract.ts
+@@ -18,7 +18,7 @@
+   'permission-denied': 'Permissão de câmera negada. Você pode voltar ou ajustar a permissão e tentar novamente.',
+   'device-unavailable': 'Câmera indisponível. Tente novamente ou volte ao manual.',
+   'camera-failed': 'Não foi possível preparar a câmera. Tente novamente ou volte ao manual.',
+-  'frame-failed': 'O quadro não pôde ser lido em memória. Tente outro enquadramento.',
++  'frame-failed': 'Não foi possível preparar o quadro da câmera em memória. Tente novamente ou volte ao manual.',
+   'engine-failed': 'Não foi possível interpretar esta captura. Tente novamente ou preencha manualmente.',
+   'resource-busy': 'O reconhecedor ainda está liberando recursos. Aguarde antes de tentar novamente.',
+   'cleanup-failed': 'Não foi possível comprovar a liberação dos recursos. Saia deste fluxo antes de tentar novamente.',

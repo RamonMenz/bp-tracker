@@ -1,0 +1,374 @@
+diff --git a/demos/android-capture/index.tsx b/demos/android-capture/index.tsx
+--- a/demos/android-capture/index.tsx
++++ b/demos/android-capture/index.tsx
+@@ -21,7 +21,7 @@
+     <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+       <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
+         <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
+-          Aferi: diagnostico de captura 3
++          Aferi: diagnostico de captura 4
+         </NativeText>
+         <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+           JavaScript iniciou.
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+@@ -12,6 +12,7 @@
+   private val cameras = mutableSetOf<AferiPhotoView>()
+   override fun definition() = ModuleDefinition {
+     Name("AferiPhotoCapture")
++    Constants("captureRevision" to "frame-1")
+     AsyncFunction("requestCameraPermission") { promise: Promise ->
+       val context = appContext.reactContext
+       val permissions = appContext.permissions
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+@@ -11,6 +11,8 @@
+ import androidx.camera.core.CameraSelector
+ import androidx.camera.core.ImageAnalysis
+ import androidx.camera.core.Preview
++import androidx.camera.core.resolutionselector.ResolutionSelector
++import androidx.camera.core.resolutionselector.ResolutionStrategy
+ import androidx.camera.lifecycle.ProcessCameraProvider
+ import androidx.camera.view.PreviewView
+ import androidx.core.content.ContextCompat
+@@ -51,7 +53,11 @@
+   var requestedActive = false
+   var attemptId = 0
+ 
+-  init { addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)) }
++  init {
++    // TextureView compoe o preview dentro da hierarquia React/ScrollView.
++    preview.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
++    addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
++  }
+   override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+     preview.layout(0, 0, right - left, bottom - top)
+   }
+@@ -82,8 +88,14 @@
+         if (owner == null) { fail("camera-failed"); return@addListener }
+         provider = future.get()
+         surface = Preview.Builder().build().also { it.setSurfaceProvider(preview.surfaceProvider) }
+-        @Suppress("DEPRECATION")
+-        val analysis = ImageAnalysis.Builder().setTargetResolution(Size(1280, 960))
++        // O tamanho alvo antigo era uma preferencia, nao um teto. Filtrar antes
++        // do bind para nunca selecionar um quadro que o copiador recusaria.
++        val selector = ResolutionSelector.Builder()
++          .setResolutionStrategy(ResolutionStrategy(Size(1280, 960), ResolutionStrategy.FALLBACK_RULE_CLOSEST_LOWER_THEN_HIGHER))
++          .setResolutionFilter { sizes, _ -> sizes.filter { FrameBytes.acceptsDimensions(it.width, it.height) } }
++          .build()
++        val analysis = ImageAnalysis.Builder().setResolutionSelector(selector)
++          .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_YUV_420_888)
+           .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build()
+         frames = analysis
+         recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+@@ -95,16 +107,33 @@
+           val height = frame.height
+           val rotation = frame.imageInfo.rotationDegrees
+           val capturedAtMs = System.currentTimeMillis()
++          // Somente metadados tecnicos; nunca bytes, pixels ou texto reconhecido.
++          val diagnostic = mutableMapOf<String, Any?>("revision" to "frame-1",
++            "width" to width, "height" to height, "format" to frame.format,
++            "rotation" to rotation, "maxPixels" to FrameBytes.MAX_FRAME_PIXELS)
+           ownedBytes = null
+           try {
+             val p = frame.planes
++            diagnostic["planeCount"] = p.size
++            diagnostic["planes"] = p.take(3).map { plane ->
++              val buffer = plane.buffer
++              mapOf("rowStride" to plane.rowStride, "pixelStride" to plane.pixelStride,
++                "position" to buffer.position(), "limit" to buffer.limit())
++            }
+             if (frame.format != ImageFormat.YUV_420_888 || p.size != 3) throw IllegalArgumentException("frame-format")
+             ownedBytes = FrameBytes.nv21(width, height,
+               p[0].buffer, p[0].rowStride, p[0].pixelStride,
+               p[1].buffer, p[1].rowStride, p[1].pixelStride,
+               p[2].buffer, p[2].rowStride, p[2].pixelStride)
+-          } catch (_: Exception) {
+-            settle(mapOf("code" to "frame-failed"))
++          } catch (error: Exception) {
++            diagnostic["reason"] = when (error.message) {
++              "frame-format" -> "frame-format"
++              "frame-size" -> "frame-size"
++              "frame-stride" -> "frame-stride"
++              "frame-plane" -> "frame-plane"
++              else -> "frame-copy"
++            }
++            settle(mapOf("code" to "frame-failed", "frameDiagnostic" to diagnostic.toMap()))
+           } finally { frame.close() }
+           // O ImageProxy já está fechado. A câmera pode ser liberada imediatamente,
+           // pois o ML Kit lerá apenas nossa cópia NV21, sem URI/arquivo.
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java
+@@ -4,12 +4,16 @@
+ 
+ /** Cópia YUV_420_888 -> NV21 em RAM. Independente de Android para testar strides reais. */
+ public final class FrameBytes {
++  public static final int MAX_FRAME_PIXELS = 1920000;
+   private FrameBytes() {}
++  public static boolean acceptsDimensions(int width, int height) {
++    return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0
++        && (long) width * height <= MAX_FRAME_PIXELS;
++  }
+   public static byte[] nv21(int width, int height,
+       ByteBuffer y, int yRow, int yPixel, ByteBuffer u, int uRow, int uPixel,
+       ByteBuffer v, int vRow, int vPixel) {
+-    if (width <= 0 || height <= 0 || (width & 1) != 0 || (height & 1) != 0
+-        || (long) width * height > 1920000) throw new IllegalArgumentException("frame-size");
++    if (!acceptsDimensions(width, height)) throw new IllegalArgumentException("frame-size");
+     if (yRow <= 0 || yPixel <= 0 || uRow <= 0 || uPixel <= 0 || vRow <= 0 || vPixel <= 0)
+       throw new IllegalArgumentException("frame-stride");
+     byte[] bytes = new byte[width * height * 3 / 2];
+diff --git a/native-modules/aferi-photo-capture/checks/FrameBytesTest.java b/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
+--- a/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
++++ b/native-modules/aferi-photo-capture/checks/FrameBytesTest.java
+@@ -4,6 +4,11 @@
+ import java.util.Arrays;
+ 
+ public final class FrameBytesTest {
++  private static int dimensionChecks = 0;
++  private static void dimensions(int width, int height, boolean accepted) {
++    if (FrameBytes.acceptsDimensions(width, height) != accepted) throw new AssertionError("frame-dimension-policy");
++    dimensionChecks++;
++  }
+   private static void equal(byte[] actual, byte[] expected) {
+     if (!Arrays.equals(actual, expected)) throw new AssertionError("synthetic-frame-mismatch");
+   }
+@@ -30,6 +35,17 @@
+     fails(() -> FrameBytes.nv21(4,2,y,100,1,u,2,1,v,2,1));
+     fails(() -> FrameBytes.nv21(4,2,y,4,0,u,2,1,v,2,1));
+     equal(FrameBytes.nv21(4,2,y.asReadOnlyBuffer(),4,1,u,2,1,v,2,1), expected);
+-    System.out.println("FrameBytes: 8 checks passed (synthetic buffers; no camera/ML Kit proof)");
++    dimensions(1280, 960, true);
++    dimensions(1440, 1080, true);
++    dimensions(1600, 1200, true);
++    dimensions(1920, 1000, true);
++    dimensions(1920, 1080, false);
++    dimensions(1922, 1000, false);
++    dimensions(1920, 1440, false);
++    dimensions(0, 960, false);
++    dimensions(-2, 960, false);
++    dimensions(1279, 960, false);
++    dimensions(2147483646, 2147483646, false);
++    System.out.println("FrameBytes: 8 buffer checks and " + dimensionChecks + " dimension checks passed (synthetic; no camera/ML Kit proof)");
+   }
+ }
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.test.ts b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.test.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+@@ -195,7 +195,7 @@
+   const t = await setup();
+   setCurrentState('background');
+   await act(async () => { t.result.current.start(); await flush(); });
+-  expect(t.result.current.diagnosticVersion).toBe('captura-3');
++  expect(t.result.current.diagnosticVersion).toBe('captura-4');
+   expect(t.result.current.diagnostics).toEqual(expect.arrayContaining([
+     'toque:iniciar', 'app-no-toque:background', 'bloqueio:app-nao-ativo',
+   ]));
+@@ -220,3 +220,18 @@
+   });
+   expect(t.result.current.diagnostics.length).toBeLessThanOrEqual(18);
+ });
++
++test('falha do quadro mostra metadados tecnicos sem criar candidatos', async () => {
++  const t = await setup();
++  t.handle.recognize.mockResolvedValue({ code: 'frame-failed', frameDiagnostic: {
++    revision: 'frame-1', reason: 'frame-plane', width: 1280, height: 960,
++    format: 35, rotation: 90, planeCount: 3, planes: [], text: 'SENTINELA',
++  } });
++  await ready(t);
++  await act(async () => { t.result.current.capture(); await flush(); });
++  expect(t.result.current.captureState).toMatchObject({ phase: 'failed', issue: 'frame-failed' });
++  expect(t.result.current.diagnostics).toContain('quadro:motivo=frame-plane');
++  expect(JSON.stringify(t.result.current.diagnostics)).not.toContain('SENTINELA');
++  expect(t.result.current.review.state.draft).toBeNull();
++  expect(t.result.current.review.state.confirmed).toBeNull();
++});
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.ts b/src/features/assisted-entry/useAndroidPhotoReview.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.ts
+@@ -3,6 +3,7 @@
+ 
+ import { createAndroidPhotoSession, type PhotoCaptureState } from '@/services/recognition/android-photo-session';
+ import { loadAndroidPhotoBinding, type AndroidPhotoBinding } from '@/services/recognition/photo-android';
++import { describeFrameFailure } from '@/services/recognition/frame-diagnostic';
+ import type { AndroidCameraHandle } from '@/services/recognition/photo-capture-contract';
+ 
+ import { useCandidateReview } from './useCandidateReview';
+@@ -68,7 +69,15 @@
+         }
+       },
+       open: () => { record('view:montagem-solicitada'); },
+-      recognize: () => access.camera()?.recognize() ?? Promise.reject(new Error('camera-unavailable')),
++      recognize: async () => {
++        const camera = access.camera();
++        if (!camera) throw new Error('camera-unavailable');
++        const raw: unknown = await camera.recognize();
++        if (raw && typeof raw === 'object' && 'frameDiagnostic' in raw) {
++          for (const line of describeFrameFailure(raw.frameDiagnostic)) record(line);
++        }
++        return raw;
++      },
+       close: () => access.camera()?.cancelCapture() ?? Promise.resolve(true),
+     }, next => {
+       if (sessions.current === session) {
+@@ -128,6 +137,7 @@
+           ? 'permissao:ja-concedida-sem-dialogo' : 'permissao:dialogo-necessario'));
+         access.setBinding(loaded); setBinding(loaded);
+         record('modulo:carregado');
++        record(`modulo-nativo:${loaded.nativeRevision ?? 'anterior'}`);
+       }
+       const accepted = session.start();
+       record(accepted ? 'inicio:aceito' : 'inicio:recusado');
+@@ -147,6 +157,7 @@
+   return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+     binding, attachCamera, start,
+     capture: () => { record('toque:capturar'); return sessions.current?.capture() ?? false; },
+-    onStatus, busy, diagnostics, diagnosticVersion: 'captura-3' as const,
++    onStatus, busy, diagnostics, diagnosticVersion: 'captura-4' as const,
++    diagnosticNativeRevision: binding?.nativeRevision ?? 'nao-carregado',
+     diagnosticAppState: safeAppState(AppState.currentState) };
+ }
+diff --git a/src/screens/AndroidPhotoCaptureScreen.tsx b/src/screens/AndroidPhotoCaptureScreen.tsx
+--- a/src/screens/AndroidPhotoCaptureScreen.tsx
++++ b/src/screens/AndroidPhotoCaptureScreen.tsx
+@@ -16,7 +16,7 @@
+ };
+ export function AndroidPhotoCaptureScreen() {
+   const { review, captureState, binding, attachCamera, start, capture, onStatus, busy,
+-    diagnostics, diagnosticVersion, diagnosticAppState } = useAndroidPhotoReview();
++    diagnostics, diagnosticVersion, diagnosticAppState, diagnosticNativeRevision } = useAndroidPhotoReview();
+   const Camera = binding?.Camera;
+   const active = ['opening', 'ready', 'recognizing'].includes(captureState.phase);
+   return (
+@@ -41,6 +41,9 @@
+           <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+             App: {diagnosticAppState} | Fase: {captureState.phase}
+           </NativeText>
++          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++            Nativo: {diagnosticNativeRevision}
++          </NativeText>
+           <NativeText selectable style={{ fontSize: 14, color: '#0f172a' }}>
+             {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
+           </NativeText>
+diff --git a/src/services/recognition/photo-android.native.test.ts b/src/services/recognition/photo-android.native.test.ts
+--- a/src/services/recognition/photo-android.native.test.ts
++++ b/src/services/recognition/photo-android.native.test.ts
+@@ -25,6 +25,18 @@
+   expect(PermissionsAndroid.check).not.toHaveBeenCalled();
+   expect(t.requestCameraPermission).not.toHaveBeenCalled();
+   expect(requireNativeView).toHaveBeenCalledWith('AferiPhotoCapture');
++  expect(t.binding.nativeRevision).toBe('anterior');
++});
++
++test('identifica a revisao do APK sem capturar ou solicitar permissao', () => {
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: 'frame-1', requestCameraPermission: jest.fn() });
++  expect(loadAndroidPhotoBinding().nativeRevision).toBe('frame-1');
++  expect(PermissionsAndroid.check).not.toHaveBeenCalled();
++});
++
++test('nao exibe constante nativa arbitraria', () => {
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: 'SENTINELA', requestCameraPermission: jest.fn() });
++  expect(loadAndroidPhotoBinding().nativeRevision).toBe('anterior');
+ });
+ 
+ test('permissao ja concedida evita a solicitacao nativa e outro dialogo', async () => {
+diff --git a/src/services/recognition/photo-android.native.ts b/src/services/recognition/photo-android.native.ts
+--- a/src/services/recognition/photo-android.native.ts
++++ b/src/services/recognition/photo-android.native.ts
+@@ -11,14 +11,16 @@
+   onStatus: (event: NativeSyntheticEvent<{ status: string; attemptId: number }>) => void;
+ }
+ export interface AndroidPhotoBinding {
++  nativeRevision?: 'frame-1' | 'anterior';
+   requestPermission(): Promise<boolean>;
+   Camera: ComponentType<CameraPreviewProps>;
+ }
+ /** Executar somente ao entrar explicitamente na modalidade Android. */
+ export function loadAndroidPhotoBinding(onPermissionRoute?: (route: 'already-granted' | 'request-required') => void): AndroidPhotoBinding {
+-  const native = requireOptionalNativeModule<{ requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
++  const native = requireOptionalNativeModule<{ captureRevision?: unknown; requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
+   if (!native) throw new PhotoCaptureError('unsupported');
+-  return { requestPermission: async () => {
++  return { nativeRevision: native.captureRevision === 'frame-1' ? 'frame-1' : 'anterior',
++    requestPermission: async () => {
+       // Consultar nao abre Activity/dialogo nem inicia camera. Reutilizar o aceite
+       // atual evita pedir novamente e interromper a tentativa por AppState.
+       if (await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA)) {
+diff --git a/src/services/recognition/photo-capture-contract.ts b/src/services/recognition/photo-capture-contract.ts
+--- a/src/services/recognition/photo-capture-contract.ts
++++ b/src/services/recognition/photo-capture-contract.ts
+@@ -18,7 +18,7 @@
+   'permission-denied': 'Permissão de câmera negada. Você pode voltar ou ajustar a permissão e tentar novamente.',
+   'device-unavailable': 'Câmera indisponível. Tente novamente ou volte ao manual.',
+   'camera-failed': 'Não foi possível preparar a câmera. Tente novamente ou volte ao manual.',
+-  'frame-failed': 'O quadro não pôde ser lido em memória. Tente outro enquadramento.',
++  'frame-failed': 'Não foi possível preparar o quadro da câmera em memória. Tente novamente ou volte ao manual.',
+   'engine-failed': 'Não foi possível interpretar esta captura. Tente novamente ou preencha manualmente.',
+   'resource-busy': 'O reconhecedor ainda está liberando recursos. Aguarde antes de tentar novamente.',
+   'cleanup-failed': 'Não foi possível comprovar a liberação dos recursos. Saia deste fluxo antes de tentar novamente.',
+diff --git a/src/services/recognition/frame-diagnostic.ts b/src/services/recognition/frame-diagnostic.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/frame-diagnostic.ts
+@@ -0,0 +1,22 @@
++/** Projecao limitada de metadados nativos. Nao serializar objetos/erros do SDK. */
++export function describeFrameFailure(value: unknown): readonly string[] {
++  if (!value || typeof value !== 'object') return [];
++  const data = value as Record<string, unknown>;
++  const reasons = ['frame-format', 'frame-size', 'frame-stride', 'frame-plane', 'frame-copy'];
++  if (data.revision !== 'frame-1' || typeof data.reason !== 'string' || !reasons.includes(data.reason)) return [];
++  const integer = (v: unknown, maximum: number): v is number => typeof v === 'number'
++    && Number.isInteger(v) && v >= 0 && v <= maximum;
++  if (!integer(data.width, 100000) || !integer(data.height, 100000)
++    || !integer(data.format, 1000) || !integer(data.planeCount, 8)
++    || ![0, 90, 180, 270].includes(data.rotation as number)) return [];
++  const lines = [`quadro:motivo=${data.reason}`,
++    `quadro:${data.width}x${data.height}; formato=${data.format}; planos=${data.planeCount}; rot=${data.rotation}`];
++  if (Array.isArray(data.planes)) for (const [index, item] of data.planes.slice(0, 3).entries()) {
++    if (!item || typeof item !== 'object') continue;
++    const plane = item as Record<string, unknown>;
++    const fields = ['rowStride', 'pixelStride', 'position', 'limit'] as const;
++    if (!fields.every(key => integer(plane[key], 2147483647))) continue;
++    lines.push(`plano${index}:linha=${plane.rowStride}; pixel=${plane.pixelStride}; pos=${plane.position}; limite=${plane.limit}`);
++  }
++  return lines;
++}
+diff --git a/src/services/recognition/frame-diagnostic.test.ts b/src/services/recognition/frame-diagnostic.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/frame-diagnostic.test.ts
+@@ -0,0 +1,31 @@
++import { describeFrameFailure } from './frame-diagnostic';
++
++const sample = () => ({ revision: 'frame-1', reason: 'frame-size', width: 1920, height: 1080,
++  format: 35, rotation: 90, planeCount: 3,
++  planes: [{ rowStride: 1920, pixelStride: 1, position: 0, limit: 2073600 }],
++});
++
++test('projeta somente motivo, dimensoes e strides tecnicos', () => {
++  const lines = describeFrameFailure({ ...sample(), text: 'SENTINELA', image: 'SENTINELA', systolic: 120 });
++  expect(lines).toEqual([
++    'quadro:motivo=frame-size',
++    'quadro:1920x1080; formato=35; planos=3; rot=90',
++    'plano0:linha=1920; pixel=1; pos=0; limite=2073600',
++  ]);
++  expect(JSON.stringify(lines)).not.toContain('SENTINELA');
++});
++
++test.each([null, 'SENTINELA', {}, { ...sample(), reason: 'SENTINELA' },
++  { ...sample(), width: '1920' }, { ...sample(), height: NaN },
++  { ...sample(), rotation: '90' }, { ...sample(), revision: 'unknown' },
++])('metadado malformado nao e serializado', value => {
++  expect(describeFrameFailure(value)).toEqual([]);
++});
++
++test('limita os planos e rejeita campo textual de buffer', () => {
++  const data = sample();
++  expect(describeFrameFailure({ ...data, planes: Array(50).fill(data.planes[0]) })).toHaveLength(5);
++  const result = describeFrameFailure({ ...data, planes: [{ ...data.planes[0], limit: 'SENTINELA' }] });
++  expect(result).toHaveLength(2);
++  expect(JSON.stringify(result)).not.toContain('SENTINELA');
++});

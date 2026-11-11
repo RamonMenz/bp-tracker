@@ -1,5 +1,12 @@
 # TASK-07 — captura Android conectada à revisão, em avaliação
 
+> **Evidência posterior — 11/11/2026 (UTC):** o build Windows, os ajustes de
+> abertura/captura, o reconhecimento de cartão sintético no Samsung e os limites
+> das três repetições relatadas estão no [registro de validação Android](task-07-registro-validacao-android.md).
+> O [roteiro Windows atualizado](task-07-roteiro-windows-android.md) e os patches
+> arquivados complementam esta etapa histórica. TASK-07 permanece parcial;
+> documentação publicada não aplica as correções ao app nem homologa privacidade.
+
 Atualização posterior: a [TASK-09](task-09-interpretacao-fotografia.md) ampliou a
 interpretação compartilhada por rótulos/layout. As referências à interpretação
 mínima abaixo descrevem o alcance original da TASK-07; suas pendências nativas

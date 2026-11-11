@@ -1,0 +1,155 @@
+diff --git a/demos/android-capture/index.tsx b/demos/android-capture/index.tsx
+--- a/demos/android-capture/index.tsx
++++ b/demos/android-capture/index.tsx
+@@ -21,7 +21,7 @@
+     <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+       <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
+         <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
+-          Aferi: diagnostico de captura 4
++          Aferi: diagnostico de captura 5
+         </NativeText>
+         <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+           JavaScript iniciou.
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt
+@@ -12,7 +12,7 @@
+   private val cameras = mutableSetOf<AferiPhotoView>()
+   override fun definition() = ModuleDefinition {
+     Name("AferiPhotoCapture")
+-    Constants("captureRevision" to "frame-1")
++    Constants("captureRevision" to "preview-1")
+     AsyncFunction("requestCameraPermission") { promise: Promise ->
+       val context = appContext.reactContext
+       val permissions = appContext.permissions
+diff --git a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+--- a/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
++++ b/native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt
+@@ -17,6 +17,7 @@
+ import androidx.camera.view.PreviewView
+ import androidx.core.content.ContextCompat
+ import androidx.lifecycle.LifecycleOwner
++import androidx.lifecycle.Observer
+ import com.google.mlkit.vision.common.InputImage
+ import com.google.mlkit.vision.text.TextRecognition
+ import com.google.mlkit.vision.text.TextRecognizer
+@@ -32,8 +33,13 @@
+ private object PhotoLease { var owner: AferiPhotoView? = null }
+ 
+ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(context, appContext) {
++  // PreviewView adiciona TextureView depois do bind. O requestLayout desses
++  // filhos precisa medir/layout Android, mesmo sem outro commit de layout Yoga.
++  override val shouldUseAndroidLayout: Boolean = true
+   private val onStatus by EventDispatcher()
+   private val preview = PreviewView(context)
++  private var previewObserver: Observer<PreviewView.StreamState>? = null
++  private var previewReady = false
+   private val handler = Handler(Looper.getMainLooper())
+   private var provider: ProcessCameraProvider? = null
+   private var frames: ImageAnalysis? = null
+@@ -57,9 +63,6 @@
+     // TextureView compoe o preview dentro da hierarquia React/ScrollView.
+     preview.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+     addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+-  }
+-  override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+-    preview.layout(0, 0, right - left, bottom - top)
+   }
+   private fun status(code: String) {
+     if (!disposed) onStatus(mapOf("status" to code, "attemptId" to boundAttempt))
+@@ -174,12 +177,22 @@
+           }
+         }
+         provider!!.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, surface!!, analysis)
+-        status("ready")
++        // Em modo COMPATIBLE, STREAMING confirma que o preview iniciou.
++        // Bind concluido sozinho nao garante imagem e nao habilita o obturador.
++        val observer = Observer<PreviewView.StreamState> { state ->
++          if (active && generation == epoch && !disposed) {
++            val wasReady = previewReady
++            previewReady = state == PreviewView.StreamState.STREAMING
++            if (previewReady && !wasReady) status("ready")
++          }
++        }
++        previewObserver = observer
++        preview.previewStreamState.observe(owner, observer)
+       } catch (_: Exception) { fail("camera-failed") }
+     }, ContextCompat.getMainExecutor(context))
+   }
+   fun recognize(promise: Promise) {
+-    if (!active || frames == null || processing || requested || result != null) {
++    if (!active || !previewReady || frames == null || processing || requested || result != null) {
+       promise.resolve(mapOf("code" to "resource-busy")); return
+     }
+     result = promise; requested = true
+@@ -200,6 +213,8 @@
+   private fun fail(code: String) { settle(mapOf("code" to code)); cancel(); status(code) }
+   private fun stopCamera(): Boolean {
+     return try {
++      previewObserver?.let { preview.previewStreamState.removeObserver(it) }
++      previewObserver = null; previewReady = false
+       frames?.clearAnalyzer()
+       val uses = listOfNotNull(frames, surface)
+       if (uses.isNotEmpty()) provider?.unbind(*uses.toTypedArray())
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.test.ts b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.test.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+@@ -195,7 +195,7 @@
+   const t = await setup();
+   setCurrentState('background');
+   await act(async () => { t.result.current.start(); await flush(); });
+-  expect(t.result.current.diagnosticVersion).toBe('captura-4');
++  expect(t.result.current.diagnosticVersion).toBe('captura-5');
+   expect(t.result.current.diagnostics).toEqual(expect.arrayContaining([
+     'toque:iniciar', 'app-no-toque:background', 'bloqueio:app-nao-ativo',
+   ]));
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.ts b/src/features/assisted-entry/useAndroidPhotoReview.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.ts
+@@ -157,7 +157,7 @@
+   return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+     binding, attachCamera, start,
+     capture: () => { record('toque:capturar'); return sessions.current?.capture() ?? false; },
+-    onStatus, busy, diagnostics, diagnosticVersion: 'captura-4' as const,
++    onStatus, busy, diagnostics, diagnosticVersion: 'captura-5' as const,
+     diagnosticNativeRevision: binding?.nativeRevision ?? 'nao-carregado',
+     diagnosticAppState: safeAppState(AppState.currentState) };
+ }
+diff --git a/src/services/recognition/photo-android.native.test.ts b/src/services/recognition/photo-android.native.test.ts
+--- a/src/services/recognition/photo-android.native.test.ts
++++ b/src/services/recognition/photo-android.native.test.ts
+@@ -28,9 +28,9 @@
+   expect(t.binding.nativeRevision).toBe('anterior');
+ });
+ 
+-test('identifica a revisao do APK sem capturar ou solicitar permissao', () => {
+-  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: 'frame-1', requestCameraPermission: jest.fn() });
+-  expect(loadAndroidPhotoBinding().nativeRevision).toBe('frame-1');
++test.each(['frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: revision, requestCameraPermission: jest.fn() });
++  expect(loadAndroidPhotoBinding().nativeRevision).toBe(revision);
+   expect(PermissionsAndroid.check).not.toHaveBeenCalled();
+ });
+ 
+diff --git a/src/services/recognition/photo-android.native.ts b/src/services/recognition/photo-android.native.ts
+--- a/src/services/recognition/photo-android.native.ts
++++ b/src/services/recognition/photo-android.native.ts
+@@ -11,7 +11,7 @@
+   onStatus: (event: NativeSyntheticEvent<{ status: string; attemptId: number }>) => void;
+ }
+ export interface AndroidPhotoBinding {
+-  nativeRevision?: 'frame-1' | 'anterior';
++  nativeRevision?: 'preview-1' | 'frame-1' | 'anterior';
+   requestPermission(): Promise<boolean>;
+   Camera: ComponentType<CameraPreviewProps>;
+ }
+@@ -19,7 +19,8 @@
+ export function loadAndroidPhotoBinding(onPermissionRoute?: (route: 'already-granted' | 'request-required') => void): AndroidPhotoBinding {
+   const native = requireOptionalNativeModule<{ captureRevision?: unknown; requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
+   if (!native) throw new PhotoCaptureError('unsupported');
+-  return { nativeRevision: native.captureRevision === 'frame-1' ? 'frame-1' : 'anterior',
++  return { nativeRevision: native.captureRevision === 'preview-1' || native.captureRevision === 'frame-1'
++    ? native.captureRevision : 'anterior',
+     requestPermission: async () => {
+       // Consultar nao abre Activity/dialogo nem inicia camera. Reutilizar o aceite
+       // atual evita pedir novamente e interromper a tentativa por AppState.
