@@ -18,7 +18,7 @@ export const PHOTO_MESSAGES: Record<PhotoCaptureCode, string> = {
   'permission-denied': 'Permissão de câmera negada. Você pode voltar ou ajustar a permissão e tentar novamente.',
   'device-unavailable': 'Câmera indisponível. Tente novamente ou volte ao manual.',
   'camera-failed': 'Não foi possível preparar a câmera. Tente novamente ou volte ao manual.',
-  'frame-failed': 'O quadro não pôde ser lido em memória. Tente outro enquadramento.',
+  'frame-failed': 'Não foi possível preparar o quadro da câmera em memória. Tente novamente ou volte ao manual.',
   'engine-failed': 'Não foi possível interpretar esta captura. Tente novamente ou preencha manualmente.',
   'resource-busy': 'O reconhecedor ainda está liberando recursos. Aguarde antes de tentar novamente.',
   'cleanup-failed': 'Não foi possível comprovar a liberação dos recursos. Saia deste fluxo antes de tentar novamente.',

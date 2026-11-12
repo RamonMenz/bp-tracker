@@ -1,5 +1,10 @@
 # TASK-07 — registro da depuração e validação inicial em Android
 
+> **Retomada posterior em 11/11/2026:** o PR #64 foi confirmado como mesclado
+> (`6f7a249`). A integração funcional, as diferenças frente aos artefatos e as
+> novas verificações estão no [registro de integração](task-07-integracao-android.md).
+> O conteúdo abaixo preserva a evidência e os limites do arquivamento original.
+
 **Registro documental: 11/11/2026 (UTC).** Projeto Aferi. Fonte principal: mensagens,
 logs e capturas apresentados neste chat, mais código e artefatos produzidos nele.
 As etapas abaixo estão em ordem de ocorrência; não se atribuem datas a mensagens

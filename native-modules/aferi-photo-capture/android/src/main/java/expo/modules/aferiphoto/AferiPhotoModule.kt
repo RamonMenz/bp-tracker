@@ -12,6 +12,7 @@ class AferiPhotoModule : Module() {
   private val cameras = mutableSetOf<AferiPhotoView>()
   override fun definition() = ModuleDefinition {
     Name("AferiPhotoCapture")
+    Constants("captureRevision" to "preview-1")
     AsyncFunction("requestCameraPermission") { promise: Promise ->
       val context = appContext.reactContext
       val permissions = appContext.permissions

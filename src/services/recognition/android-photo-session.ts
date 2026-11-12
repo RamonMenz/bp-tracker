@@ -96,5 +96,6 @@ export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (st
     return completion;
   }
   function dispose() { disposed = true; void cancel(); }
-  return { start, capture, status, cancel, dispose, settled: () => completion };
+  return { start, capture, status, cancel, dispose, settled: () => completion,
+    isReleased: () => current === null && state.phase !== 'blocked' };
 }
