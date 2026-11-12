@@ -1,5 +1,9 @@
 # TASK-07 — integração das correções Android
 
+> **Evidência posterior recebida em 12/11/2026:** [três rodadas S02 e inventário
+> posterior relatados no Samsung](task-07-resultados-samsung.md). Resultado positivo
+> limitado ao cartão sintético; identidade do APK instalado e privacidade pendentes.
+
 Retomada em **11/11/2026**. Base remota: `staging`
 `6f7a2494426cfa470cc9be40d60b1da72abc06af`. Branch:
 `fix/task-07-captura-android`. **TASK-07 permanece parcial.**
