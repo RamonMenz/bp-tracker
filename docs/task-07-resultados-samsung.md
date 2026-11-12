@@ -115,11 +115,25 @@ O hash de APK não identifica sozinho o bundle JS carregado pelo Metro.
 | Editar sistólica para 70, mantendo diastólica 80 | Confirmação impedida, relatado |
 | Corrigir sistólica para 130 | Confirmação permitida, relatado |
 | Em outra captura, editar um campo e cancelar | Autor relata comportamento conforme esperado, sem erro percebido; não descreveu individualmente os estados de descarte e de recaptura |
-| Tocar em Confirmar revisão em memória e observar mensagem/valores finais | Ainda não explicitado no retorno; solicitado esclarecimento, sem presumir que botão habilitado equivale a confirmação executada |
+| Tocar em Confirmar revisão em memória e observar mensagem/valores finais | Esclarecimento recebido: autor transcreveu a tela final com confirmação somente em memória, 130 por 80 mmHg e pulso 72 |
 
-Validação e habilitação do botão têm evidência relatada; S06 permanece parcial.
-Não há prova de escrita clínica; a demo continua somente em memória. Esta rodada
-não encerra FOT-05/FOT-06/FOT-07 ou os cenários de cancelamento em outras fases.
+O esclarecimento posterior do autor trouxe a seguinte transcrição da tela:
+
+```text
+Revisar fotografia
+Captura real em avaliação. Confirmação apenas em memória; sem gravação clínica.
+Confirmação demonstrada somente em memória.
+130 por 80 mmHg
+Pulso: 72
+12/11. 12:39
+```
+
+Validação, correção e confirmação final em memória têm evidência positiva no
+alcance relatado de S06, além do relato de cancelamento após edição. O texto
+`12/11. 12:39` é a data/hora exibida na revisão, sem fuso informado; não é tratado
+como horário comprovado do clique ou duração do teste. Não há prova de escrita
+clínica; a demo continua somente em memória. Esta rodada não encerra FOT-05–07,
+TASK-07 ou os cenários de cancelamento em outras fases.
 
 O autor apresentou dois pares `find`/`ls`, identificados como antes e depois da
 nova rodada. Os dois `find` trazem a mesma lista de 16 arquivos já transcrita
@@ -148,13 +162,11 @@ pendente. Ausência de mudança nessa listagem não é aceite integral de FOT-10
 
 ## Próximas evidências
 
-1. Esclarecer se houve o gesto de confirmar a revisão em memória e quais mensagem
-   e valores foram exibidos depois; registrar separadamente de botão habilitado.
-2. Preservar os pares antes/depois e continuar inventários por cenário, sem
+1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
-3. Exercitar cancelamento/interrupções/concorrência/permissões S01/S03–S05/S07,
+2. Exercitar cancelamento/interrupções/concorrência/permissões S01/S03–S05/S07,
    verificando explicitamente descarte e ausência de restauração; depois S08/S09.
-4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
+3. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
    mídia ou payload clínico. Não confundir tráfego Metro com reconhecimento.
 
 O [protocolo completo](task-07-integracao-android.md) permanece aplicável. TASK-07,
