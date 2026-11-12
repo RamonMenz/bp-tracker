@@ -17,7 +17,7 @@ registro. Sem acesso do Codex ao Windows, APK ou dispositivo.
 | SHA-256 do arquivo APK informado | `69D5A0B31023A9B3647B0036CC2EB3AF0683BE19A02782A2B8E834635849E09C` |
 | Fast Refresh | Desativado, informado pelo autor |
 | Marcadores | `captura-5 / preview-1` |
-| Identidade do APK instalado | Pendente: consulta `pm path` falhou por ausência de dispositivo ADB. Sucesso posterior do `run-as` confirma presença/acesso ao pacote de avaliação nesse momento, mas não vincula seu binário ao hash do arquivo APK |
+| Identidade do APK instalado | Inicialmente pendente por falha ADB; a coleta complementar abaixo trouxe SHA-256 do `base.apk` instalado igual ao do arquivo APK informado. Igualdade estabelecida no momento da nova consulta; não identifica por si só o JS servido pelo Metro |
 
 Cartão sintético esperado: SYS 120 / DIA 80 / PUL 72. Não é display de medidor real.
 
@@ -30,8 +30,9 @@ Cartão sintético esperado: SYS 120 / DIA 80 / PUL 72. Não é display de medid
 **S02 positivo no alcance relatado**: três percursos até a revisão, fechamento
 visual do preview e indicador apagado. Sem tempos, profiler ou captura instrumental
 de liberação. Não converter as três rodadas em acurácia estatística, cobertura
-de displays reais ou garantia de descarte físico da memória. Não há resultado
-recebido para S01/S03–S09, confirmação em memória ou inspeção de rede/offline.
+de displays reais ou garantia de descarte físico da memória. Na primeira entrega
+não havia resultado para S01/S03–S09, confirmação ou rede/offline; a coleta
+complementar abaixo acrescenta evidência parcial de S06.
 
 ## Inventário posterior sanitizado
 
@@ -88,15 +89,71 @@ cookies, preferências ou identificadores para o Git/chat, nem apagá-los para f
 o inventário parecer limpo. Prosseguir apenas com entradas sintéticas no cliente
 isolado; habilitação clínica permanece bloqueada pelos critérios pendentes.
 
+## Coleta complementar — identidade, S06 e comparação de inventários
+
+Recebida em **12/11/2026**, após o primeiro relatório. PR #66 confirmado como
+mesclado em staging `72c1ebdef7be3d27c409666802c22d7aff561703`; esta atualização
+documental parte dessa base. Horário exato dos testes e fuso não informados.
+
+O autor executou `pm path` para o pacote de avaliação, selecionou `base.apk` e
+executou `sha256sum` no dispositivo. Saída sanitizada, omitindo caminho aleatório
+de instalação, prompt Windows e UID/GID:
+
+```text
+69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c  [base.apk instalado]
+```
+
+Esse SHA-256 é igual ao do arquivo APK informado anteriormente; diferença de caixa
+das letras não altera o hash. Isso vincula o APK base instalado naquele momento
+ao arquivo compilado. Não foi informado se houve reinstalação entre as rodadas;
+não se retroage a verificação para comprovar a instalação de cada ensaio anterior.
+O hash de APK não identifica sozinho o bundle JS carregado pelo Metro.
+
+| Ação de S06 relatada | Resultado / alcance |
+|---|---|
+| Capturar novamente o cartão | Reconhecimento bem-sucedido relatado |
+| Editar sistólica para 70, mantendo diastólica 80 | Confirmação impedida, relatado |
+| Corrigir sistólica para 130 | Confirmação permitida, relatado |
+| Em outra captura, editar um campo e cancelar | Autor relata comportamento conforme esperado, sem erro percebido; não descreveu individualmente os estados de descarte e de recaptura |
+| Tocar em Confirmar revisão em memória e observar mensagem/valores finais | Ainda não explicitado no retorno; solicitado esclarecimento, sem presumir que botão habilitado equivale a confirmação executada |
+
+Validação e habilitação do botão têm evidência relatada; S06 permanece parcial.
+Não há prova de escrita clínica; a demo continua somente em memória. Esta rodada
+não encerra FOT-05/FOT-06/FOT-07 ou os cenários de cancelamento em outras fases.
+
+O autor apresentou dois pares `find`/`ls`, identificados como antes e depois da
+nova rodada. Os dois `find` trazem a mesma lista de 16 arquivos já transcrita
+neste documento. Os dois `ls` são iguais nos metadados exibidos:
+
+| Caminho relativo | Tipo | Bytes informados em ambos | Modificação exibida em ambos |
+|---|---|---:|---|
+| `cache/.expo-dev-launcher` | Diretório | 3452 | 2026-11-10 21:05 |
+| `cache/WebView` | Diretório | 3452 | 2026-11-10 21:12 |
+| `files/DevLauncherApp-BridgelessReactNativeDevBundle.js` | Arquivo | 7340789 | 2026-11-12 12:44 |
+| `files/profileInstalled` | Arquivo | 24 | 2026-11-12 12:39 |
+| `no_backup/expo-dev-launcher-installation-id.txt` | Arquivo | 36 | 2026-11-10 21:08 |
+
+Os horários do bundle e de profileInstalled diferem do inventário da entrega
+anterior, mas são iguais entre os dois inventários desta coleta. Não foi fornecido
+controle do intervalo entre entregas para atribuir causa a essa diferença.
+
+**Conclusão limitada:** não houve diferença observável nos nomes listados nem
+nos metadados exibidos pelo `ls` desse par antes/depois. `find` não lista tamanho
+ou modificação de bancos/preferências/cookies, e o `ls` recebido não cobre esses
+diretórios. Nem mesmo metadados iguais provariam igualdade de conteúdo; não foram
+fornecidos hashes dos arquivos internos, nem solicitada sua exportação. Arquivos
+transitórios e alterações internas continuam fora do alcance da comparação.
+Auditoria de DataTransport/telemetria, rede/reconexão e privacidade permanece
+pendente. Ausência de mudança nessa listagem não é aceite integral de FOT-10–12.
+
 ## Próximas evidências
 
-1. Com USB funcional, repetir `pm path` e, se permitido pelo Android, comparar
-   SHA-256 do APK base instalado com o arquivo informado. Presença do pacote,
-   marcadores e hash local isoladamente não identificam o binário em execução.
-2. Usar o inventário atual como referência para novas rodadas controladas;
-   identificar cenário e momentos antes/depois sem reconstruir o passado.
-3. Executar S06: correção, validação e confirmação somente em memória; depois
-   cancelamento/interrupções/concorrência/permissões S01/S03–S05/S07 e S08/S09.
+1. Esclarecer se houve o gesto de confirmar a revisão em memória e quais mensagem
+   e valores foram exibidos depois; registrar separadamente de botão habilitado.
+2. Preservar os pares antes/depois e continuar inventários por cenário, sem
+   reconstruir retrospectivamente a inspeção das três rodadas iniciais.
+3. Exercitar cancelamento/interrupções/concorrência/permissões S01/S03–S05/S07,
+   verificando explicitamente descarte e ausência de restauração; depois S08/S09.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
    mídia ou payload clínico. Não confundir tráfego Metro com reconhecimento.
 
