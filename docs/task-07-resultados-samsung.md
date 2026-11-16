@@ -395,6 +395,48 @@ Inventários iguais nesse alcance não excluem mudanças internas em bancos ou
 preferências, arquivos transitórios ou tráfego. G não encerra S04 por completo,
 privacidade ou TASK-07; rotação e troca de app continuam cenários separados.
 
+## Teste H — rotação, recebido em 16/11/2026
+
+O autor confirmou rotação automática habilitada e rotação efetiva da interface
+da demo. Em H1/H2 percebeu somente relayout, sem interrupção/reinício aparente.
+
+| Observação relatada | H1: preview | H2: revisão |
+|---|---|---|
+| Fase informada | ready | Revisão preservada no relayout |
+| Usabilidade | Preview e controles utilizáveis | Sem campos/controles cortados ou inacessíveis |
+| Captura/reabertura automática | Não | Não relatada separadamente; confirmação automática não ocorreu |
+| Edição 130 | Não aplicável | Mantida ao rotacionar |
+| Nova captura recuperou edição anterior | Não aplicável | Não |
+| Novo início/cancelamento | Funcionaram | Sem descrição adicional desses controles |
+
+**H1/H2 positivos no alcance de rotação com relayout relatado.** Preservar a
+edição durante mera mudança de layout é comportamento esperado; não equivale
+a restaurar revisão abandonada após background/recriação. Essa rodada não
+exercitou interrupção/reinício por rotação, nem comprova outros dispositivos,
+orientações ou configurações. Ausência de corte é observação nessa rodada,
+não conclusão de acessibilidade S09 completa.
+
+O autor relatou textos idênticos dos inventários antes/depois de cada subteste,
+sem repetir suas saídas; não se atribuem tamanhos/horários de rodadas anteriores.
+Forneceu os quatro hashes do arquivo JS no sandbox, todos:
+
+```text
+a7b2efd2c07366d300b0e04180157c6e8d44e6ce5e5b4cbc40d7963e18bdf9c2
+```
+
+| Coleta H | SHA-256 informado |
+|---|---|
+| Antes de H1 | Igual ao valor acima |
+| Depois de H1 | Igual ao valor acima |
+| Antes de H2 | Igual ao valor acima |
+| Depois de H2 | Igual ao valor acima |
+
+É também o hash recebido em G. Isso sustenta igualdade desse arquivo nos pontos
+medidos, sem excluir mudanças transitórias entre coletas, identificar sozinho o
+JS executado ou comprovar conteúdo de bancos/preferências/cookies e rede.
+S04 continua parcial para troca de app e condições não exercitadas; TASK-07 e
+auditoria de privacidade seguem abertas.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -405,28 +447,28 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S01 | F positivo no alcance relatado | Não ampliar para todas as condições/versões de permissão |
 | S02 | Três leituras positivas do cartão sintético | Sem ampliar para displays reais ou acurácia universal |
 | S03 | A positivo no preview; D não executado no OCR | Cancelamento em permissão/abertura; OCR permanece não executado enquanto inalcançável |
-| S04 | B/C positivos em Home; G1/G2 positivos no bloqueio, no alcance relatado | Troca de app e rotação nas fases aplicáveis; distinguir relayout/recriação |
+| S04 | B/C em Home, G1/G2 no bloqueio e H1/H2 na rotação com relayout positivos no relato | Troca de app; rotação com interrupção/recriação não ocorreu em H |
 | S05 | E sem erro percebido, toques aceitos indeterminados | Saída/entrada rápida e liberação; não afirmar concorrência nativa comprovada |
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
 | S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
 
-Após G, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
+Após H, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
 parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco cobre rotação no preview e na
-revisão, distinguindo relayout de interrupção/recriação; saída/entrada rápida,
-S08/S09 e auditoria seguem na sequência.
+restantes para aceite integral. O próximo bloco cobre troca rápida de app no
+preview e na revisão, sem exigir abertura durante limpeza pendente; S08/S09 e
+auditoria seguem na sequência.
 
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar rotação/troca de app, saída/entrada rápida
+3. Exercitar troca de app e saída/entrada rápida
    de S05 e S08/S09, conforme a matriz de cobertura.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
