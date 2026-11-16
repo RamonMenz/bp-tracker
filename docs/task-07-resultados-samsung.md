@@ -160,13 +160,104 @@ transitórios e alterações internas continuam fora do alcance da comparação.
 Auditoria de DataTransport/telemetria, rede/reconexão e privacidade permanece
 pendente. Ausência de mudança nessa listagem não é aceite integral de FOT-10–12.
 
+## Cancelamento e Home durante preview — retorno de 16/11/2026
+
+Fonte: relato do autor e quatro pares de saídas identificadas por cenário e
+momento. Fonte declarada `4dc0105` limpa; Fast Refresh desativado;
+`captura-5`/`preview-1`, com `nao-carregado` antes do início. Conexão USB com
+`adb reverse` na porta 8097. **Houve reinstalação desde os testes anteriores**;
+não foi fornecido novo hash do APK instalado. O hash verificado em 12/11 não é
+usado para identificar automaticamente o APK desta nova sessão.
+
+Na retomada, `curl` no PC falhava em `127.0.0.1:8097/status`, mas respondia
+`packager-status:running` em `localhost`; ADB detectava o telefone e a regra
+reverse existia. Expo desta versão escuta em `localhost` com `--localhost`, mas
+gera endereço 127.0.0.1 para o cliente. Hipótese compatível: preferência IPv6 no
+bind. O autor confirmou que o curl IPv4 passou a responder após reiniciar Metro
+com `--dns-result-order=ipv4first` em NODE_OPTIONS. Não foi fornecida inspeção
+do socket original para provar sua família; não é falha comprovada da câmera.
+
+| Observação relatada | A: Cancelar captura no preview (parte de S03) | B: Home no preview (parte de S04) |
+|---|---|---|
+| Preview interrompido | Sim | Sim |
+| Indicador de câmera apagou | Sim | Sim |
+| Fase informada | cancelled | Não especificada |
+| Candidato/revisão antiga apareceu | Não | Não |
+| Reinício automático da câmera | Não | Não |
+| Novo início explícito abriu preview | Sim | Sim |
+| Encerramento da nova tentativa | Cancelado; sem blocked/cleanup-failed relatados | Cancelado |
+
+**A e B positivos no alcance relatado.** Não equivalem a todo S03/S04: permissão,
+abertura, OCR, revisão, bloqueio, rotação e demais interrupções têm cenários
+próprios. Não foi especificado se o retorno de Home preservou a instância React
+ou recriou o app. Indicador e UI não substituem inspeção instrumental de recursos.
+
+### Inventários dessa sessão
+
+No `find` ANTES de A consta literalmente:
+
+```text
+./databases/com.google.android.datatransport.events-journala
+```
+
+DEPOIS de A e nos dois inventários de B consta:
+
+```text
+./databases/com.google.android.datatransport.events-journal
+```
+
+Os demais nomes correspondem à lista já transcrita; são 16 entradas em cada
+listagem. A diferença do sufixo `a` foi destacada pelo próprio autor. Foi pedido
+esclarecimento sobre saída original versus erro de transcrição. **Não foi
+corrigida silenciosamente nem considerada prova de criação/remoção real.**
+Nova listagem atual pode informar o nome presente, mas não reconstruir o anterior.
+
+Os quatro `ls` têm metadados exibidos iguais. Tabela sanitizada (sem prompt,
+UID/GID ou caminho aleatório de instalação), horários sem fuso informado:
+
+| Caminho relativo | Tipo | Bytes informados | Modificação exibida |
+|---|---|---:|---|
+| `cache/.expo-dev-launcher` | Diretório | 3452 | 2026-11-10 21:05 |
+| `cache/WebView` | Diretório | 3452 | 2026-11-10 21:12 |
+| `files/DevLauncherApp-BridgelessReactNativeDevBundle.js` | Arquivo | 7340781 | 2026-11-16 10:00 |
+| `files/profileInstalled` | Arquivo | 24 | 2026-11-16 10:00 |
+| `no_backup/expo-dev-launcher-installation-id.txt` | Arquivo | 36 | 2026-11-10 21:08 |
+
+O bundle tem tamanho diferente do relatório de 12/11 (7340789 bytes), mas tamanho
+igual nos quatro inventários novos. Não há comparação controlada entre sessões
+para atribuir a causa. Horários de modificação não são convertidos em hora dos
+testes. Em B, nomes e metadados exibidos são iguais entre antes e depois. Em A,
+metadados exibidos são iguais, com a ressalva do nome divergente no `find`.
+
+Não há inspeção do conteúdo ou metadados dos bancos/preferências/cookies pelo
+`ls` fornecido; nada permite excluir alterações internas, filas de telemetria
+ou arquivos transitórios. Auditoria DataTransport, rede/reconexão e privacidade
+continua pendente; nenhuma tarefa ou critério integral de privacidade foi aceito.
+
+### Rastreio preliminar das dependências, sem acesso ao aparelho
+
+Em 16/11/2026, foram consultados os POMs oficiais de
+[text-recognition 16.0.1](https://dl.google.com/dl/android/maven2/com/google/mlkit/text-recognition/16.0.1/text-recognition-16.0.1.pom)
+e [ML Kit common 18.11.0](https://dl.google.com/dl/android/maven2/com/google/mlkit/common/18.11.0/common-18.11.0.pom).
+O primeiro declara common 18.11.0; este declara DataTransport transport-api 2.2.1,
+transport-backend-cct 2.3.3 e transport-runtime 2.2.6. É uma rota transitiva
+documentada para a presença de DataTransport, sem depender de o cliente importar
+o Firebase clínico do produto. Não é prova de que esses sejam os componentes ou
+versões efetivamente resolvidos no APK instalado: Gradle pode selecionar outras
+versões entre dependências. Não identifica quem criou o banco observado, o que
+ele contém, se houve envio ou quais destinos foram usados. Falta conferir a
+árvore resolvida e o comportamento em runtime; nenhuma dependência foi trocada
+ou telemetria declarada segura com base apenas nesses metadados públicos.
+
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
-2. Exercitar cancelamento/interrupções/concorrência/permissões S01/S03–S05/S07,
-   verificando explicitamente descarte e ausência de restauração; depois S08/S09.
-3. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
+2. Renovar a identidade do APK após a reinstalação e esclarecer `journala`.
+3. Exercitar Home durante revisão, cancelamento durante OCR quando alcançável,
+   concorrência e permissões; depois demais interrupções, S08/S09. Não repetir
+   A/B como substituto dos casos restantes de S03/S04.
+4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
    mídia ou payload clínico. Não confundir tráfego Metro com reconhecimento.
 
 O [protocolo completo](task-07-integracao-android.md) permanece aplicável. TASK-07,
