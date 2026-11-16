@@ -311,6 +311,47 @@ sem prompt pessoal, UID/GID ou conteúdo de arquivos. Horários sem fuso informa
 Não há diferença nos nomes e metadados exibidos; o limite sobre conteúdo interno,
 arquivos transitórios e rede continua aplicável.
 
+## Teste F — permissões, recebido em 16/11/2026
+
+O autor relata: nenhuma abertura/pedido antes de Iniciar; fase cancelled após
+negar; nenhum preview/revisão indevido ou repetição automática de pedidos;
+nenhuma abertura automática ao autorizar nas configurações; novo início explícito
+abriu preview e cancelamento final funcionou. **S01/S07 positivos no alcance da
+rodada combinada relatada.** cancelled é o estado observado; não substituir por
+permission-denied ou inferir a sequência interna de callbacks do Android.
+
+Os dois `find` contêm os mesmos 16 nomes. No `ls`, as diferenças apresentadas são:
+
+| Entrada | Antes | Depois | Tamanho exibido |
+|---|---|---|---:|
+| Diretório `files/.` | 2026-11-16 11:21 | 2026-11-16 11:23 | 3452 em ambos |
+| `files/DevLauncherApp-BridgelessReactNativeDevBundle.js` | 2026-11-16 11:21 | 2026-11-16 11:23 | 7340781 em ambos |
+
+Os demais metadados exibidos são iguais: profileInstalled 24 bytes/modificação
+2026-11-16 11:21; arquivo no_backup 36 bytes/modificação 2026-11-10 21:08;
+diretórios cache/.expo-dev-launcher e cache/WebView mantêm a tabela anterior.
+UID/GID e prompt pessoal omitidos; horários sem fuso informado, sem inferir
+duração da rodada. Não classificar esse inventário como integralmente igual.
+
+O nome identifica o bundle JS do Dev Client; recarregamento do bundle ao retomar
+o aplicativo é uma hipótese compatível com os horários alterados, mas não foi
+instrumentado. Não há hash antes/depois desse arquivo para afirmar igualdade de
+conteúdo ou causa da regravação. Tamanho igual não prova conteúdo igual. A mudança
+não é evidência, por si só, de persistência de imagem; também não comprova sua
+ausência. Diretório pode mudar de horário mesmo com nomes finais iguais.
+
+Não foi fornecido conteúdo de mídia nem solicitado conteúdo de bancos. Inventários e
+teste funcional não encerram FOT-10–12. Para futuras rodadas, hash somente do
+bundle JS pode complementar os metadados, sem exportar arquivo ou payload:
+
+```powershell
+& $aferiAdb shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js
+```
+
+Esse hash se refere ao arquivo JS no sandbox, distinto do hash do APK e sem
+garantia de identificar o JS efetivamente executado em cada instante. Não estender
+a coleta para hashes de identificadores, cookies, bancos ou dados clínicos.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -318,29 +359,31 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 
 | Grupo | Evidência recebida | Complemento pendente |
 |---|---|---|
-| S01 | Sem rodada dedicada relatada | Abertura sem ação, negativa de permissão e nova ação após autorizar |
+| S01 | F positivo no alcance relatado | Não ampliar para todas as condições/versões de permissão |
 | S02 | Três leituras positivas do cartão sintético | Sem ampliar para displays reais ou acurácia universal |
 | S03 | A positivo no preview; D não executado no OCR | Cancelamento em permissão/abertura; OCR permanece não executado enquanto inalcançável |
 | S04 | B positivo no preview; C positivo na revisão | Troca de app, bloqueio e rotação nas fases aplicáveis; distinguir relayout/recriação |
 | S05 | E sem erro percebido, toques aceitos indeterminados | Saída/entrada rápida e liberação; não afirmar concorrência nativa comprovada |
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
-| S07 | Sem rodada dedicada relatada | Revogar e reautorizar câmera, sem retomada automática |
+| S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
 | S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
 
-Há **quatro grupos sem rodada dedicada recebida** (S01/S07/S08/S09) e **três
-parciais com complementos** (S03/S04/S05). S02/S06 têm resultados positivos no
+Após F, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
+parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco combina S01/S07 sem apagar dados.
+restantes para aceite integral. O próximo bloco cobre bloqueio do telefone no
+preview e na revisão; rotação, saída/entrada rápida, S08/S09 e auditoria seguem
+na sequência, sem repetir F apenas por mudança do horário do bundle.
 
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar permissões S01/S07; depois demais interrupções, saída/entrada rápida
+3. Exercitar demais interrupções (bloqueio/rotação), saída/entrada rápida
    de S05 e S08/S09, conforme a matriz de cobertura.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
