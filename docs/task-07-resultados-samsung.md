@@ -352,6 +352,34 @@ Esse hash se refere ao arquivo JS no sandbox, distinto do hash do APK e sem
 garantia de identificar o JS efetivamente executado em cada instante. Não estender
 a coleta para hashes de identificadores, cookies, bancos ou dados clínicos.
 
+## Teste G — bloqueio do telefone, recebido em 16/11/2026
+
+| Observação relatada | G1: bloquear no preview | G2: bloquear na revisão |
+|---|---|---|
+| Estado ao voltar | cancelled | Revisão/edição 130 descartadas |
+| Preview/indicador encerrados | Sim | Câmera permaneceu desligada |
+| Candidato/revisão antiga disponível | Não | Confirmação antiga indisponível |
+| Retomada automática | Não | Não relatou nova tentativa automática; demais observações limitadas aos campos fornecidos |
+| Novo início explícito | Funcionou, assim como cancelamento | Nova captura não recuperou edição anterior |
+| Reinício percebido do app | Não, segundo o autor | Não, segundo o autor |
+
+**G1/G2 positivos no alcance relatado de bloqueio no preview e na revisão,
+complementando S04.** Ausência de reinício percebido é observação visual; não
+comprova continuidade do processo/instância React por instrumentação. Nenhuma
+nova captura, log ou dump foi produzido pelo Codex no dispositivo.
+
+O autor informou que os textos dos inventários antes/depois foram idênticos em
+cada subteste, sem fornecer novamente as saídas. Registrar como comparação
+relatada, sem atribuir a ela tamanhos/horários de rodadas anteriores. Embora o
+título do retorno mencione inventários e hashes, não trouxe valores SHA-256 nem
+declaração específica de igualdade dos hashes do bundle. Foi solicitado
+esclarecimento; não registrar igualdade binária, identidade de JS em execução
+ou hashes coletados por inferência. Hash do bundle é distinto de hash do APK.
+
+Inventários iguais nesse alcance não excluem mudanças internas em bancos ou
+preferências, arquivos transitórios ou tráfego. G não encerra S04 por completo,
+privacidade ou TASK-07; rotação e troca de app continuam cenários separados.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -362,28 +390,28 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S01 | F positivo no alcance relatado | Não ampliar para todas as condições/versões de permissão |
 | S02 | Três leituras positivas do cartão sintético | Sem ampliar para displays reais ou acurácia universal |
 | S03 | A positivo no preview; D não executado no OCR | Cancelamento em permissão/abertura; OCR permanece não executado enquanto inalcançável |
-| S04 | B positivo no preview; C positivo na revisão | Troca de app, bloqueio e rotação nas fases aplicáveis; distinguir relayout/recriação |
+| S04 | B/C positivos em Home; G1/G2 positivos no bloqueio, no alcance relatado | Troca de app e rotação nas fases aplicáveis; distinguir relayout/recriação |
 | S05 | E sem erro percebido, toques aceitos indeterminados | Saída/entrada rápida e liberação; não afirmar concorrência nativa comprovada |
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
 | S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
 
-Após F, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
+Após G, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
 parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco cobre bloqueio do telefone no
-preview e na revisão; rotação, saída/entrada rápida, S08/S09 e auditoria seguem
-na sequência, sem repetir F apenas por mudança do horário do bundle.
+restantes para aceite integral. O próximo bloco cobre rotação no preview e na
+revisão, distinguindo relayout de interrupção/recriação; saída/entrada rápida,
+S08/S09 e auditoria seguem na sequência.
 
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar demais interrupções (bloqueio/rotação), saída/entrada rápida
+3. Exercitar rotação/troca de app, saída/entrada rápida
    de S05 e S08/S09, conforme a matriz de cobertura.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
