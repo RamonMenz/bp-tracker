@@ -291,12 +291,57 @@ Os inventários C, como A/B, não inspecionam conteúdo de bancos/preferências,
 arquivos transitórios ou tráfego. DataTransport e privacidade permanecem em
 auditoria; não houve habilitação clínica nem conclusão integral de tarefa.
 
+## Teste E — tentativa de toques repetidos, recebida em 16/11/2026
+
+O autor tentou tocar várias vezes nos botões e não percebeu erros. Relatou que
+as ações foram rápidas e acredita que alguns controles ficaram bloqueados após
+o primeiro toque; não conseguiu determinar se o segundo toque foi aceito.
+Não foram fornecidos contadores de eventos, capturas concorrentes ou trace nativo.
+
+**Resultado: sem erro percebido nas tentativas relatadas, com cobertura parcial
+de S05.** Não afirmar que todos os controles receberam dois toques, que houve
+disputa concorrente efetiva ou que foi comprovado um único processamento nativo.
+Não repetir indefinidamente para tentar vencer o bloqueio da interface.
+
+Os dois inventários E contêm os mesmos 16 nomes já transcritos e `ls` iguais:
+bundle 7340781 bytes/modificação 2026-11-16 10:45; profileInstalled 24 bytes/
+modificação 2026-11-16 10:46; diretórios de cache e arquivo no_backup mantêm os
+metadados listados em C. Saídas sanitizadas por referência à lista/tabela anterior,
+sem prompt pessoal, UID/GID ou conteúdo de arquivos. Horários sem fuso informado.
+Não há diferença nos nomes e metadados exibidos; o limite sobre conteúdo interno,
+arquivos transitórios e rede continua aplicável.
+
+## Cobertura atual do roteiro Samsung
+
+Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
+integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluídas:
+
+| Grupo | Evidência recebida | Complemento pendente |
+|---|---|---|
+| S01 | Sem rodada dedicada relatada | Abertura sem ação, negativa de permissão e nova ação após autorizar |
+| S02 | Três leituras positivas do cartão sintético | Sem ampliar para displays reais ou acurácia universal |
+| S03 | A positivo no preview; D não executado no OCR | Cancelamento em permissão/abertura; OCR permanece não executado enquanto inalcançável |
+| S04 | B positivo no preview; C positivo na revisão | Troca de app, bloqueio e rotação nas fases aplicáveis; distinguir relayout/recriação |
+| S05 | E sem erro percebido, toques aceitos indeterminados | Saída/entrada rápida e liberação; não afirmar concorrência nativa comprovada |
+| S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
+| S07 | Sem rodada dedicada relatada | Revogar e reautorizar câmera, sem retomada automática |
+| S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
+| S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
+
+Há **quatro grupos sem rodada dedicada recebida** (S01/S07/S08/S09) e **três
+parciais com complementos** (S03/S04/S05). S02/S06 têm resultados positivos no
+alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
+grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
+displays reais, legado e integração clínica; não há número fixo de execuções
+restantes para aceite integral. O próximo bloco combina S01/S07 sem apagar dados.
+
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar concorrência e permissões; depois demais interrupções, S08/S09.
+3. Exercitar permissões S01/S07; depois demais interrupções, saída/entrada rápida
+   de S05 e S08/S09, conforme a matriz de cobertura.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
