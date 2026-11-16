@@ -370,11 +370,26 @@ nova captura, log ou dump foi produzido pelo Codex no dispositivo.
 
 O autor informou que os textos dos inventários antes/depois foram idênticos em
 cada subteste, sem fornecer novamente as saídas. Registrar como comparação
-relatada, sem atribuir a ela tamanhos/horários de rodadas anteriores. Embora o
-título do retorno mencione inventários e hashes, não trouxe valores SHA-256 nem
-declaração específica de igualdade dos hashes do bundle. Foi solicitado
-esclarecimento; não registrar igualdade binária, identidade de JS em execução
-ou hashes coletados por inferência. Hash do bundle é distinto de hash do APK.
+relatada, sem atribuir a ela tamanhos/horários de rodadas anteriores. O primeiro
+retorno não continha valores SHA-256; após esclarecimento, o autor forneceu as
+quatro saídas de sha256sum do arquivo
+`files/DevLauncherApp-BridgelessReactNativeDevBundle.js`, todas com:
+
+```text
+a7b2efd2c07366d300b0e04180157c6e8d44e6ce5e5b4cbc40d7963e18bdf9c2
+```
+
+| Coleta | SHA-256 informado |
+|---|---|
+| Antes de G1 | Igual ao valor acima |
+| Depois de G1 | Igual ao valor acima |
+| Antes de G2 | Igual ao valor acima |
+| Depois de G2 | Igual ao valor acima |
+
+Isso sustenta igualdade do conteúdo desse arquivo nos quatro momentos medidos,
+com base nas saídas fornecidas. Não exclui alteração transitória entre coletas
+nem identifica sozinho o código em execução. Hash do bundle é distinto de hash
+do APK e não comprova igualdade de conteúdo de bancos, preferências ou cookies.
 
 Inventários iguais nesse alcance não excluem mudanças internas em bancos ou
 preferências, arquivos transitórios ou tráfego. G não encerra S04 por completo,
