@@ -166,8 +166,8 @@ Fonte: relato do autor e quatro pares de saídas identificadas por cenário e
 momento. Fonte declarada `4dc0105` limpa; Fast Refresh desativado;
 `captura-5`/`preview-1`, com `nao-carregado` antes do início. Conexão USB com
 `adb reverse` na porta 8097. **Houve reinstalação desde os testes anteriores**;
-não foi fornecido novo hash do APK instalado. O hash verificado em 12/11 não é
-usado para identificar automaticamente o APK desta nova sessão.
+o novo hash foi fornecido posteriormente, conforme a coleta C/D abaixo. A
+verificação inicial de 12/11 não é retroativamente atribuída à reinstalação.
 
 Na retomada, `curl` no PC falhava em `127.0.0.1:8097/status`, mas respondia
 `packager-status:running` em `localhost`; ADB detectava o telefone e a regra
@@ -207,10 +207,13 @@ DEPOIS de A e nos dois inventários de B consta:
 ```
 
 Os demais nomes correspondem à lista já transcrita; são 16 entradas em cada
-listagem. A diferença do sufixo `a` foi destacada pelo próprio autor. Foi pedido
-esclarecimento sobre saída original versus erro de transcrição. **Não foi
-corrigida silenciosamente nem considerada prova de criação/remoção real.**
-Nova listagem atual pode informar o nome presente, mas não reconstruir o anterior.
+listagem. A diferença do sufixo `a` foi destacada pelo próprio autor. Após pedido
+de esclarecimento, ele conferiu o terminal e informou não encontrar esse `a`,
+atribuindo-o a erro ao copiar/editar o relatório. A transcrição inicial fica
+preservada acima e a correção é atribuída ao autor, sem alteração silenciosa.
+**Conclusão corrigida de A: sem diferença relatada nos nomes nem nos metadados
+exibidos antes/depois, assim como B.** Não se trata de evidência de criação ou
+remoção real do banco.
 
 Os quatro `ls` têm metadados exibidos iguais. Tabela sanitizada (sem prompt,
 UID/GID ou caminho aleatório de instalação), horários sem fuso informado:
@@ -227,7 +230,7 @@ O bundle tem tamanho diferente do relatório de 12/11 (7340789 bytes), mas taman
 igual nos quatro inventários novos. Não há comparação controlada entre sessões
 para atribuir a causa. Horários de modificação não são convertidos em hora dos
 testes. Em B, nomes e metadados exibidos são iguais entre antes e depois. Em A,
-metadados exibidos são iguais, com a ressalva do nome divergente no `find`.
+a mesma conclusão é relatada após o esclarecimento de transcrição acima.
 
 Não há inspeção do conteúdo ou metadados dos bancos/preferências/cookies pelo
 `ls` fornecido; nada permite excluir alterações internas, filas de telemetria
@@ -249,14 +252,53 @@ ele contém, se houve envio ou quais destinos foram usados. Falta conferir a
 árvore resolvida e o comportamento em runtime; nenhuma dependência foi trocada
 ou telemetria declarada segura com base apenas nesses metadados públicos.
 
+## Coleta C/D e hash após reinstalação — recebida em 16/11/2026
+
+O autor forneceu nova saída de `sha256sum` do base.apk instalado e de Get-FileHash
+do APK local, ambas com o mesmo SHA-256, desconsiderando caixa:
+
+```text
+69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c
+```
+
+Caminho aleatório de instalação e prompt pessoal omitidos. Esse retorno renova
+a correspondência entre APK base instalado e arquivo local no momento da consulta
+após a reinstalação; não identifica sozinho o JS servido pelo Metro nem prova
+qual binário estava instalado em cada instante anterior.
+
+**Teste C — Home durante revisão: positivo no alcance relatado (parte de S04).**
+O autor relata descarte da revisão, ausência da correção 130 ao retornar,
+impossibilidade de confirmar aquela revisão, câmera desligada e ausência de
+reinício automático. Uma nova captura por gesto explícito trouxe candidatos do
+cartão sem recuperar a edição anterior. Não especificou se o app foi recriado
+ou preservou a instância ao retornar.
+
+O par de inventários C contém os mesmos 16 nomes já registrados e `ls` iguais.
+O bundle tem 7340781 bytes, modificação exibida 2026-11-16 10:45; profileInstalled
+tem 24 bytes, modificação 2026-11-16 10:46. Nos dois inventários, os diretórios
+cache/.expo-dev-launcher e cache/WebView mantêm os metadados previamente
+transcritos, e o arquivo no_backup/expo-dev-launcher-installation-id.txt mantém
+36 bytes e modificação 2026-11-10 21:08. Horários sem fuso informado, não tratados
+como instantes dos testes. Os horários diferem da coleta A/B, mas são iguais
+no par C; não se atribui causa à diferença entre sessões.
+
+**Teste D — cancelar durante OCR: não executado.** Segundo o autor, a fase foi
+rápida demais para efetuar o cancelamento. Não registrar como aprovado, falha,
+latência medida ou descarte tardio comprovado. Não foram fornecidos inventários
+de D. Testes isolados anteriores não substituem a evidência física ausente.
+
+Os inventários C, como A/B, não inspecionam conteúdo de bancos/preferências,
+arquivos transitórios ou tráfego. DataTransport e privacidade permanecem em
+auditoria; não houve habilitação clínica nem conclusão integral de tarefa.
+
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
-2. Renovar a identidade do APK após a reinstalação e esclarecer `journala`.
-3. Exercitar Home durante revisão, cancelamento durante OCR quando alcançável,
-   concorrência e permissões; depois demais interrupções, S08/S09. Não repetir
-   A/B como substituto dos casos restantes de S03/S04.
+2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
+3. Exercitar concorrência e permissões; depois demais interrupções, S08/S09.
+   Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
+   ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
    mídia ou payload clínico. Não confundir tráfego Metro com reconhecimento.
 
