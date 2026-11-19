@@ -545,6 +545,48 @@ horário alterado em J2. Não identifica a causa da alteração/regravação nem
 conteúdo de bancos/preferências/cookies ou ausência de temporários e tráfego.
 Não registrar todos os metadados como iguais. Auditoria e TASK-07 abertas.
 
+## Teste K — acessibilidade S09, recebido em 19/11/2026
+
+| Caso | Resultado relatado | Limite / pendência |
+|---|---|---|
+| K1 TalkBack | Iniciar/capturar/cancelar operáveis; campos/valores/unidades e resultado final identificáveis | Confirmação indisponível **não identificável**; erro de 70/80 compreensível somente após selecionar o erro |
+| K2 Fonte máxima disponível | Números/rótulos/erros legíveis, botões acessíveis, sem cortes/sobreposição percebidos | Configuração máxima informada sem escala numérica; alcance desse aparelho/percurso |
+| K3 Temas | Demo acompanhou claro/escuro, legibilidade relatada, sem problema percebido | Não equivale a medição de contraste WCAG AA |
+
+K2/K3 positivos no alcance relatado. **K1 e S09 parciais, com obstáculo concreto
+de identificação da confirmação desabilitada a corrigir/retestar.** O autor
+considerou TalkBack confuso e relatou primeira experiência; isso não invalida a
+dificuldade nem prova que seja exclusivamente falta de familiaridade. Não
+registrar anúncio automático de erro como aprovado: ele precisou selecionar o
+erro para ouvi-lo. A causa específica de comportamento do TalkBack não foi
+instrumentada; o Button já declara accessibilityState.disabled no código.
+
+Os seis `find` têm os mesmos 16 nomes. Dentro de cada par, `ls` igual; entre
+casos, os horários diferem (sem fuso informado, não usados como latência):
+
+| Coleta antes/depois | files/. e bundle: modificação exibida | Bundle bytes | profileInstalled: bytes / modificação |
+|---|---|---:|---|
+| K1 | 2026-11-19 15:18 | 7340781 | 24 / 2026-11-19 13:45 |
+| K2 | 2026-11-19 15:44 | 7340781 | 24 / 2026-11-19 15:44 |
+| K3 | 2026-11-19 15:47 | 7340781 | 24 / 2026-11-19 15:44 |
+
+Cache/.expo-dev-launcher e cache/WebView mantêm os metadados anteriores;
+no_backup/expo-dev-launcher-installation-id.txt mantém 36 bytes e modificação
+2026-11-10 21:08. Prompts pessoais e UID/GID omitidos. Não registrar todos os
+seis inventários como idênticos entre casos.
+
+Os seis SHA-256 do arquivo JS no sandbox, antes/depois de K1/K2/K3, são iguais:
+
+```text
+a7b2efd2c07366d300b0e04180157c6e8d44e6ce5e5b4cbc40d7963e18bdf9c2
+```
+
+Coincidem com G/H/I/J e sustentam igualdade desse arquivo nos momentos medidos,
+sem excluir alterações transitórias, identificar sozinho o JS executado ou
+auditar conteúdo de bancos/preferências/cookies e rede. Privacidade e TASK-07
+permanecem abertas. Próximo passo: corrigir a comunicação da confirmação e
+retestar K1, preservando o bloqueio real e a confirmação explícita.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -560,14 +602,14 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | J1/J2/J3 positivos nos cartões sintéticos relatados; J1 corrigido pelo autor | Sem ampliar cobertura a displays reais, outros layouts ou acurácia geral |
-| S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
+| S09 | K2/K3 positivos no relato; K1 parcial | Corrigir/retestar identificação da confirmação indisponível e comunicação de erros |
 
-Após J, há **um grupo sem rodada dedicada recebida** (S09) e **três
-parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
+Após K, todos os nove grupos receberam alguma evidência. **Quatro permanecem
+parciais com complementos** (S03/S04/S05/S09). S01/S02/S06/S07/S08 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco cobre acessibilidade S09;
+restantes para aceite integral. O próximo passo é correção/reteste de K1;
 auditoria segue em paralelo. Não repetir I para tentar provocar closing
 nem ampliar seu alcance por ausência de erro visível.
 
@@ -594,7 +636,9 @@ recebeu ambos os rótulos: a fotografia/OCR pode omitir um deles. Não confirmar
 conflito nem repetir para selecionar apenas um resultado favorável. Não solicitar
 OCR bruto ou capturas de câmera para o Git/chat.
 
-## Próxima rodada K — acessibilidade S09 (ainda não executada)
+## Roteiro proposto para K — acessibilidade S09
+
+Protocolo preservado; resultados recebidos estão na seção Teste K acima.
 
 Usar cartão sintético e a mesma demo, sem nova instalação. Três subtestes:
 
@@ -616,8 +660,7 @@ mantêm seu alcance limitado; percepção de legibilidade não mede contraste AA
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar S09, preservando os limites dos casos parciais da matriz e dos
-   cartões S08 já relatados.
+3. Corrigir e retestar K1, preservando os limites dos demais casos da matriz.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
