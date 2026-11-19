@@ -487,6 +487,64 @@ transitória, nem identifica sozinho JS executado ou comprova conteúdo de banco
 preferências/cookies, ausência de mídia persistida ou ausência de tráfego.
 Auditoria de privacidade e TASK-07 permanecem abertas.
 
+## Teste J — cartões S08, recebido em 19/11/2026
+
+Fonte: relato do autor, seis inventários e seis saídas SHA-256. Sem acesso do
+Codex à câmera/aparelho. Os cartões propostos estão na seção de roteiro J abaixo.
+
+| Caso | Resultado relatado | Conclusão no alcance do cartão |
+|---|---|---|
+| J1 sem pulso | 120/80, pulso vazio, sem aviso | Positivo para campos reconhecidos e ausência de pulso |
+| J2 acessórios | 120/80/72; hora e memória não entraram em campos, sem aviso | Positivo para acessórios nesse cartão |
+| J3 conflito | Sistólica vazia, diastólica 80, pulso 72; confirmação impedida | Positivo para conflito explicitado/bloqueio nesse cartão |
+
+**Correção atribuída ao autor:** o primeiro relatório de J1 trazia diastólica
+90, divergente do cartão proposto 80. Após pedido de esclarecimento, o autor
+confirmou que 90 era erro ao transcrever o relatório e que a tela mostrou 80.
+O retorno corrigido é 120/80; não registrar erro de OCR 80→90 comprovado nem
+apagar o histórico da correção. Esse esclarecimento não é uma nova tentativa.
+
+Mensagem de J3 transcrita pelo autor, sem normalização silenciosa:
+
+```text
+Informe a sistólica
+Sistólica: Incorreto: associação ambígua ao campo. Preencha ou corrija.
+```
+
+S08 tem resultados positivos nos três cartões sintéticos relatados. Não é prova
+de acurácia geral, reconhecimento de displays reais ou de que todo conflito
+possível seja detectado. Não foi fornecido texto OCR bruto/caixas; não inferir
+detalhes internos além do comportamento observado. Nenhuma gravação clínica foi
+relatada; esta demo permanece somente em memória.
+
+Os seis `find` contêm os mesmos 16 nomes já registrados. J1 e J3 têm metadados
+exibidos iguais antes/depois; J2 tem mudança nos horários de files/bundle:
+
+| Coleta | `files/.` e bundle: modificação exibida | Bundle: bytes |
+|---|---|---:|
+| J1 antes/depois | 2026-11-19 13:48 | 7340781 |
+| J2 antes | 2026-11-19 13:48 | 7340781 |
+| J2 depois | 2026-11-19 13:51 | 7340781 |
+| J3 antes/depois | 2026-11-19 13:54 | 7340781 |
+
+Os outros metadados exibidos se mantêm: profileInstalled 24 bytes/modificação
+2026-11-19 13:45; arquivo no_backup 36 bytes/modificação 2026-11-10 21:08;
+diretórios cache/.expo-dev-launcher e cache/WebView conforme as tabelas anteriores.
+UID/GID e prompts pessoais omitidos. Horários sem fuso informado, não convertidos
+em instantes de captura ou duração de teste.
+
+Antes/depois de J1, antes/depois de J2 e antes/depois de J3, o arquivo JS no
+sandbox tem o mesmo SHA-256 recebido em G/H/I:
+
+```text
+a7b2efd2c07366d300b0e04180157c6e8d44e6ce5e5b4cbc40d7963e18bdf9c2
+```
+
+Isso sustenta igualdade desse arquivo nos seis momentos medidos, inclusive com
+horário alterado em J2. Não identifica a causa da alteração/regravação nem prova
+conteúdo de bancos/preferências/cookies ou ausência de temporários e tráfego.
+Não registrar todos os metadados como iguais. Auditoria e TASK-07 abertas.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -501,19 +559,21 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S05 | E sem erro percebido; I1/I2 com retorno rápido seguros no relato | Toques aceitos indeterminados; closing/bloqueio não observados em I1; sem disputa/concorrência nativa comprovada |
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
-| S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
+| S08 | J1/J2/J3 positivos nos cartões sintéticos relatados; J1 corrigido pelo autor | Sem ampliar cobertura a displays reais, outros layouts ou acurácia geral |
 | S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
 
-Após I, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
+Após J, há **um grupo sem rodada dedicada recebida** (S09) e **três
 parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco cobre cartões sintéticos S08;
-S09 e auditoria seguem na sequência. Não repetir I para tentar provocar closing
+restantes para aceite integral. O próximo bloco cobre acessibilidade S09;
+auditoria segue em paralelo. Não repetir I para tentar provocar closing
 nem ampliar seu alcance por ausência de erro visível.
 
-## Próxima rodada J — cartões sintéticos S08 (ainda não executada)
+## Roteiro proposto para J — cartões sintéticos S08
+
+Protocolo preservado; resultados recebidos estão na seção Teste J acima.
 
 Exibir somente as linhas de cada cartão, em fonte grande, no computador ou em
 papel. Títulos/instruções ficam fora do enquadramento; não usar amostras clínicas.
@@ -534,12 +594,30 @@ recebeu ambos os rótulos: a fotografia/OCR pode omitir um deles. Não confirmar
 conflito nem repetir para selecionar apenas um resultado favorável. Não solicitar
 OCR bruto ou capturas de câmera para o Git/chat.
 
+## Próxima rodada K — acessibilidade S09 (ainda não executada)
+
+Usar cartão sintético e a mesma demo, sem nova instalação. Três subtestes:
+
+| Caso proposto | Procedimento / evidência esperada |
+|---|---|
+| K1 TalkBack | Navegar por iniciar/capturar/cancelar, campos de revisão e confirmação somente em memória; nomes/papéis/estado desabilitado e aviso de erro compreensíveis; registrar o que foi anunciado, sem gravação de áudio |
+| K2 Fonte ampliada | Ajustar fonte no sistema, registrar nível/configuração, abrir nova tentativa e verificar rótulos, números, erros e controles sem cortes ou sobreposição; rolagem pode ser necessária |
+| K3 Temas disponíveis | Configurar claro/escuro no sistema antes de cada tentativa; verificar legibilidade de texto, valores, erros e botões; registrar se a demo não acompanha o tema |
+
+Entrar em configurações pode colocar a demo em background e invalidar a revisão:
+ajustar primeiro e depois iniciar nova tentativa, sem confundir descarte esperado
+com falha de fonte/tema. Preparar forma de desativar TalkBack antes de habilitá-lo;
+restaurar configurações pessoais ao terminar. Não solicitar áudio, logs clínicos
+ou conteúdo de captura. Inventários/hashes antes/depois identificados por caso
+mantêm seu alcance limitado; percepção de legibilidade não mede contraste AA.
+
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar S08/S09, preservando os limites dos casos parciais da matriz.
+3. Exercitar S09, preservando os limites dos casos parciais da matriz e dos
+   cartões S08 já relatados.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
