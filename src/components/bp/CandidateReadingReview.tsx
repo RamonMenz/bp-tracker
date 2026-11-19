@@ -20,12 +20,20 @@ const REASONS: Record<Extract<CandidateField, { status: 'uncertain' }>['reason']
   unreadable: 'leitura incompleta ou ilegível',
 };
 const LABELS = { systolic: 'Sistólica', diastolic: 'Diastólica', pulse: 'Pulso' };
+const REVIEW_LABELS = { ...LABELS, note: 'Observação', measuredAt: 'Data e hora' };
 
 export function CandidateReadingReview({ review }: { review: CandidateReviewView }) {
   const [pickerAttempt, setPickerAttempt] = useState<number | null>(null);
   const { state, errors } = review;
   const draft = state.draft;
   const isVoice = review.modality === 'voice';
+  const issues = (['systolic', 'diastolic', 'pulse', 'note', 'measuredAt'] as const)
+    .flatMap(key => errors[key] ? [`${REVIEW_LABELS[key]}: ${errors[key]}`] : []);
+  const confirmationStatus = state.phase === 'confirming'
+    ? 'Confirmação em andamento. Aguarde.'
+    : review.canConfirm
+      ? 'Confirmação disponível. Confira os valores antes de confirmar.'
+      : `Confirmação indisponível. ${issues.join(' ') || 'Revise os campos antes de confirmar.'}`;
   return (
     <Card className="gap-4">
       <Text variant="sectionHeader" accessibilityRole="header">{isVoice ? 'Revisar voz' : 'Revisar fotografia'}</Text>
@@ -69,7 +77,9 @@ export function CandidateReadingReview({ review }: { review: CandidateReviewView
             accessibilityLabel="Data e hora da medição" onChange={value => review.edit('measuredAt', value, state.attempt)}
             onClose={() => setPickerAttempt(null)} /> : null}
           {errors.measuredAt ? <Text accessibilityRole="alert">{errors.measuredAt}</Text> : null}
+          <Text accessible accessibilityLiveRegion="polite">{confirmationStatus}</Text>
           <Button label={review.isSimulation ? "Confirmar simulação" : review.isPreviewOnly ? "Confirmar revisão em memória" : "Confirmar e salvar medição"} disabled={!review.canConfirm}
+            accessibilityHint={review.canConfirm ? 'Confirma os valores revisados.' : confirmationStatus}
             loading={state.phase === 'confirming'} onPress={() => { setPickerAttempt(null); void review.confirm(); }} />
         </>
       ) : (
