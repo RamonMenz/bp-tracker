@@ -437,6 +437,56 @@ JS executado ou comprovar conteúdo de bancos/preferências/cookies e rede.
 S04 continua parcial para troca de app e condições não exercitadas; TASK-07 e
 auditoria de privacidade seguem abertas.
 
+## Teste I — troca rápida de app, recebido em 19/11/2026
+
+Fonte: relato do autor, quatro inventários e quatro saídas SHA-256. Sem acesso
+do Codex ao aparelho. Não foram fornecidas novas versões de fonte/APK nessa
+mensagem; não se presume uma nova verificação da identidade da instalação.
+
+| Observação relatada | I1: preview | I2: revisão |
+|---|---|---|
+| Fase ao voltar | cancelled | Revisão/edição 130 descartadas |
+| Preview/indicador encerrados | Sim | Não especificado separadamente |
+| Retomada automática | Não | Sem confirmação/captura automática |
+| Revisão/resultado antigo | Não apareceu | Confirmação antiga indisponível |
+| closing/botão desabilitado observados | Não | Não especificado separadamente |
+| Novo início/cancelamento | Funcionaram | Nova captura não recuperou edição anterior |
+| Reinício percebido do app | Não, segundo o autor | Não, segundo o autor |
+
+**I1/I2 positivos no alcance relatado de troca rápida de app durante preview e
+revisão.** Não observar closing/bloqueio não prova que a barreira de liberação
+foi disputada; não há contadores/trace de processamento nativo. Ausência de
+reinício percebido é observação visual, sem prova instrumental da instância.
+
+Os quatro `find` têm os mesmos 16 nomes já registrados. Cada par antes/depois
+tem `ls` igual; tabela de metadados transcritos sem prompt pessoal ou UID/GID:
+
+| Entrada | Antes/depois de I1 | Antes/depois de I2 | Bytes exibidos |
+|---|---|---|---:|
+| `files/.` | 2026-11-19 12:46 | 2026-11-19 12:50 | 3452 |
+| `files/DevLauncherApp-BridgelessReactNativeDevBundle.js` | 2026-11-19 12:46 | 2026-11-19 12:50 | 7340781 |
+| `files/profileInstalled` | 2026-11-16 13:11 | 2026-11-16 13:11 | 24 |
+| `no_backup/expo-dev-launcher-installation-id.txt` | 2026-11-10 21:08 | 2026-11-10 21:08 | 36 |
+
+`cache/.expo-dev-launcher` e `cache/WebView` mantêm os metadados anteriormente
+transcritos. Horários sem fuso informado, não convertidos em horas de execução
+ou latência. Há diferença dos horários de files/bundle entre I1 e I2, sem
+diferença dentro de cada par. Não registrar os quatro inventários como todos
+idênticos nem atribuir causa à alteração entre subtestes.
+
+Hashes recebidos do arquivo JS no sandbox:
+
+```text
+a7b2efd2c07366d300b0e04180157c6e8d44e6ce5e5b4cbc40d7963e18bdf9c2
+```
+
+Antes/depois de I1 e antes/depois de I2 apresentam esse mesmo valor, também
+recebido em G/H. Isso sustenta igualdade do bundle nos quatro momentos medidos,
+apesar dos horários diferentes entre I1/I2. Não exclui regravação/alteração
+transitória, nem identifica sozinho JS executado ou comprova conteúdo de bancos,
+preferências/cookies, ausência de mídia persistida ou ausência de tráfego.
+Auditoria de privacidade e TASK-07 permanecem abertas.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -447,29 +497,49 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S01 | F positivo no alcance relatado | Não ampliar para todas as condições/versões de permissão |
 | S02 | Três leituras positivas do cartão sintético | Sem ampliar para displays reais ou acurácia universal |
 | S03 | A positivo no preview; D não executado no OCR | Cancelamento em permissão/abertura; OCR permanece não executado enquanto inalcançável |
-| S04 | B/C em Home, G1/G2 no bloqueio e H1/H2 na rotação com relayout positivos no relato | Troca de app; rotação com interrupção/recriação não ocorreu em H |
-| S05 | E sem erro percebido, toques aceitos indeterminados | Saída/entrada rápida e liberação; não afirmar concorrência nativa comprovada |
+| S04 | B/C em Home, G1/G2 no bloqueio, H1/H2 em relayout e I1/I2 na troca de app positivos no relato | Alcance preview/revisão; rotação com interrupção/recriação não ocorreu em H; demais fases não presumidas |
+| S05 | E sem erro percebido; I1/I2 com retorno rápido seguros no relato | Toques aceitos indeterminados; closing/bloqueio não observados em I1; sem disputa/concorrência nativa comprovada |
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | Sem rodada dedicada relatada | Cartões sintéticos sem pulso, com acessórios e conflitos |
 | S09 | Sem rodada dedicada relatada | TalkBack, fonte ampliada e temas disponíveis |
 
-Após H, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
+Após I, há **dois grupos sem rodada dedicada recebida** (S08/S09) e **três
 parciais com complementos** (S03/S04/S05). S01/S02/S06/S07 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo bloco cobre troca rápida de app no
-preview e na revisão, sem exigir abertura durante limpeza pendente; S08/S09 e
-auditoria seguem na sequência.
+restantes para aceite integral. O próximo bloco cobre cartões sintéticos S08;
+S09 e auditoria seguem na sequência. Não repetir I para tentar provocar closing
+nem ampliar seu alcance por ausência de erro visível.
+
+## Próxima rodada J — cartões sintéticos S08 (ainda não executada)
+
+Exibir somente as linhas de cada cartão, em fonte grande, no computador ou em
+papel. Títulos/instruções ficam fora do enquadramento; não usar amostras clínicas.
+Uma captura por cartão, cancelando a revisão entre eles; inventários e hash do
+bundle antes/depois identificados por subteste. Não é corpus de medidores reais.
+
+| Cartão | Linhas sintéticas | Resultado esperado, sujeito ao OCR real |
+|---|---|---|
+| J1 | SYS 120; DIA 80 (uma linha por campo, sem PUL) | SYS/DIA identificados; pulso vazio/ausente, sem recuperar 72 do teste anterior |
+| J2 | TIME 09:30; MEM 1; SYS 120; DIA 80; PUL 72 (uma linha por item) | Hora/memória não viram valores clínicos; candidatos esperados 120/80/72 |
+| J3 | SYS 120; SYS 130; DIA 80; PUL 72 (uma linha por item) | Conflito de sistólica explícito, campo vazio/incerto e confirmação impedida até correção |
+
+Os valores e horário são entradas sintéticas propostas, não resultados nem
+horário de execução. Uma leitura parcial/ilegível precisa ser registrada como
+tal, não aprovada por ser segura nem corrigida antes de documentar a saída.
+Se J3 preencher sistólica, registrar valor e aviso sem presumir que o parser
+recebeu ambos os rótulos: a fotografia/OCR pode omitir um deles. Não confirmar
+conflito nem repetir para selecionar apenas um resultado favorável. Não solicitar
+OCR bruto ou capturas de câmera para o Git/chat.
 
 ## Próximas evidências
 
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Exercitar troca de app e saída/entrada rápida
-   de S05 e S08/S09, conforme a matriz de cobertura.
+3. Exercitar S08/S09, preservando os limites dos casos parciais da matriz.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
