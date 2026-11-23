@@ -587,6 +587,20 @@ auditar conteúdo de bancos/preferências/cookies e rede. Privacidade e TASK-07
 permanecem abertas. Próximo passo: corrigir a comunicação da confirmação e
 retestar K1, preservando o bloqueio real e a confirmação explícita.
 
+## Reteste K1 recebido em 23/11/2026
+
+Autor identificou worktree f057283 limpa e novo hash do arquivo JS
+860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388.
+Agora relata identificação da confirmação indisponível/motivo e do estado
+desabilitado ao navegar/selecionar o botão; inválido bloqueado, correção e
+confirmação em memória funcionais, texto legível com fonte ampliada. **Melhora
+positiva no percurso relatado, sem anúncio automático observado.** Não atribuir
+ao retorno números finais não transcritos ou descarte do texto após cancelar
+não detalhado. Inventários antes/depois declarados iguais, com apenas uma
+transcrição fornecida; metadados não são os de 19/11. O registro detalhado está
+no [PR #70 e documento de reteste](https://github.com/RamonMenz/bp-tracker/pull/70),
+preservando as duas frentes. Auditoria de privacidade e TASK-07 abertas.
+
 ## Cobertura atual do roteiro Samsung
 
 Os nove IDs S01–S09 são grupos de cenários, não nove cliques nem nove critérios
@@ -602,14 +616,14 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | J1/J2/J3 positivos nos cartões sintéticos relatados; J1 corrigido pelo autor | Sem ampliar cobertura a displays reais, outros layouts ou acurácia geral |
-| S09 | K2/K3 positivos no relato; K1 parcial | Corrigir/retestar identificação da confirmação indisponível e comunicação de erros |
+| S09 | K2/K3 positivos; reteste K1 com bloqueio/motivo identificáveis por navegação | Anúncio automático não observado; demais limites de acessibilidade/contraste não presumidos |
 
 Após K, todos os nove grupos receberam alguma evidência. **Quatro permanecem
 parciais com complementos** (S03/S04/S05/S09). S01/S02/S06/S07/S08 têm resultados positivos no
 alcance da demo. Isso não é percentual de conclusão da TASK-07. Fora desses nove
 grupos, permanecem auditorias de armazenamento/logs/telemetria/rede/reconexão,
 displays reais, legado e integração clínica; não há número fixo de execuções
-restantes para aceite integral. O próximo passo é correção/reteste de K1;
+restantes para aceite integral. O próximo passo é auditoria técnica;
 auditoria segue em paralelo. Não repetir I para tentar provocar closing
 nem ampliar seu alcance por ausência de erro visível.
 
@@ -660,7 +674,8 @@ mantêm seu alcance limitado; percepção de legibilidade não mede contraste AA
 1. Preservar os pares antes/depois e continuar inventários por cenário, sem
    reconstruir retrospectivamente a inspeção das três rodadas iniciais.
 2. Preservar o hash renovado e registrar futuras reinstalações separadamente.
-3. Corrigir e retestar K1, preservando os limites dos demais casos da matriz.
+3. Preservar o resultado positivo por navegação de K1 e seus limites, sem repetir
+   toda a bateria manual ou declarar anúncio automático aprovado.
    Manter D não executado até ser alcançável, sem repetir tentativas indefinidamente
    ou introduzir atraso no produto para simular evidência física.
 4. Auditar dependências/telemetria e rede por UID, incluindo reconexão, sem coletar
