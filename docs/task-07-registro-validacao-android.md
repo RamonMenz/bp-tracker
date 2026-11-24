@@ -1,5 +1,8 @@
 # TASK-07 — registro da depuração e validação inicial em Android
 
+> **Continuidade:** [ponto de retomada de 24/11/2026](task-07-rodada-tecnica-consolidada.md#ponto-de-retomada--consolidação-do-aprendizado-deste-chat),
+> com mapa dos documentos, identidades, lições, R1/R2 e pendências atuais.
+
 > **Retomada posterior em 11/11/2026:** o PR #64 foi confirmado como mesclado
 > (`6f7a249`). A integração funcional, as diferenças frente aos artefatos e as
 > novas verificações estão no [registro de integração](task-07-integracao-android.md).
