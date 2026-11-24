@@ -527,3 +527,14 @@ preparada com consulta reverse 1/0→0/0→1/0, retirada/restauração só de 80
 Wi-Fi/dados originais e uma captura sintética com cancelamento; O1 também é Q0.
 Sem resultados físicos novos de O/Q ou observação por UID/destino presumidos;
 não equivale a isolamento universal/privacidade homologada.
+
+
+Retorno posterior O/Q: rádios Wi-Fi/dados/Bluetooth desligados, reverse 8097
+1/0→0/0→1/0, hash 86017456… conhecido. Reconhecimento sintético e cancelamento
+funcionaram; reconexão/estados originais restaurados, cancelled/sem campos/câmera/
+retomada/erro, espera programada 30 s sem pausa extra. O0/O1/Q1 IDs 6/7/8, 16
+entradas; uma mudança size-or-mtime DataTransport em cada par, sem conteúdo/
+causa/envio determinados ou prova de que seja a mesma entrada. [Rodada e diagnóstico consolidados](task-07-inspecao-privacidade-localidade.md#retorno-oq--leitura-desconectada-e-reconexão).
+Sem novas capturas pedidas: próximo M0 se artefato/Studio existirem e auditoria
+independente de SDK. Encoders OCR públicos examinados sem pixels/texto nessa
+subárvore, sem resolver ID do envelope ou SDK/SO integral. Habilitação bloqueada.

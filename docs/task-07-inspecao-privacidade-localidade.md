@@ -3,7 +3,8 @@
 Preparado em 24/11/2026 sobre staging
 `81af92f4d3763e1e89f910e01c296decf83b5778`, branch
 `docs/task-07-inspecao-privacidade`. Diagnóstico **parcial e habilitação clínica
-bloqueada**. A inspeção física abaixo ainda não foi executada nesta etapa.
+bloqueada**. Rodada I/S/B/C/R/E/O/Q executada e relatada pelo autor, com
+evidências e limites abaixo; sem inspeção direta do Samsung pelo Codex.
 Aplicam-se a [constituição](../constitution.md), a [spec fotografia](../specs/spec-fotografia.md)
 (FOT-01/02/07/08/10/16), os gates de [tasks.md](../tasks.md) e os
 [resultados anteriores](task-07-resultados-samsung.md). Não repetir a bateria
@@ -604,7 +605,7 @@ diretamente ao PC por cabo USB, sem hub/adaptador Ethernet no telefone. Esse
 esclarecimento resolve a montagem declarada; não certifica isolamento universal
 ou tráfego zero. Não exige desligar Ethernet do PC ou depuração USB.
 
-**O/Q conduzidos somente nas condições declaradas abaixo, ainda sem resultado:**
+**Procedimento O/Q executado nas condições declaradas abaixo; retorno posterior:**
 fonte/Metro TalkBack e coletor inventario-1 já carregados, Fast Refresh desligado,
 sem novo APK/código, somente cartão sintético e nenhuma confirmação clínica.
 O0→O1 abrange uma captura e cancelamento da revisão; O1 também é Q0, evitando
@@ -691,8 +692,85 @@ Devolver hash, três resumos reverse (antes/depois da remoção/depois da restau
 três inventários e duas comparações; estado inicial do Bluetooth e conexões efetivamente desligadas/restauradas,
 phase/Nativo/preview, correspondência com cartão, cancelamento, janelas e pausas,
 recarga/reinício/erro e confirmação de câmera desligada. Não payload, screenshot,
-logcat, banco, IP/SSID/serial ou conteúdo de arquivo. O/Q ainda não executados;
+logcat, banco, IP/SSID/serial ou conteúdo de arquivo. Retorno de O/Q abaixo;
 privacidade, manifesto/APK e observação por UID/destinos seguem pendentes.
+
+## Retorno O/Q — leitura desconectada e reconexão
+
+Registro em 24/11/2026, conforme relato/terminal do autor, sem data/hora de
+execução informadas ou acesso direto ao Samsung. Não houve novos HEAD/status
+transcritos; a condução manteve TalkBack f057283 e coletor inventario-1/583f61f.
+
+| Item | Observação recebida | Alcance |
+|---|---|---|
+| Condições | Bluetooth estava ligado e foi desligado; Wi-Fi/dados/Bluetooth permaneceram desligados em O | Estados relatados pelo autor; montagem USB direta/ancoragens desligadas/VPN não já informadas |
+| Bundle pré-remoção | SHA-256 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 | Coincide com referências, sem prova universal de runtime/SDK |
+| Reverse | Resumos 1/0 antes, 0/0 após remover, 1/0 após restaurar; sem erro percebido | Canal tcp:8097→tcp:8097 retirado/restaurado; não mede tráfego, destinos ou outras interfaces do SO |
+| O captura | ready/preview-1/preview visível; revisão correspondente ao cartão sintético, câmera/preview encerrados | Reconhecimento funcionou na configuração declarada, sem canal Metro 8097 e sem conexões de rádio declaradas |
+| O cancelamento | Campos descartados, sem retomada automática ou aviso Metro/erro/recarga/reinício percebido | Descarte positivo no alcance relatado |
+| O0/O1 | IDs 6/7, 16 entradas em cada | Categorias: 1 bundle, 2 nomes DataTransport, 12 não classificados, 1 preferência com nome ML Kit |
+| O0→O1 | ChangedEntries 1, datatransport-nome, size-or-mtime, Files 1 | Janela inclui captura/reconhecimento/cancelamento; sem adição/remoção detectada |
+| Q reconexão | Reverse/Wi-Fi/dados/Bluetooth restaurados aos estados anteriores; cancelled, sem campos/câmera/retomada ou comportamento inesperado | Sem nova captura; retorno saudável relatado |
+| Q espera | Start-Sleep 30 s concluído, sem pausa adicional; sem erro/recarga/reinício percebido | Espera programada, sem cronometragem integral do intervalo |
+| Q1 e comparação | Id 8, 16 entradas; O1→Q1 ChangedEntries 1, datatransport-nome, size-or-mtime, Files 1 | Uma entrada da categoria mudou; relatório não identifica se é a mesma de O |
+
+**O/Q positivos no alcance funcional observado.** O complementa o R1 histórico:
+aqui o reverse foi retirado e os rádios declarados desligados. Demonstra que o
+percurso reconheceu o cartão sem depender dessas conexões; não comprova ausência
+universal de rede, arquivos temporários, logs ou telemetria, nem leitura de
+medidores reais. Nenhuma medição por UID/destino/payload foi realizada.
+
+Mudança de metadados DataTransport em O e Q é compatível com atividade local e
+possível processamento adiado como hipóteses, sem provar fila, conteúdo ou envio.
+Reconectar Metro também restaura comunicação de desenvolvimento. Não transformar
+estabilidade do restante do inventário, ausência de erro ou hash do JS em aceite
+de anonimização/privacidade. Não ler bancos, instalar monitor por tentativa ou
+repetir O/Q para obter delta zero. As conexões originais foram restauradas.
+
+### Diagnóstico consolidado desta rodada
+
+| Frente | Evidência disponível | Lacuna / condição de habilitação |
+|---|---|---|
+| Caminho próprio | CameraX/NV21/InputImage.fromByteBuffer, interpretação/revisão, erros fixos, demo sem writer/fallback; código revisado e testes | Compilação/manifesto/APK efetivos e internos SDK/SO não homologados por revisão de fontes |
+| Execução no Samsung | I/S/B/C/R/E/O/Q positivos nos alcances descritos, correção do sim de B rastreada, versões/identidades delimitadas | Não equivalem a confirmação/persistência clínica, contas, corpus ou comparação acadêmica |
+| Armazenamento | 16 entradas por snapshot; diferenças de tamanho/mtime por categoria documentadas | Conteúdo/temporários entre snapshots/mesmo tamanho e mtime/áreas fora do escopo não inspecionados |
+| Localidade | O reconheceu com rádios declarados desligados e reverse removido | Não é auditoria integral de rede nem exclui telemetria/fila posterior |
+| Telemetria/rede | Rotas estáticas de ID/serialização/transporte conhecidas; DataTransport mudou também em janelas sem OCR e em O/Q | Anonimização e comportamento efetivo, destinos/bytes/logs/falhas do SDK/SO seguem sem evidência suficiente |
+| Manifesto instalado | Configuração/template/módulo revisados; APK instalado histórico sem reconfirmação atual | M0 exige identidade atual e artefato local correspondente, sem envio do APK |
+
+Rodada funcional/metadados consolidada; **TASK-04/06/07/18 permanecem parciais e
+habilitação clínica bloqueada**. Não há defeito funcional confirmado que justifique
+mudar captura/parser/stack ou dispensar guardrails. Não pedir novas capturas por
+lacunas que os snapshots não conseguem resolver. Próximo trabalho: manifesto
+M0 se houver artefato/ferramenta existentes e auditoria independente do SDK.
+Disponibilidade de Android Studio/APK local foi solicitada ao autor, sem build,
+instalação, upload ou novo ensaio físico. Monitor por UID/destino continua NE.
+
+### Complemento independente — encoders do evento OCR
+
+Inspeção estática em 24/11/2026 com javap/JDK 21, sem executar SDK, sobre AAR
+público play-services-mlkit-text-recognition-common 19.1.0. SHA-256 reconferido:
+3be02b3c3c829476100f01d0ab79f0b4a923da23909d3ac63e486d1a63381c58.
+Complementa os produtores do [PR #74](https://github.com/RamonMenz/bp-tracker/blob/812d65b3930833e9b2040882dbc877c20109cdab/docs/task-07-auditoria-dependencias.md#produtores-de-eventos-e-limites-da-inspeção),
+sem incorporar seu código à base. Prefixo das classes abaixo:
+com.google.android.gms.internal.mlkit_vision_text_common.
+
+| Classe / método | Observação estática |
+|---|---|
+| zzmq.configure | Registra zzrz→zzln (offsets 205–210), zzod→zzhz (169–174), zzoj→zzid (97–102), zzsd→zzlo (217–222) |
+| zzln.encode | Evento zzrz projeta inferenceCommonLogEvent, imageInfo e recognizerOptions por getters; não serializa InputImage diretamente nesse corpo |
+| zzhz.encode | imageFormat e originalImageSize vêm de getters de zzod; compressedImageSize e isOdmlImage recebem null nesse encoder (41/51) |
+| zzid.encode | durationMs/errorCode/flags vêm de zzoj; demais descritores examinados recebem null nesse corpo, não provar preenchimento só por nome de campo |
+| zzlo.encode | languageOption vem do getter de zzsd; isUsingLegacyApi e sdkVersion recebem null nesse objeto (27/37); não implica ausência de versão no envelope comum |
+
+Reprodução: extrair classes.jar do AAR público para diretório separado e usar
+`java -m jdk.jdeps/com.sun.tools.javap.Main -c -p -classpath classes.jar` com os
+nomes completos da tabela. Offsets são bytecode, não eventos do Samsung.
+Nesta subárvore examinada não há campo de pixels/texto reconhecido/valores
+clínicos; isso não cobre os demais produtores/envelopes/módulos nativos/logs ou
+implementação dos transportes. O ID persistente já rastreado fica no envelope
+comum, fora desses objetos: o complemento não resolve anonimização. Nenhum
+payload ou banco do aparelho foi lido. Habilitação permanece bloqueada.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -912,9 +990,11 @@ E recebido positivo para negativa/cancelamento; uma entrada não classificada
 mudou size-or-mtime, sem conteúdo/causa/envio determinados. Preparação offline
 recebida: permissão restaurada, cancelled/preview-1 sem câmera, hash conhecido,
 um reverse 8097 e Wi-Fi/dados ligados. Ancoragens USB/Bluetooth desligadas e
-cabo direto sem adaptador confirmados pelo autor; O/Q conduzidos, ainda sem
-resultado. Nenhum desligamento/remoção/captura presumido. M0/APK/UID/destinos e
-privacidade pendentes; habilitação clínica bloqueada.
+cabo direto sem adaptador confirmados. O/Q recebidos positivos no alcance
+funcional; reverse 1/0→0/0→1/0, rádios desligados em O e restaurados em Q;
+16 entradas nos snapshots, uma mudança DataTransport em cada comparação, sem
+conteúdo/causa/envio determinados. Rodada consolidada; M0/APK/UID/destinos e
+privacidade pendentes, habilitação clínica bloqueada.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
