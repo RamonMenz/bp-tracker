@@ -1,5 +1,14 @@
 # TASK-07 — continuidade, rodada técnica e resultados consolidados
 
+> **Integração posterior ao merge #72:** staging avançou para `f901bbb`;
+> a branch do PR #73 incorporou essa base em `f038d6f`. Uma expectativa do
+> teste de OCR tardio ainda exigia dois argumentos; foi ajustada para conferir
+> também os quatro códigos fixos do diagnóstico introduzido pela #72, mantendo
+> identidade da tentativa, candidato de B e entrega única. A falha foi reproduzida
+> antes do ajuste. Lint, TypeScript raiz/demo e 742 testes/67 suítes combinados
+> passaram. Nenhum código funcional foi alterado por essa correção. Os ensaios
+> físicos continuam vinculados a f057283; não homologam retroativamente o novo JS.
+
 > **Retomada posterior em 24/11/2026:** PR #71 confirmado mesclado, fonte
 > `e7256ad`, merge/staging `a3b996a`. O retrato Git abaixo preserva a consulta
 > anterior ao merge. Continuidade em [diagnóstico de associação](task-07-diagnostico-associacao.md)

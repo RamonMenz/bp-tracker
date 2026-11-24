@@ -90,7 +90,7 @@ test('OCR antigo chegando durante novo reconhecimento não preenche nem encerra 
   expect(t.result).toHaveBeenCalledTimes(1);
   expect(t.result).toHaveBeenCalledWith(next, expect.objectContaining({ fields: expect.objectContaining({
     systolic: { status: 'candidate', value: 130, basis: 'label' },
-  }) }));
+  }) }), ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato']);
 });
 
 test.each(['rejection', 'late-ack'] as const)('cleanup %s mantém blocked após cancelamento e novos gestos', async failure => {
