@@ -385,3 +385,106 @@ exigirá ensaio isolado com dados sintéticos e observação dirigida que distin
 OCR/dev launcher, incluindo armazenamento, logs e reconexão; não pedir dump de
 banco ou captura clínica ao autor. Manter habilitação clínica bloqueada até
 evidência dos critérios, sem substituir ML Kit/Tesseract definidos nas specs.
+
+## Produtores de eventos e limites da inspeção
+
+Continuidade em 24/11/2026 sobre staging
+`81af92f4d3763e1e89f910e01c296decf83b5778`, após os merges #72/#73.
+Inspeção estática de bibliotecas públicas com OpenJDK 21.0.12.1, sem executar
+classes do SDK, capturar mídia, consultar sandbox ou acessar o Windows/Samsung.
+Complementa a seção anterior; não constitui aceite de privacidade.
+
+### Artefatos e reprodução
+
+| Artefato público oficial | SHA-256 conferido nesta etapa |
+|---|---|
+| [text-recognition 16.0.1](https://dl.google.com/dl/android/maven2/com/google/mlkit/text-recognition/16.0.1/text-recognition-16.0.1.aar) | `da753265d02479a8cfe4dbf891ba7d189248e7c8430b6f72bd4d532c757a69b3` |
+| [play-services-mlkit-text-recognition 19.0.1](https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-mlkit-text-recognition/19.0.1/play-services-mlkit-text-recognition-19.0.1.aar) | `6b504dc053758407a507883fa9495bcb4c1c2bae8069012ff3a8f70f93bc89d4` |
+| [play-services-mlkit-text-recognition-common 19.1.0](https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-mlkit-text-recognition-common/19.1.0/play-services-mlkit-text-recognition-common-19.1.0.aar) | `3be02b3c3c829476100f01d0ab79f0b4a923da23909d3ac63e486d1a63381c58` |
+
+O [POM de text-recognition 16.0.1](https://dl.google.com/dl/android/maven2/com/google/mlkit/text-recognition/16.0.1/text-recognition-16.0.1.pom)
+declara o componente 19.0.1. O AAR 16.0.1 contém o descritor do módulo latino,
+mas sua classes.jar não contém TextRecognizerOptions: a primeira tentativa de
+javap nessa classe retornou class not found. A classe foi localizada em 19.0.1.
+Isso não é falha de OCR nem resolução Gradle nova. Os hashes são de downloads
+públicos, não do APK instalado; o runtime efetivo continua sem inspeção.
+
+Para reproduzir, baixar os AARs oficiais para diretório temporário separado do
+repositório, conferir os hashes e extrair somente classes.jar de cada ZIP para
+pastas distintas. Sobre cada jar, executar, sem carregar as classes:
+
+```sh
+java -m jdk.jdeps/com.sun.tools.javap.Main -c -p -classpath classes.jar NOME_COMPLETO_DA_CLASSE
+```
+
+Classes em 19.0.1: `com.google.mlkit.vision.text.latin.TextRecognizerOptions`
+e `com.google.mlkit.vision.text.latin.TextRecognizerOptions$Builder` (proteger
+`$` com aspas simples no shell). Em 19.1.0: os nomes da tabela abaixo.
+Prefixo **T** = `com.google.mlkit.vision.text.`; **I** =
+`com.google.android.gms.internal.mlkit_vision_text_common.`. Offsets são posições
+de bytecode por método, não linhas de fonte nem eventos observados no telefone.
+
+### Do cliente próprio aos produtores
+
+AferiPhotoView.kt cria `TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)`.
+O builder latino examinado expõe setExecutor/build, sem opção pública de
+telemetria nessa superfície. Isso não prova inexistência de configuração em
+todas as APIs do SDK; nenhuma opção interna foi tratada como solução suportada.
+
+| Classe/método | Vínculo observado / alcance |
+|---|---|
+| T.TextRecognition.getClient → T.internal.zzo.zza | Cria zzn com tarefa obtida de zzp e logger obtido de I.zzun.zzb; não há ramo que exclua logger para cliente embarcado nesse trecho |
+| T.internal.zzp.create | getLoggingLibraryName → I.zzun.zzb (6–11); entrega o logger ao construtor de TextRecognizerTaskWithResource (59–63) |
+| TextRecognizerOptions.getIsThickClient → T.internal.TextRecognizerOptionsUtils.isThickClient | Consulta DynamiteModule.getLocalVersion do módulo latino e guarda boolean; não inferir a resposta do aparelho pela presença do AAR |
+| T.internal.zzn construtor | Ramos thick/thin convergem na criação do evento e I.zzuc.zzd (85–94); criar cliente já tem uma rota de evento, sem exigir uma captura |
+| T.internal.TextRecognizerTaskWithResource.zze | Chama zzf no sucesso (15–21) e em MlKitException (46–50); resultado Text é retornado separadamente |
+| T.internal.zzq.zza → TextRecognizerTaskWithResource.zzc | Closure entrega duração, código e InputImage ao produtor; nesse corpo zzc, imagem é consultada por getMobileVisionImageFormat/getMobileVisionImageSize (66–79) |
+| TextRecognizerTaskWithResource.zzc | Monta duração/código/flags, formato/tamanho e opção de idioma; seleciona thick/thin e retorna zzuf.zzf. Não há leitura de pixels ou texto reconhecido nesse corpo examinado |
+| I.zzuc.zzf → zze → I.zztw.run → zzuc.zzc | Gate por tipo de evento com intervalo de 30 s no bytecode; closure só materializada se aceita. Depois segue a rota de metadados/ID e transporte já descrita acima |
+| TextRecognizerTaskWithResource.zzf → I.zzua.run → I.zzuc.zzh/zzg → T.internal.zzr.zza → TextRecognizerTaskWithResource.zzd | Rota adicional acumula durações por chave de código/flags/idioma e monta contagem/estatísticas; converge em zzuc.zze, sem tornar anônimo o envelope com ID |
+
+O intervalo de 30 s é constante inspecionada do SDK, não latência medida nem
+recomendação para esperar entre capturas. O gate e as condições de execução
+impedem presumir um evento enviado por gesto ou que observar um período sem
+tráfego prove ausência de telemetria. Flags/idioma/tamanho são metadados técnicos,
+mas essa classificação não demonstra anonimização do envelope.
+
+### Rota adicional além de DataTransport
+
+`TextRecognizerTaskWithResource` também constrói **I.zzue** e, no final de zzf,
+chama `zzue.zzc(getLoggingEventId(), codigo, inicio, fim)` (146–166).
+No artefato latino 19.0.1, getLoggingEventId retorna 24317 ou 24306 conforme
+getIsThickClient. São constantes técnicas do SDK, não medições do aparelho.
+
+`zzue` obtém `TelemetryLogging.getClient` com API `mlkit:vision`. Seu método zzc
+monta MethodInvocation/TelemetryData e chama `TelemetryLoggingClient.log`
+(offset 58). Nessa montagem há inteiros, tempos e dois argumentos String nulos;
+não há imagem ou texto OCR como argumento nesse trecho. Um listener de falha
+guarda tempo e o gate pode suprimir novas chamadas por 30 minutos. Isso é
+inspeção de condições internas, sem evidência de aceitação/envio pelo serviço.
+
+A auditoria de rede não pode ser encerrada apenas pela revisão de bancos
+DataTransport ou contadores da UI do app. Esta nova rota exige rastrear também
+a implementação transitiva de TelemetryLoggingClient e suas condições/destinos;
+não foi inspecionado tráfego de Google Play services ou qualquer outro app.
+Não solicitar dump global, identificadores, bancos ou logs completos ao autor.
+
+### Conclusão permitida e próximo trabalho
+
+O vínculo da API usada pelo Aferi com produtores e duas interfaces de transporte
+foi aprofundado. A closure antes pendente usa metadados da imagem no corpo
+examinado; sua referência a InputImage não é prova de pixels enviados. Também
+não prova ausência de conteúdo sensível nos demais produtores, módulo nativo,
+encoders, logs, serviços ou versões transitivas. Agregação de durações não
+resolve a presença de identificador persistente no envelope já rastreado.
+
+Continuam pendentes: demais produtores de inicialização/carga/erro, encoders dos
+campos específicos e implementação de TelemetryLoggingClient; depois, protocolo
+isolado de runtime com entradas sintéticas que distinga app/SDK/dev launcher/SO,
+armazenamento, logs e reconexão. Nenhuma configuração de privacidade suportada
+foi comprovada nesta inspeção. Não alterar dependências, usar reflexão/toggles
+ofuscados, substituir motor ou habilitar integração clínica por esses resultados.
+
+O diagnóstico associacao-1 continua sem retorno físico registrado. Sua rodada
+sintética é independente da auditoria de privacidade e não a aprova. TASK-07,
+TASK-10 e TASK-18 permanecem parciais; horas/despesas/saldos não informados.
