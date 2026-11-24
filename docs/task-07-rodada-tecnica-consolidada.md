@@ -129,6 +129,13 @@ captura, sem defeito constatado ou alteração funcional. Pausa encerrada; teste
 dirigido do hook passou e fica como cobertura adicional, sem homologar hardware.
 Próximo grupo G2c: L06b/L08b, Home/bloqueio na revisão, ainda não executados.
 
+Retorno posterior G2c: autor atribuiu resultados iguais a L06b/L08b — revisão
+120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled,
+campos ausentes e nenhuma retomada por aproximadamente 5 s, sem comportamento
+ou erro percebido. [Casos separados e limites](task-07-ciclo-vida-samsung.md#retorno-g2c--home-e-bloqueio-durante-a-revisão).
+Passaram no alcance relatado, sem testar escrita ou OCR interrompido. Próximo
+grupo G2d: L07b/L09b, troca de app/rotação na revisão, ainda não executados.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
