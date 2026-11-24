@@ -398,9 +398,27 @@ de conclusão antiga distinguível; L16 não será provocado no hardware. L04
 positivo e ACKs simulados não concluem essas pendências. Recriação real por
 rotação e privacidade SDK/SO também permanecem sem homologação.
 
-**Próxima etapa: preparar permissão negada para G3b, sem Iniciar câmera.**
+Após G4b foi solicitada a preparação de permissão negada para G3b, sem Iniciar câmera.
 Isso pode reiniciar a demo; conferir carregamento/versão antes de solicitar
 novo diálogo. Não limpar dados, reinstalar ou reabrir múltiplas solicitações.
+
+### Retorno da preparação G3b — permissão negada e fonte reconferida
+
+Autor confirmou cliente de avaliação identificado, câmera em Não permitir e
+demo novamente aberta; fonte f057283876ea2126b485abd762e2886012b4c7ca limpa,
+hash do bundle 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388.
+UI idle/nao-carregado, câmera desligada e campos antigos ausentes; Fast Refresh
+desligado, nenhum reinício/diálogo inesperado ou erro percebido. Data/hora de
+execução não informadas. Não houve nova consulta ao APK; a preparação não
+solicitou reinstalação. Esse estado altera a permissão da baseline V0, não
+as fontes/JS identificados.
+
+Preparação passou no alcance relatado. Ainda não demonstra pedido pendente,
+cancelamento durante permissão (L01) ou concessão tardia (L05). **G3b liberado:**
+uma solicitação explícita, Home antes de responder e retorno por Recentes.
+Conceder uma vez somente se o diálogo original continuar pendente sem novo
+Iniciar/reload. Se sumir, L05 fica NE; não pedir outro diálogo ou autorizar
+nas Configurações para simular a mesma solicitação. Sem Capturar/OCR.
 
 ### Execução controlada desta preparação
 
@@ -437,7 +455,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é preparação de G3b, sem Iniciar câmera.
+atual de condução é G3b (L01 por Home e L05 condicional à mesma solicitação).
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -702,7 +720,7 @@ por sair da tela. Se uso ativo da câmera não encerrar ao sair, interromper
 o ensaio sem iniciar novamente. Valem todas as regras de parada/bloqueio,
 sem bypass/reload/reinstalação, e nenhuma confirmação de valores.
 
-**Etapa atual: preparação G3b, sem executar L01/L05 ainda.** Com câmera desligada,
+**Preparação G3b, já recebida; não repetir por rotina.** Com câmera desligada,
 Metro aberto e cópia preservada, abrir Informações do app somente do cliente
 Aferi — captura em avaliação (com.ramonmenz.afericapturetest). Em Permissões →
 Câmera, selecionar Não permitir. Não alterar permissões do produto principal,
@@ -723,6 +741,43 @@ hash JS ou erro, estado/Nativo/câmera, Fast Refresh e reinício/diálogo inespe
 Não tocar em Iniciar/Capturar. L01/L05 serão conduzidos após esse retorno,
 sem confundir autorização nas Configurações com concessão da mesma solicitação
 pendente depois de cancelar; se o SO não preservar esse diálogo, registrar NE.
+
+**Grupo atual G3b: L01 por Home, L05 condicional; uma solicitação, sem Capturar.**
+Mesma cópia/Metro e Fast Refresh desligado. Partir de idle/câmera desligada e
+permissão Não permitir, conforme retorno acima.
+
+1. Tocar uma única vez em Iniciar câmera Android. Esperado: diálogo de permissão
+   solicitado nesse gesto, sem preview ou reconhecimento. Se não houver diálogo
+   ou surgir erro, não insistir; registrar mensagem/fase e parar. Não conceder
+   ou negar antes da saída proposta.
+2. Com diálogo pendente, usar Home uma vez e retornar por Recentes, sem Iniciar.
+   Esse é cancelamento por mudança do app, não toque no botão Cancelar atrás
+   de um diálogo modal. Anotar se o diálogo permaneceu/reapareceu no retorno,
+   sem exigir ver a fase coberta pelo modal. Se ela não é visível, registrar
+   essa limitação; não deduzir a fase do callback nativo.
+3. Se o mesmo diálogo continuar pendente, sem novo gesto Iniciar/reload/reinício
+   percebido, conceder uma vez por Durante o uso do app (ou opção equivalente,
+   anotando a escolhida). Esperado: concessão não retoma a tentativa cancelada;
+   cancelled, câmera/preview desligados, sem revisão/retomada. Não iniciar de
+   novo; observar aproximadamente 5 s sem toque. Se o diálogo sumiu, não criar
+   outro: L05 não executado, observar o estado da demo e relatar.
+
+O protocolo não pede aguardar timeout artificialmente. Há deadline JS de 30 s
+para permissão, por inspeção do código; se ele ocorrer durante a interação,
+registrar timeout/limite experimental e não afirmar que só Home causou a
+finalização. Não repetir até obter a combinação desejada. Se ocorrer recarga/
+reinício, identidade da mesma solicitação fica incerta e L05 exige análise.
+
+Devolver: diálogo surgiu após um Iniciar, Home com pedido pendente, estado do
+diálogo ao retornar, fase visível antes/depois da concessão (ou coberta pelo
+modal), opção escolhida se aplicável, câmera/preview/revisão/retomada, intervalo,
+timeout/recarga/reinício/erro percebidos. Códigos de controle do painel podem
+ser transcritos seletivamente (app:background/cancelamento:mudanca-do-app/
+fase:cancelled), se visíveis; ausência no buffer não prova ausência do evento.
+Não enviar tela de permissão, serial, logs completos ou mídia. Se câmera abrir
+automaticamente após conceder, não Capturar: cancelar para encerrar e parar
+novas tentativas, relatando. Valem todas as regras de parada por cleanup falho,
+câmera presa ou concorrência, sem reload/reinstalação/bypass.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar

@@ -159,6 +159,13 @@ e sem campos/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
 Sem prova de ACK físico, morte de processo ou destruição de Activity. Próxima
 etapa é só preparar permissão negada para G3b; L01/L05 ainda não executados.
 
+Retorno posterior da preparação G3b: cliente identificado, Câmera Não permitir,
+fonte f057283 limpa, bundle 86017456… reconfirmado, idle/nao-carregado, sem
+câmera/campos antigos, Fast Refresh desligado, nenhum diálogo inesperado/erro.
+[Preparação aprovada no alcance relatado](task-07-ciclo-vida-samsung.md#retorno-da-preparação-g3b--permissão-negada-e-fonte-reconferida).
+Próximo passo: uma solicitação, Home antes de responder; L05 só se o mesmo
+diálogo permanecer pendente sem novo Iniciar/reload. L01/L05 ainda sem retorno.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
