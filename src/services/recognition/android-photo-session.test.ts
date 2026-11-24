@@ -45,6 +45,78 @@ test('cancelamento com permissão pendente ignora a concessão tardia', async ()
   await t.session.cancel(); grant(true); await flush();
   expect(t.ports.open).not.toHaveBeenCalled(); expect(t.result).not.toHaveBeenCalled();
 });
+test('concessão da tentativa cancelada não abre câmera da tentativa seguinte ainda sem permissão', async () => {
+  const t = setup();
+  let grantOld!: (value: boolean) => void;
+  let grantNew!: (value: boolean) => void;
+  t.ports.requestPermission
+    .mockImplementationOnce(() => new Promise(resolve => { grantOld = resolve; }))
+    .mockImplementationOnce(() => new Promise(resolve => { grantNew = resolve; }));
+  t.session.start(); await flush();
+  const old = t.state().attemptId;
+  await t.session.cancel();
+  expect(t.session.start()).toBe(true); await flush();
+  const next = t.state().attemptId;
+  expect(next).not.toBe(old);
+  grantOld(true); await flush();
+  expect(t.state().phase).toBe('permission');
+  expect(t.ports.open).not.toHaveBeenCalled();
+  expect(t.session.capture()).toBe(false);
+  grantNew(true); await flush();
+  expect(t.ports.open).toHaveBeenCalledTimes(1);
+  expect(t.ports.open).toHaveBeenCalledWith(next);
+  await t.session.cancel();
+  expect(t.result).not.toHaveBeenCalled();
+});
+
+test('OCR antigo chegando durante novo reconhecimento não preenche nem encerra a tentativa atual', async () => {
+  const t = setup();
+  let finishOld!: (value: unknown) => void;
+  let finishNew!: (value: unknown) => void;
+  t.ports.recognize
+    .mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }))
+    .mockImplementationOnce(() => new Promise(resolve => { finishNew = resolve; }));
+  await t.ready(); t.session.capture(); await flush();
+  await t.session.cancel();
+  // ACK é um double JS: permite sobrepor Promises antigas, não prova que o
+  // reconhecedor nativo já liberou RAM/lease ou que OCRs físicos se sobrepõem.
+  await t.ready(); t.session.capture(); await flush();
+  const next = t.state().attemptId;
+  finishOld(raw()); await flush();
+  expect(t.state()).toMatchObject({ phase: 'recognizing', attemptId: next });
+  expect(t.result).not.toHaveBeenCalled();
+  const fresh = raw(); fresh.tokens[0].text = 'SYS 130';
+  finishNew(fresh); await t.session.settled();
+  expect(t.result).toHaveBeenCalledTimes(1);
+  expect(t.result).toHaveBeenCalledWith(next, expect.objectContaining({ fields: expect.objectContaining({
+    systolic: { status: 'candidate', value: 130, basis: 'label' },
+  }) }));
+});
+
+test.each(['rejection', 'late-ack'] as const)('cleanup %s mantém blocked após cancelamento e novos gestos', async failure => {
+  const t = setup();
+  let release!: (value: boolean) => void;
+  if (failure === 'rejection') t.ports.close.mockRejectedValue(new Error('SENTINELA-CLINICA'));
+  else {
+    jest.useFakeTimers();
+    t.ports.close.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  }
+  await t.ready();
+  const closing = t.session.cancel(); await flush();
+  if (failure === 'late-ack') await jest.advanceTimersByTimeAsync(10000);
+  await closing;
+  expect(t.state()).toMatchObject({ phase: 'blocked', issue: 'cleanup-failed' });
+  if (failure === 'late-ack') { release(true); await flush(); }
+  await t.session.cancel();
+  t.session.status(t.state().attemptId, 'ready');
+  expect(t.session.start()).toBe(false);
+  expect(t.session.capture()).toBe(false);
+  expect(t.session.isReleased()).toBe(false);
+  expect(t.ports.open).toHaveBeenCalledTimes(1);
+  expect(t.ports.recognize).not.toHaveBeenCalled();
+  expect(t.result).not.toHaveBeenCalled();
+  expect(JSON.stringify(t.state())).not.toContain('SENTINELA');
+});
 test('não entrega candidatos nem permite recaptura antes de close concluir', async () => {
   const t = setup(); let release!: (value: boolean) => void;
   t.ports.close.mockImplementation(() => new Promise(resolve => { release = resolve; }));

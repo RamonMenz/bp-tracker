@@ -82,6 +82,12 @@ registro não são datas presumidas de execução dos testes.
 
 ### Pendências e limite desta etapa
 
+Rodada posterior de ciclo de vida solicitada em 24/11/2026:
+[matriz TASK-07/10/18, fonte/APK, grupos e estados separados](task-07-ciclo-vida-samsung.md).
+O retorno inicial informa Metro desligado e terminal de mais cedo com f057283
+limpa, APK 69d5a0b3… e bundle 86017456…; G0 atual ainda pendente. Não é novo
+ensaio físico nem validação automática das etapas históricas abaixo.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
