@@ -144,6 +144,13 @@ cancelar. [Evidências e limites](task-07-ciclo-vida-samsung.md#retorno-g2d--tro
 Recriação real continua NE. Próximo grupo G3a: uma tentativa L02/L04; fase
 rápida/incerta fica NE, sem repetir até acertar ou presumir OCR interrompido.
 
+Retorno posterior G3a: autor identificou opening em L02 e recognizing em L04
+no toque de Cancelar; ambos terminaram cancelled, câmera/preview encerrados,
+sem revisão/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
+[Passaram no alcance relatado](task-07-ciclo-vida-samsung.md#retorno-g3a--cancelamento-em-abertura-e-reconhecimento),
+sem instrumentação temporal do SDK, liberação física comprovada ou conclusão
+de L14/L15/L16. Próximo grupo G4b: L15/L10, closing e saída/retorno, sem OCR.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |

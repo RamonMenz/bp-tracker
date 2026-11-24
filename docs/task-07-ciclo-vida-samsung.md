@@ -121,9 +121,9 @@ tratada como data/hora de execução quando esta não for informada.
 |---|---|---|---|
 | G0 — versão/carregamento | Passou no alcance relatado | HEAD limpo, APK e bundle reconfirmados; Metro/demo/idle/Fast Refresh verificados. Modelo complementado em G1 | V0 |
 | L01 | NE | Diálogo pode impedir acesso ao Cancelar; background é variante distinta | V0 |
-| L02 | NE | Abertura pode ser rápida demais | V0 |
+| L02 | Passou no alcance relatado | Autor identificou opening no instante de Cancelar; final cancelled, câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
 | L03 | Passou no alcance relatado | preview-1/ready, cancelamento → cancelled; preview/uso ativo encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
-| L04 | NE | Histórico D não executado por OCR rápido; não repetir indefinidamente | V0 |
+| L04 | Passou no alcance relatado | Autor identificou recognizing no instante de Cancelar; final cancelled, câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s. Não identifica completion interno do SDK | V0 |
 | L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
 | L06a / L06b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
 | L07a / L07b | Ambos passaram no alcance relatado | Preview: resultado anterior preservado. Revisão: edição 130 sem confirmar, retorno cancelled com mensagem de cancelamento, sem retomada por aproximadamente 5 s | V0 |
@@ -342,12 +342,39 @@ distintos e esperados. Os relatos não comprovam recriação da Activity, fila/
 escrita clínica, cleanup físico de RAM/SDK ou privacidade integral. Não houve
 defeito relatado que justifique correção funcional ou nova regressão.
 
-**G3a liberado:** uma tentativa dirigida de L02 (cancelar abertura) e, se tudo
+Na análise de G2d foi liberado G3a: uma tentativa dirigida de L02 (cancelar abertura) e, se tudo
 encerrar normalmente, uma de L04 (cancelar OCR), somente cartão sintético.
 São os primeiros ensaios dirigidos desses casos nesta rodada; histórico D já
 registrava OCR rápido. Não repetir indefinidamente ou alterar resolução/mídia/
 SDK para alongar fases. Se a fase não for observável no instante da ação,
 registrar NE para o alvo, mesmo que cancelamento posterior funcione.
+
+### Retorno G3a — cancelamento em abertura e reconhecimento
+
+Autor informou resultados iguais para L02/L04, distinguindo a fase no instante
+do toque: opening em L02 e recognizing em L04. Baseline V0 herdada, sem novos
+hashes/HEAD por cenário. Data/hora de execução não informadas.
+
+| Caso | Evidência recebida | Resultado |
+|---|---|---|
+| L02 | Fase-alvo atingida segundo o autor; opening no toque; cancelled ao final; câmera/preview encerrados; sem revisão/retomada por aproximadamente 5 s sem toque; nenhum comportamento/erro percebido | Passou no alcance relatado |
+| L04 | Mesmos resultados atribuídos ao caso, com recognizing no toque | Passou no alcance relatado |
+
+O retorno contém identificação explícita da fase, não somente presença de um
+código no histórico. Não há instrumentação temporal independente, rastreio
+de completion/lease do SDK, medição de latência ou prova de descarte físico.
+O histórico D de OCR rápido descreve outro ensaio e não é reescrito. Nenhum
+defeito relatado justifica correção funcional ou nova regressão.
+
+L04 não comprova uma conclusão antiga chegando durante nova tentativa (L14),
+e esses cancelamentos não comprovam toda a barreira de reabertura L15 nem
+cleanup falho L16. L01/L05 de permissão continuam NE nesta rodada. Testes
+controlados desses casos não são promovidos a execução física.
+
+**G4b liberado:** L15 (uma tentativa de observar bloqueio durante closing) e,
+se o encerramento for normal, L10 (uma saída/retorno por Voltar Android).
+Sem Capturar/OCR neste grupo. Closing rápido demais ou destino que não permita
+retorno à demo ficam documentados como limite, sem repetir até acertar.
 
 ### Execução controlada desta preparação
 
@@ -384,7 +411,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G3a (L02/L04), uma tentativa por alvo rápido.
+atual de condução é G4b (L15/L10), sem Capturar/OCR.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -590,7 +617,7 @@ no final. Sem confirmação, mídia, dados do outro app ou logs completos.
 Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
 inesperado; não fazer o segundo caso se o primeiro falhar nem usar bypass.
 
-**Grupo atual G3a: L02 + L04, cancelamento de fases rápidas.** Mesma cópia/Metro,
+**Procedimento G3a, já executado: L02 + L04, cancelamento de fases rápidas.** Mesma cópia/Metro,
 Fast Refresh desligado e cartão sintético. Uma tentativa por caso; sem atraso
 artificial, troca de mídia/resolução ou injeção de falha no APK.
 
@@ -618,6 +645,36 @@ no histórico, sozinho, não comprova que o toque ocorreu durante OCR. ACK ou
 UI cancelada não comprovam cleanup físico. Não confirmar/salvar valores.
 Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
 inesperado; não executar o segundo caso se o primeiro falhar nem usar bypass.
+
+**Grupo atual G4b: L15 + L10, sem Capturar/OCR.** Mesma cópia/Metro, Fast Refresh
+desligado e cartão sintético como alvo do preview. Uma tentativa por caso.
+
+1. L15: iniciar uma vez e esperar ready/preview-1. Cancelar captura e observar
+   closing. Se visível, tentar Iniciar uma única vez enquanto closing, sem
+   insistir se desabilitado. Esperado: nenhuma nova abertura enquanto ocupado,
+   fim de closing não abre automaticamente; câmera/preview encerrados e fase
+   cancelled. Observar aproximadamente 5 s sem toque. Se closing não foi
+   observável no gesto, marcar NE para essa barreira; cancelamento normal não
+   aprova L15. Não atrasar cleanup nem forçar ACK. Não é preciso reabrir só
+   para testar um novo gesto; o caso seguinte já terá início explícito.
+2. L10, apenas se não houve falha e a câmera está desligada: iniciar uma vez,
+   esperar ready e usar Voltar Android uma única vez. Registrar se saiu para
+   launcher, tela inicial, menu ou outra tela. Voltar à demo por Recentes; se
+   ela não estiver disponível, usar o ícone do cliente de teste uma vez, sem
+   reload/seleção repetida de bundles. Se ficar no launcher/menu sem retorno
+   identificável à demo, parar e informar, sem abrir câmera por outro caminho.
+   Esperado no retorno: câmera/preview desligados, nenhum candidato antigo ou
+   retomada automática, observando aproximadamente 5 s sem Iniciar. Se processo
+   reiniciou, idle/nao-carregado podem aparecer; registrar isso em vez de exigir
+   cancelled. Menu sem saída ou somente background não comprovam desmontagem.
+
+Devolver L15: closing observado ou rápido demais, fase no gesto, Iniciar
+desabilitado, nova abertura automática ou não, fase final, câmera e erro.
+L10: destino do Voltar, forma de retorno, fase/preview/campos, retomada,
+recarga/reinício percebidos, intervalo e erro. Não presumir Activity destruída
+por sair da tela. Se uso ativo da câmera não encerrar ao sair, interromper
+o ensaio sem iniciar novamente. Valem todas as regras de parada/bloqueio,
+sem bypass/reload/reinstalação, e nenhuma confirmação de valores.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar
