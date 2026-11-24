@@ -510,3 +510,20 @@ E0/E1 IDs 4/5 com 16 entradas; mudou size-or-mtime de uma entrada não classific
 sem causa/conteúdo/envio determinados. [Evidência e preparação O/Q](task-07-inspecao-privacidade-localidade.md#retorno-e--negativa-de-permissão-e-mudança-não-classificada).
 Próximo: restaurar permissão da demo e consultar hash/contagens reverse/conexões,
 sem iniciar câmera ou alterar rede ainda. Privacidade/habilitação não aprovadas.
+
+
+Preparação offline recebida: permissão restaurada, Recentes sem a, cancelled/
+preview-1 com câmera desligada e sem campos/retomada, Fast Refresh desligado,
+hash 86017456… coincidente. Reverse8097Conhecido=1/OutrasLinhas=0; Wi-Fi/dados
+ligados e VPN não. USB/Bluetooth/Ethernet do telefone desconhecidos; Ethernet do
+PC não identifica rota do telefone. [Registro e esclarecimento dirigido](task-07-inspecao-privacidade-localidade.md#retorno-da-preparação-offline--permissão-e-reverse-conhecidos).
+Solicitado só estado de ancoragem e ligação física, sem alteração de rede/câmera.
+O/Q e monitoramento por UID/destino ainda não executados; habilitação bloqueada.
+
+
+Esclarecimento posterior: Ancoragem USB/Bluetooth desligadas, cabo USB direto
+PC→telefone, sem hub/adaptador Ethernet no telefone. [Condução O/Q](task-07-inspecao-privacidade-localidade.md#esclarecimento-das-conexões-e-condução-oq)
+preparada com consulta reverse 1/0→0/0→1/0, retirada/restauração só de 8097,
+Wi-Fi/dados originais e uma captura sintética com cancelamento; O1 também é Q0.
+Sem resultados físicos novos de O/Q ou observação por UID/destino presumidos;
+não equivale a isolamento universal/privacidade homologada.

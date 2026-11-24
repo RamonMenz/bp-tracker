@@ -507,7 +507,7 @@ não atribuir a eles automaticamente a diferença E0→E1. Não ler arquivos ou
 ampliar logs, limpar cache, repetir E até delta zero ou tratar o caso como falha
 confirmada da implementação. Permissão ficou negada ao término conforme roteiro.
 
-### Próxima preparação de O/Q — restaurar permissão e identificar conexões
+### Preparação de O/Q — retorno inicial recebido abaixo
 
 Somente preparação, sem Capturar/Iniciar ou desligar rede ainda. Preservar Metro
 TalkBack/fonte f057283 e ferramenta 583f61f, sem atualização de código/APK.
@@ -553,6 +553,146 @@ Só depois conduzir O (offline) e Q (reconexão), com remoção/restauração di
 apenas do mapeamento reconhecido, se aplicável. Rede por UID/destinos segue NE:
 contagens de reverse e teste offline não são monitor de rede ou aceite de
 telemetria. Nenhum novo inventário ou captura solicitado nesta preparação.
+
+## Retorno da preparação offline — permissão e reverse conhecidos
+
+Registro em 24/11/2026, conforme resumo do autor; sem data/hora de execução
+informadas ou acesso direto ao telefone. Fonte/ferramenta mantidas pela condução;
+HEAD/status não foram retranscritos nesta devolução.
+
+| Item | Retorno recebido | Alcance |
+|---|---|---|
+| Permissão | Restaurada | Condução pediu a opção anterior Durante o uso do app; não iniciou captura |
+| Retorno à demo | Recentes, sem a; sem tela branca/carregamento/reinício percebido | Estado observado pelo autor |
+| UI | cancelled/preview-1; câmera desligada, campos antigos ausentes, sem retomada; Fast Refresh desligado | preview-1 identifica módulo carregado, não câmera em uso |
+| Bundle | SHA-256 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 | Coincide com referências, sem provar todo runtime/APK |
+| Reverse | Reverse8097Conhecido 1, OutrasLinhas 0 | Um tcp:8097 → tcp:8097 no formato esperado; sem saída bruta/serial publicados |
+| Conexões | Wi-Fi e dados móveis ligados; VPN não | Estados do telefone informados, sem medição de tráfego |
+| Demais caminhos | Internet por USB e Bluetooth/Ethernet desconhecida; PC usa Ethernet | Conexão do PC não identifica conectividade do telefone |
+| Impedimentos percebidos | Nenhum | Não equivale a eliminação das lacunas de rede |
+
+O Ethernet do PC, sozinho, não significa internet no telefone. O reverse permite
+que conexão do telefone a loopback:8097 alcance o Metro no PC; não é uma rota
+genérica de internet nem prova de tráfego exclusivo de desenvolvimento. Rotas
+por USB, adaptadores, VPN ou software de compartilhamento precisam de condição
+registrada separadamente. Não fechar Metro, desconectar USB, mudar modo USB ou
+instalar monitor para inferir isso.
+
+**Esclarecimento solicitado antes de desligar redes:** nas Configurações do
+Samsung → Conexões → Roteador Wi-Fi e Ancoragem (ou equivalente), consultar
+somente estados de Ancoragem USB e Ancoragem Bluetooth, sem alterar. Informar
+se telefone está conectado diretamente ao PC por cabo USB, sem hub/adaptador
+Ethernet ligado ao telefone. Não pedir screenshot, nomes de rede ou identificadores.
+
+Ancoragem do telefone é normalmente compartilhamento do telefone para outro
+dispositivo; estado desligado, por si só, também não prova ausência universal de
+rota inversa ou software de rede. O objetivo é delimitar a montagem física e
+as conexões declaradas, sem chamar o ensaio de isolamento absoluto. Se não
+conseguir verificar, registrar desconhecido, sem supor desligado.
+
+Na devolução inicial O/Q ainda não tinham execução e aguardavam os estados
+adicionais. O esclarecimento e a condução posterior estão abaixo, sem resultados
+novos presumidos para desligamento de redes, reverse ou captura. A condição original já registrada a restaurar
+após O será Wi-Fi ligado, dados móveis ligados e reverse 8097 conhecido; não
+alterar mapeamentos desconhecidos nem configurações de outros apps. UID/destinos,
+manifesto/APK atual e privacidade integral continuam pendentes.
+
+### Esclarecimento das conexões e condução O/Q
+
+Autor confirmou Ancoragem USB e Ancoragem Bluetooth desligadas, telefone ligado
+diretamente ao PC por cabo USB, sem hub/adaptador Ethernet no telefone. Esse
+esclarecimento resolve a montagem declarada; não certifica isolamento universal
+ou tráfego zero. Não exige desligar Ethernet do PC ou depuração USB.
+
+**O/Q conduzidos somente nas condições declaradas abaixo, ainda sem resultado:**
+fonte/Metro TalkBack e coletor inventario-1 já carregados, Fast Refresh desligado,
+sem novo APK/código, somente cartão sintético e nenhuma confirmação clínica.
+O0→O1 abrange uma captura e cancelamento da revisão; O1 também é Q0, evitando
+coleta redundante. Q observa reconexão sem captura adicional.
+
+1. No PowerShell, definir a consulta sanitizada abaixo e conferir 1/0 antes de
+   alterar redes. Se saída diferente, parar; não sobrescrever rotas desconhecidas.
+2. Antes de alterar conexões, anotar se o rádio Bluetooth do telefone está ligado
+   ou desligado (não informado ainda). Com câmera desligada, desligar Wi-Fi, dados
+   móveis e temporariamente o rádio Bluetooth, se ligado, para retirar também
+   eventual caminho cliente por Bluetooth; ancoragem desligada não o exclui.
+   Não alterar cabo USB, depuração, modo USB, Ethernet do
+   PC, VPN ou ancoragem. Voltar à demo com reverse ainda presente para carregar
+   JS se o Android o exigir; registrar recarga/reinício. Se não ficar pronta,
+   não capturar: restaurar redes originais e relatar impedimento.
+3. Conferir câmera desligada, sem revisão, fase idle/cancelled e hash conhecido
+   86017456…. Hash diferente é impedimento de identidade, sem reload até coincidir.
+4. Remover somente tcp:8097 e conferir resumo 0/0. Registrar sucesso/erro e flag
+   de remoção. Não usar --remove-all. Se falhar/saída inesperada, parar captura.
+5. Sem reload ou retorno às Configurações, O0 e JSON. Um Iniciar até ready/
+   preview-1, uma captura do cartão 120/80/72. Esperado revisão correspondente,
+   câmera/preview encerrados; anotar. Cancelar revisão e observar cerca de 5 s,
+   sem campos/retomada. O1 e comparação O0→O1. Sem editar/confirmar, repetir ou
+   preencher campos para contornar. Qualquer falha de recurso encerra ensaios.
+6. O1 é Q0, ainda sem redes/Metro conectados. Sem câmera ativa, restaurar o reverse
+   removido, Wi-Fi/dados móveis originalmente ligados e o rádio Bluetooth somente
+   se estava ligado antes da preparação. Não criar outras
+   rotas. Conferir resumo reverse 1/0. A ida às Configurações ocorre após cancelar.
+7. Voltar à demo sem Iniciar/Capturar/reload e observar cerca de 30 s, registrando
+   espera programada e pausas extras sem atribuir precisão ao intervalo total.
+   Q1 e comparação O1→Q1; informar fase/campos/câmera/retomada, recarga/carregamento
+   e erro percebidos. Sem destino/payload ou monitor qualificado, rede fica NE.
+
+Consulta somente de metadados do reverse, sem saída bruta/serial:
+
+```powershell
+function Get-AferiReverseResumo {
+    $aferiRaw = @(& $aferiAdb -d reverse --list 2>&1)
+    if ($LASTEXITCODE -ne 0) { throw 'reverse-unavailable' }
+    $aferiLinhas = @($aferiRaw | Where-Object { $_.ToString().Trim().Length -gt 0 })
+    $aferiAlvo = @($aferiLinhas | Where-Object { $_ -is [string] -and $_ -match '^\S+\s+tcp:8097\s+tcp:8097\s*$' })
+    [pscustomobject]@{
+        Reverse8097Conhecido = $aferiAlvo.Count
+        OutrasLinhas = $aferiLinhas.Count - $aferiAlvo.Count
+    }
+}
+Get-AferiReverseResumo | ConvertTo-Json
+```
+
+Comandos intercalados com as ações, não um bloco a executar sem pausas:
+
+```powershell
+# Só após redes móveis/Wi-Fi desligados, demo pronta e hash conferido.
+$aferiReverseRemovido = $false
+& $aferiAdb -d reverse --remove tcp:8097
+if ($LASTEXITCODE -eq 0) { $aferiReverseRemovido = $true } else { throw 'reverse-remove-failed' }
+# Conferir 0/0 antes de O0.
+Get-AferiReverseResumo | ConvertTo-Json
+$aferiO0 = New-AferiInventory -AdbPath $aferiAdb
+$aferiO0 | ConvertTo-Json -Depth 4
+# Uma captura; revisão conferida, câmera encerrada; cancelar e observar.
+$aferiO1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiO1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiO0.Id -After $aferiO1.Id | ConvertTo-Json -Depth 5
+# Após cancelar, restaurar apenas mapeamento removido e redes originais.
+if ($aferiReverseRemovido) { & $aferiAdb -d reverse tcp:8097 tcp:8097 }
+Get-AferiReverseResumo | ConvertTo-Json
+# Restaurar Wi-Fi/dados e estado original do Bluetooth; voltar e observar.
+Start-Sleep -Seconds 30
+$aferiQ1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiQ1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiO1.Id -After $aferiQ1.Id | ConvertTo-Json -Depth 5
+```
+
+O comentário condicional da flag não substitui verificar erro: se houver erro
+na remoção, não marcar sucesso nem avançar para O0. Ao interromper após mudança
+de conexões, restaurar Wi-Fi/dados e estado Bluetooth originais; restaurar somente o reverse cuja
+remoção foi confirmada, sem contornar câmera presa/blocked por reload. Se a demo
+ficar inacessível sem Metro, registrar indisponibilidade do cliente/JS e restaurar
+conexões; não atribuir isso automaticamente ao OCR. Contagens de arquivos e
+mudanças não têm resultado esperado fixo. Hash igual não homologa SDK/SO.
+
+Devolver hash, três resumos reverse (antes/depois da remoção/depois da restauração),
+três inventários e duas comparações; estado inicial do Bluetooth e conexões efetivamente desligadas/restauradas,
+phase/Nativo/preview, correspondência com cartão, cancelamento, janelas e pausas,
+recarga/reinício/erro e confirmação de câmera desligada. Não payload, screenshot,
+logcat, banco, IP/SSID/serial ou conteúdo de arquivo. O/Q ainda não executados;
+privacidade, manifesto/APK e observação por UID/destinos seguem pendentes.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -769,9 +909,12 @@ DataTransport em C; bundle e entrada não classificada após R. Conteúdo/causa/
 não determinados. Fonte/bundle pós-R reconfirmados: f057283 limpa e hash igual
 ao P0; abertura manual por a registrada com momento relativo não especificado.
 E recebido positivo para negativa/cancelamento; uma entrada não classificada
-mudou size-or-mtime, sem conteúdo/causa/envio determinados. Próxima preparação:
-restaurar permissão e identificar reverse/conexões, sem câmera ou rede alterada.
-O/Q, M0, APK atual e UID/destinos pendentes; habilitação clínica bloqueada.
+mudou size-or-mtime, sem conteúdo/causa/envio determinados. Preparação offline
+recebida: permissão restaurada, cancelled/preview-1 sem câmera, hash conhecido,
+um reverse 8097 e Wi-Fi/dados ligados. Ancoragens USB/Bluetooth desligadas e
+cabo direto sem adaptador confirmados pelo autor; O/Q conduzidos, ainda sem
+resultado. Nenhum desligamento/remoção/captura presumido. M0/APK/UID/destinos e
+privacidade pendentes; habilitação clínica bloqueada.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
