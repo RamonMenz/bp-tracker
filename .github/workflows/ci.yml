@@ -44,6 +44,9 @@ jobs:
       - name: Testes (Jest)
         run: npm test -- --ci
 
+      - name: Coletor de metadados (PowerShell, ADB simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
+
   functions:
     name: Cloud Functions (build e testes)
     runs-on: ubuntu-latest

@@ -350,7 +350,8 @@ justifique alterar o fluxo de produção ou substituir ML Kit/Tesseract.
 | Expo autolinking Android, raiz/demo; react-native-config da demo | Captura presente só na demo; voz ausente; Firebase/Google/push excluídos na configuração RN da demo | Resolução de fontes; não manifesto final ou APK |
 | Manifestos/template/locks e caminho próprio | Revisão estática registrada acima | Não inspeciona o manifesto mesclado/instalado |
 
-Functions/rules não alteradas; sem nova tentativa local de Rules nesta etapa:
+Os checks do coletor também integram o job App do CI (pwsh do runner Ubuntu),
+sem dispositivo ou instalação no Samsung. Functions/rules não alteradas; sem nova tentativa local de Rules nesta etapa:
 o download do JAR 1.21.0 já falhou no mesmo ambiente na entrega #74. O CI verde
 da #74 é evidência daquela entrega, não desta. Checks remotos deste novo PR
 serão conferidos separadamente. Sem horas/despesas/saldos informados, produção,
