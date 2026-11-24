@@ -309,6 +309,10 @@ sozinha o binário instalado, o JS executado ou o conteúdo dos bancos.
 
 A árvore e a inspeção estática inicial estão registradas acima; falta ampliar
 a auditoria dos produtores de eventos e verificar o comportamento em runtime.
+O [retorno R1/R2 e avanço de produtores/identificador do SDK](task-07-rodada-tecnica-consolidada.md#retorno-recebido-de-r1r2)
+complementam esta coleta: captura offline e descarte acessível positivos no
+relato; produtor de identificador de instância encontrado nos artefatos públicos,
+sem constatação de payload ou envio no Samsung.
 Qualquer evidência de persistência/envio clínico bloqueia habilitação; ausência
 de erro nos testes de interface não homologa privacidade. Nenhum conteúdo de
 evento/banco ou comportamento de rede no aparelho é presumido neste documento.

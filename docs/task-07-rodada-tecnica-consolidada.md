@@ -22,7 +22,7 @@ Não conclui TASK-07, privacidade ou habilitação clínica.
   Kotlin/APK ou execução de SDK/SO no ambiente desta rodada.
 - FrameBytes: 8 checks de buffers e 11 de dimensões aprovados em Java, sintéticos.
 - Descarte da explicação acessível ao cancelar já é coberto por teste de revisão;
-  ainda falta observar esse detalhe com TalkBack no aparelho.
+  o retorno físico R2 posterior está registrado abaixo.
 - Contraste calculado a partir dos tokens, sem screenshot: texto/superfície,
   muted/superfície, erro/superfície, primária e desabilitado deram, respectivamente,
   14,63 / 4,76 / 6,29 / 5,17 / 6,15 no claro e 13,20 / 6,34 / 6,04 / 7,36 / 4,59
@@ -132,3 +132,66 @@ R1/R2 ou para avançar a auditoria técnica. Os blocos S03/S04/S05 permanecem
 parciais em hardware: testes simulados não cobrem a implementação interna do
 SDK nem recriação real da Activity. Medidor real exige investigação própria;
 não presumir rótulos, causa ou acurácia com base na marca/modelo.
+
+## Retorno recebido de R1/R2
+
+Fonte: relato do autor e comandos transcritos; sem acesso ao Windows/aparelho.
+Data/hora da execução não informadas. Preparação recebida:
+
+| Identificador | Resultado |
+|---|---|
+| HEAD da cópia TalkBack | f057283876ea2126b485abd762e2886012b4c7ca |
+| git status --short | Sem saída, limpo |
+| SHA-256 do base.apk instalado | 69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c |
+| SHA-256 do bundle no sandbox | 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 |
+
+APK coincide com o hash instalado/local anteriormente recebido; bundle coincide
+com o reteste TalkBack. São identidades dos arquivos consultados, sem par
+antes/depois desta rodada nem prova isolada de qual código estava em execução.
+Não foram repetidos marcadores, Fast Refresh ou informação de reinstalação;
+não preencher essas lacunas por suposição nem exigir nova rodada sem motivo.
+
+**R1 — positivo no alcance relatado:** autor informa captura/reconhecimento
+funcionais com Wi-Fi e dados móveis desligados, sem erro percebido. Após
+religá-los, não percebeu comportamento estranho. Não transcreveu valores por
+campo, indicador/preview/cancelamento separadamente nem forneceu medição de
+rede. O relato sustenta funcionamento nessa condição, não ausência absoluta
+de rede (USB/localhost permanecia no roteiro) ou de tráfego na reconexão.
+
+**R2 — positivo para descarte e orientação:** após editar SYS para 70, autor
+ouviu logo em seguida a regra de que a sistólica deve ser maior que a diastólica.
+Cancelou; campos/explicação antigos desapareceram; nova captura não recuperou
+a edição 70. Sem erro percebido. Não detalhou se houve navegação/foco adicional,
+qual elemento anunciou a regra ou a fala completa de disponibilidade; portanto
+não descrever como anúncio automático integral do status comprovado. O novo
+relato complementa o reteste anterior, sem apagá-lo ou presumir contraste/
+acessibilidade integral. Não acrescentar confirmação/cancelamento final não
+detalhados nessa resposta.
+
+Não repetir R1/R2 nem A–K com base apenas nessas lacunas de relato. Próximo
+trabalho é técnico: rastrear produtores/serializadores e compatibilidade da
+telemetria, mantendo a investigação do layout G-Tech BSPII separada. Não há
+aprovação de privacidade, medidor real, persistência clínica ou TASK-07.
+
+## Auditoria estática complementar — identificador de instância do SDK
+
+Por javap -c -p nos AARs públicos common 18.11.0 e
+[play-services-mlkit-text-recognition-common 19.1.0](https://dl.google.com/dl/android/maven2/com/google/android/gms/play-services-mlkit-text-recognition-common/19.1.0/play-services-mlkit-text-recognition-common-19.1.0.aar),
+versões presentes na árvore Gradle recebida. SHA-256 desse segundo AAR:
+`3be02b3c3c829476100f01d0ab79f0b4a923da23909d3ac63e486d1a63381c58`.
+
+- SharedPrefManager.getMlSdkInstanceId consulta a chave ml_sdk_instance_id;
+  se ausente, gera UUID e usa SharedPreferences.Editor.putString/apply.
+- O produtor OCR interno zzuc consulta esse método e passa a string ao builder
+  zzsr.zzi antes de entregar o evento à interface zzts. O getter zzst.zzi é
+  lido pelo encoder zzmg no campo mlSdkInstanceId; o encoder common zzkh também
+  declara esse campo. Há rota estática para identidade de instância em eventos.
+
+Isso não é só um nome de campo no esquema: há rotina de persistência e produtor
+que solicita o identificador. Porém, não foi lido identificador do aparelho,
+não houve captura de eventos nem confirmação da execução/envio dessa rota no
+Samsung. UUID de instância não é automaticamente identidade civil, mas sua
+presença impede presumir telemetria exclusivamente anônima/agregada; requer
+avaliação frente à constituição. Não afirmar que valores clínicos são enviados
+nem que os eventos contêm apenas métricas. Nenhuma API de SDK foi alterada ou
+desabilitada por tentativa; auditoria de dados, destinos e runtime segue aberta.
