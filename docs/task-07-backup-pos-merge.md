@@ -120,3 +120,96 @@ estiverem pendentes. Telemetria/ID persistente, conteúdo de deltas DataTranspor
 contas/escritas e SDK/SO integral seguem as lacunas já registradas. Nem ausência
 de tráfego numa janela nem ausência de arquivo em snapshot prova comportamento
 universal ou permite concluir as quatro tarefas.
+
+## Retorno de versões e verificação independente de prebuild
+
+Autor informou Node v24.22.0, npm11.19.1 e Temurin OpenJDK17.0.21+9, build
+2026-10-20, VM64-bit. Registro em 24/11/2026, sem hora de execução informada.
+React Native0.86.0 instalado declara Node ^20.19.4 || ^22.13.0 || ^24.3.0 || >=25;
+Node recebido está nessa faixa. Plugin Gradle RN usa jvmToolchain(17). Isso não
+comprova que JAVA_HOME/Gradle selecionam o mesmo Java consultado no PATH.
+Não trocar JDK ou atualizar dependências por tentativa.
+
+Codex executou prebuild real da demo em cópia temporária isolada do commit
+062e9b188c7af6cf9539b0ba1faed63dd26460e8, com dependências já disponíveis e
+EXPO_NO_TELEMETRY=1/CI=1. Comando expo prebuild --platform android --no-install,
+sem SDK/Gradle/telefone. Concluiu sem alterar package.json; aviso de expo-system-ui
+para userInterfaceStyle não levou à instalação de dependência extra.
+Manifesto fonte gerado: allowBackup=false, referências fullBackupContent e
+dataExtractionRules corretas; ambos os recursos existem, com nove exclusões em
+cada seção legada/cloud/D2D. Wrapper gerado usa Gradle9.3.1. Não é manifesto final
+mesclado/empacotado, compilação APK ou execução no Samsung.
+
+### Windows — preparação isolada e geração, sem instalar
+
+Preservar pos-merge em9612c64 e outras worktrees. Usar outra pasta inexistente,
+fixada no commit funcional062e9b1 do PR76; não requer merge do PR. O commit
+continua referência de código mesmo se documentação posterior avançar a branch.
+Não instalar nada no telefone; ele pode ficar desconectado durante a compilação.
+Os comandos precisam de rede no PC para dependências de desenvolvimento;
+isso não é ensaio de reconhecimento offline do aplicativo.
+
+```powershell
+Set-Location -LiteralPath 'C:\dev\aferi-task07-pos-merge'
+git fetch origin fix/task-07-regras-backup
+if ($LASTEXITCODE -ne 0) { throw 'fetch-backup-failed' }
+$aferiBuild = 'C:\dev\aferi-task07-backup-build'
+if (Test-Path -LiteralPath $aferiBuild) { throw 'build-destination-exists' }
+git worktree add --detach $aferiBuild 062e9b188c7af6cf9539b0ba1faed63dd26460e8
+if ($LASTEXITCODE -ne 0) { throw 'build-worktree-failed' }
+Set-Location -LiteralPath $aferiBuild
+git rev-parse HEAD
+git status --short
+npm ci --ignore-scripts --no-audit --no-fund
+if ($LASTEXITCODE -ne 0) { throw 'dependencies-failed' }
+node .\tools\task07\AferiBackupRules.check.cjs
+if ($LASTEXITCODE -ne 0) { throw 'backup-check-failed' }
+Set-Location -LiteralPath .\demos\android-capture
+$env:EXPO_NO_TELEMETRY = '1'
+node ..\..\node_modules\expo\bin\cli prebuild --platform android --no-install
+if ($LASTEXITCODE -ne 0) { throw 'prebuild-failed' }
+```
+
+Esperado: HEAD062e9b1/status vazio antes de instalar dependências, check aprovado,
+prebuild concluído. Não executar npm install na demo, expo run:android,
+prebuild --clean, adb install ou tarefas installDebug. Não copiar android/ ou
+node_modules de outra worktree. Se falhar, parar nessa etapa; devolver só etapa,
+código fixo e mensagem curta com caminhos/identificadores omitidos.
+
+### Windows — compilar sem instalação
+
+Na mesma sessão, apenas após preparação aprovada:
+
+```powershell
+$aferiSdkBuild = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+if (-not (Test-Path -LiteralPath $aferiSdkBuild -PathType Container)) {
+    throw 'sdk-not-found'
+}
+$env:ANDROID_HOME = $aferiSdkBuild
+Set-Location -LiteralPath (Join-Path $aferiBuild 'demos\android-capture\android')
+.\gradlew.bat --version
+if ($LASTEXITCODE -ne 0) { throw 'gradle-version-failed' }
+.\gradlew.bat :app:assembleDebug --no-daemon --console=plain -PreactNativeArchitectures=arm64-v8a
+if ($LASTEXITCODE -ne 0) { throw 'assemble-failed' }
+$aferiApkBuild = Join-Path $aferiBuild 'demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+if (-not (Test-Path -LiteralPath $aferiApkBuild -PathType Leaf)) { throw 'apk-not-found' }
+[pscustomobject]@{
+    Fonte = (git -C $aferiBuild rev-parse HEAD)
+    ApkExiste = $true
+    Sha256Apk = (Get-FileHash -LiteralPath $aferiApkBuild -Algorithm SHA256).Hash.ToLowerInvariant()
+} | ConvertTo-Json
+git -C $aferiBuild status --short
+```
+
+Esperado Gradle9.3.1, Launcher JVM compatível Java17, assembleDebug concluído e
+JSON com hash calculado, nunca um hash previsto. Builds podem baixar componentes
+SDK/NDK/dependências; se houver licença/erro, informar impedimento e não atualizar
+ferramentas/configuração por tentativa. Saída --version pode conter caminhos
+locais: transcrever somente versão Gradle e Launcher JVM, sem copiar saída inteira.
+Devolver também resumo prebuild/build, JSON e status, sem APK ou log completo.
+Se falhar, não executar linhas seguintes nem enviar stacktrace inteiro.
+
+Parar depois do build. Manifesto mesclado, recursos XML empacotados e assinatura
+precisam de análise local selecionada antes de atualizar o app. Não rodar Metro
+desta nova cópia nem pressionar a para instalar/abrir. APK anterior não foi
+substituído e não há nova evidência funcional de captura/privacidade.

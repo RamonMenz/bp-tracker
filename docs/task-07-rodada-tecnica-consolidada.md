@@ -612,3 +612,11 @@ no commit, limpa e allowBackup=false na fonte conforme autor. APK anterior intac
 para exclusões legadas/cloud/D2D, sem alterar engine/fluxo clínico; requer futuro
 build/manifesto/recursos efetivos. OEM/cross-platform/telemetria/UID/destinos
 continuam pendentes. Próximo retorno só de versões Node/npm/Java; sem captura.
+
+
+Preflight Windows recebido: Node24.22.0/npm11.19.1/Temurin17.0.21+9. Faixa Node
+RN compatível e toolchain17 conferidos, sem comprovar seleção por JAVA_HOME.
+Prebuild real Codex isolado do código062e9b1 passou, manifest/resource refs e
+exclusões conferidos; sem Gradle/APK/telefone. [Roteiro de geração e assembleDebug
+sem instalação](task-07-backup-pos-merge.md#retorno-de-versões-e-verificação-independente-de-prebuild)
+preparado; novo hash e manifesto/recursos empacotados aguardam execução local.
