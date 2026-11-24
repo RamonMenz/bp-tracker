@@ -884,7 +884,7 @@ coincidem também com a identidade histórica conhecida, mas isso não homologa
 o runtime no SO atualizado, todos os serviços, logs/rede ou privacidade. A rodada
 funcional anterior permanece vinculada ao ambiente anterior, sem reteste imposto.
 
-### Próximo M0b — manifesto selecionado com aapt2 local
+### Procedimento M0b — manifesto selecionado com aapt2 local
 
 [Extrator manifesto-1](../tools/task07/AferiManifestMetadata.psm1) e
 [checks](../tools/task07/AferiManifestMetadata.check.ps1) novos, sem dependência
@@ -930,8 +930,70 @@ código executável. Nenhum APK do autor foi recebido ou executado. Formatos
 full URI/android: e valores tipados suportados pelo extrator; checks simulados
 cobrem escopo application, whitelist/ausências/maxSdk, desconhecido, pacote/
 estrutura/duplicatas, privacidade de saída, hash alterado e fronteira nativa.
-Também entram no job App do CI. Windows/aapt2 do autor ainda sem execução M0b;
+Também entram no job App do CI. O retorno Windows/aapt2 consta abaixo;
 UID/destinos/SDK/SO integrais e habilitação clínica continuam pendentes.
+
+## Retorno M0b — manifesto do APK identificado e configuração de backup
+
+Registro em 24/11/2026 a partir do JSON do autor; data/hora da execução não
+informadas. Ferramenta manifesto-1, aapt2 **2.20-13193326**, no Windows do autor.
+SHA-256 local **69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c**,
+igual ao M0a que vinculou APK local/base instalado. Não houve acesso direto do
+Codex ao binário/aparelho nem nova captura solicitada.
+
+| Campo selecionado | Observação | Alcance |
+|---|---|---|
+| Pacote | com.ramonmenz.afericapturetest | Demo identificada |
+| minSdk / targetSdk | 24 / 36 | Android do telefone é API 37; target não é versão do SO |
+| CAMERA / INTERNET | uses-permission, sem maxSdk declarado | Declaração não demonstra concessão, uso ou destino |
+| RECORD_AUDIO e seis permissões de storage/mídia selecionadas | Não declaradas | Não cobre toda permissão possível; sandbox privado não exige essas permissões |
+| allowBackup | true | Elegibilidade a mecanismos de backup; não prova execução, conteúdo ou destino de backup |
+| fullBackupContent / dataExtractionRules | nao-declarado | Sem regras explícitas nesses atributos; não comprova ausência de política do SO/OEM |
+| debuggable | true | APK de desenvolvimento; não homologa distribuição clínica |
+| usesCleartextTraffic | true | Cleartext permitido na configuração; não demonstra requisição HTTP ou envio de OCR |
+| networkSecurityConfig | nao-declarado | Sem referência nesse atributo; não significa ausência de TLS nem ausência de rede |
+
+**Correção de fonte:** a demo não definia android.allowBackup. O transformador
+AllowBackup do @expo/config-plugins instalado usa true como padrão; agora
+[demos/android-capture/app.json](../demos/android-capture/app.json) define
+android.allowBackup=false. Verificação no host aplica o transformador real do
+Expo à configuração da demo e a um manifesto sintético com valor anterior true,
+conferindo false e preservação de atributos/permissões de desenvolvimento.
+Não altera engine, buffers, captura, revisão, legado ou aplicação clínica.
+
+A alteração depende de regeneração do projeto nativo e de um novo build para
+chegar a outro APK; atualizar apenas JS/Metro não modifica o manifesto. **O APK
+instalado continua com allowBackup=true.** Preservar o APK/rodada atuais; não
+recompilar, reinstalar, limpar dados ou desinstalar para obter resultado diferente
+nesta inspeção. Build futuro requer fonte identificada, ambiente isolado,
+manifesto final novamente analisado e nova identidade registrada antes de uso.
+Nenhum backup antigo foi inspecionado, apagado ou invalidado por esta correção.
+
+allowBackup=false é uma redução de superfície, sem garantia universal: em
+Android 12+ há ressalvas de fabricante para transferências entre dispositivos.
+Não declaramos que a opção elimina toda migração, acesso de debug, persistência
+do SDK/SO ou exposição de conteúdo. Eventual necessidade de regras explícitas
+para backup/transferência e seu comportamento no Samsung continua pendente de
+análise antes de habilitar; não se deve abrir backups ou coletar seu conteúdo.
+Referências: [Expo android.allowBackup](https://docs.expo.dev/versions/latest/config/app/#allowbackup)
+e [Android Auto Backup / enable-disable](https://developer.android.com/identity/data/autobackup#EnablingAutoBackup).
+
+**Diagnóstico:** reconhecimento offline e descartes observados permanecem
+positivos em seus cenários; metadados DataTransport e outros deltas continuam sem
+conteúdo/causa/envio determinados. M0b fecha a lacuna dos atributos selecionados
+do manifesto identificado, não a auditoria integral de componentes/SDK/SO.
+Telemetria/ID persistente, destinos por UID e reconexão ainda não foram
+verificados; INTERNET/cleartext do Metro não podem ser usados para atribuir todo
+tráfego ao reconhecimento ou para absolvê-lo. Não remover permissões por tentativa.
+
+Próxima ação no dispositivo: nenhuma nova captura nesta etapa. Manter demo em
+idle/cancelled, câmera desligada e conexões originais; preservar o APK atual.
+A inspeção de rede exige selecionar ferramenta que restrinja a coleta a
+UID/destinos/contagens, inclusive na reconexão, sem registrar payloads, HAR,
+PCAP, logcat completo, imagens ou OCR. Profiler que capture corpos por padrão
+não atende ao protocolo. Indisponibilidade de ferramenta é lacuna, não zero tráfego.
+A qualificação da ferramenta e as regras de backup/transferência precedem nova
+rodada física; não há autorização clínica decorrente deste resultado.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -1157,8 +1219,11 @@ funcional; reverse 1/0→0/0→1/0, rádios desligados em O e restaurados em Q;
 conteúdo/causa/envio determinados. Rodada consolidada; M0/APK/UID/destinos e
 privacidade pendentes, habilitação clínica bloqueada. Atualização de SO posterior
 registrada: M0a identificou Android17/API37/patch2026-10-05/buildCP2A.260605.016.S731BXXUACZJC,
-APK local/base únicos com hash69d5a0b3… e JS86017456… coincidentes. Próximo M0b
-com extrator manifesto-1, sem captura; ensaios anteriores não homologam o novo SO.
+APK local/base únicos com hash69d5a0b3… e JS86017456… coincidentes. M0b recebido:
+aapt2 2.20-13193326, min24/target36, CAMERA/INTERNET; allowBackup/cleartext/debuggable
+true, sem referências a regras de backup/rede nos atributos selecionados. Fonte da
+demo passa a allowBackup=false para futuro build; APK atual preservado e gate
+fechado. Ensaios anteriores não homologam o novo SO.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
@@ -1186,6 +1251,8 @@ justifique alterar o fluxo de produção ou substituir ML Kit/Tesseract.
 
 | Ferramenta / cenário | Observação | Alcance |
 |---|---|---|
+| Expo AllowBackup, configuração real da demo e manifesto sintético | true→false, demais atributos/permissões preservados; allowBackup=false agora explícito na fonte | Sem prebuild, compilação, instalação ou novo APK; não valida regras OEM |
+| manifesto-1/aapt2 2.20-13193326 no Windows do autor | JSON selecionado do APK69d5a0b3… recebido em M0b | Leitura estática vinculada por M0a, sem tráfego/conteúdo de arquivos/runtime |
 | PowerShell 7.5.4/Linux, checks do coletor | Aprovados: comparação, acréscimo/remoção/mtime, nomes privados, entradas inválidas/duplicadas, case-sensitive, descarte/IDs e fronteira ADB simulada | Não executa Windows/ADB/Samsung; fixtures temporárias só no host, descartadas |
 | Lint e TypeScript raiz/demo | Aprovados | Sem alteração de código funcional do app |
 | Jest --ci --runInBand | 742 testes/67 suítes aprovados; avisos preexistentes de act | SDK/câmera/contas simulados; não são inspeção de privacidade física |

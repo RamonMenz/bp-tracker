@@ -554,3 +554,15 @@ base instalado/APK local com SHA-25669d5a0b3… iguais. [Identidade e próximo M
 Extrator manifesto-1 seleciona permissões/atributos diretos de application sem
 expor árvore/paths, com validação de hash e fixtures/aapt2 público, sem APK real.
 Próximo só leitura local estática; nenhuma nova captura ou build. Gate mantido.
+
+
+M0b recebido: manifesto-1/aapt2 2.20-13193326 e APK69d5a0b3… identificado.
+min24/target36, CAMERA/INTERNET declaradas; áudio/storage/mídia selecionadas
+não declaradas. allowBackup/usesCleartextTraffic/debuggable true, sem atributos
+fullBackupContent/dataExtractionRules/networkSecurityConfig declarados.
+[Diagnóstico e correção de fonte](task-07-inspecao-privacidade-localidade.md#retorno-m0b--manifesto-do-apk-identificado-e-configuração-de-backup):
+android.allowBackup=false na demo para futuro build, conferido pelo transformador
+real Expo. APK instalado permanece true, sem build/instalação ou mudança do ensaio.
+Elegibilidade não prova backup ocorrido; cleartext/INTERNET não provam upload.
+Ressalvas de transferência OEM, telemetria/ID e UID/destinos mantêm gate fechado.
+Sem nova captura; preservar artefatos e qualificar observação só de metadados.
