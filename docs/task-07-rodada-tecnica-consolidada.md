@@ -477,3 +477,130 @@ presença impede presumir telemetria exclusivamente anônima/agregada; requer
 avaliação frente à constituição. Não afirmar que valores clínicos são enviados
 nem que os eventos contêm apenas métricas. Nenhuma API de SDK foi alterada ou
 desabilitada por tentativa; auditoria de dados, destinos e runtime segue aberta.
+
+
+## Inspeção dirigida de privacidade e localidade — continuidade
+
+Em 24/11/2026, sobre staging 81af92f, foi preparado o
+[diagnóstico e protocolo TASK-04/06/07/18](task-07-inspecao-privacidade-localidade.md).
+PR #74 permanece aberto no início dessa etapa e foi consultado como evidência,
+sem presumir merge; nova branch docs/task-07-inspecao-privacidade independente.
+Coletor PowerShell inventario-1 compara metadados em memória, sem ler conteúdo
+ou expor caminhos nos relatórios. P0 solicitado, sem retorno físico registrado;
+rede por UID/destino ainda sem ferramenta qualificada. Não executar toda a matriz
+sem condução nem repetir A–K/R1/R2. Habilitação clínica continua bloqueada.
+
+
+Retorno posterior P0 recebido: fonte f057283 limpa, ADB 1.0.41/pacote 37.0.1,
+Samsung SM-S731B/Android 17/API 37, demo UID 10033 e bundle 86017456… reconfirmados.
+Metro aberto; demo aberta para conferir captura-5/nao-carregado/idle, câmera
+sem uso/revisão antiga e Fast Refresh desligado. associacao-1 ausente é compatível
+com a fonte antiga. Reinstalação desconhecida e APK atual sem hash reconfirmado;
+rede por UID/destinos sem ferramenta identificada. [Análise e próximo controle I](task-07-inspecao-privacidade-localidade.md#retorno-p0--identidade-e-estado-inicial-recebidos),
+sem câmera/OCR ou troca de JS/APK; não presume conformidade ou conclusão de tarefa.
+
+
+Retorno posterior I recebido: coletor inventario-1 em 583f61f limpa executado no
+Windows PowerShell 5.1.26100.9818. I0/I1 com 16 arquivos (1 bundle, 2 nomes de
+DataTransport, 12 não classificados, 1 preferência com nome ML Kit); zero
+mudanças de entrada/tamanho/mtime detectadas. Autor confirmou espera programada
+30 s sem pausa adicional, idle/câmera desligada, sem revisão/retomada/recarga/
+reinício/erro. [Evidência, alcance e próximo S/B](task-07-inspecao-privacidade-localidade.md#retorno-i--coletor-no-windows-e-controle-idle).
+Positivo para controle/capacidade, sem prova de conteúdo/temporários/rede/SDK/SO;
+S/B e demais grupos desta rodada ainda pendentes, habilitação clínica bloqueada.
+
+
+Retorno posterior S/B: leitura sintética correta em ready/preview-1, revisão e
+câmera encerrada; 16 entradas nos três snapshots. S0→S1 mudou tamanho e/ou mtime
+de uma entrada com nome DataTransport; conteúdo/causa/envio não determinados.
+S1→B1 sem mudanças detectadas; cancelled, campos ausentes e câmera desligada por
+aproximadamente 5 s. O sim inicial para retomada foi corrigido pelo autor como
+erro de marcação: **não houve retomada**. Pausa encerrada sem reteste/defeito
+constatado. [Registro, limites e próximo C/R](task-07-inspecao-privacidade-localidade.md#retorno-sb--captura-mudança-de-metadados-e-descarte).
+Não ler bancos ou repetir captura por delta zero. Habilitação permanece bloqueada.
+
+
+Retorno posterior C/R: cancelamento em ready/preview-1 terminou cancelled, câmera
+encerrada e sem revisão/retomada; force-stop sem erro percebido, retorno pelo ícone
+à demo idle/Nativo não carregado, sem campos/câmera/retomada. Janelas relatadas de
+aproximadamente 5 s; 16 entradas nos snapshots IDs 1/2/3 após reimportação do
+módulo. C0→C1 mudou size-or-mtime de uma entrada DataTransport; C1→R1 mudou uma
+entrada bundle e uma não classificada. [Evidência, limites e hash dirigido pós-R](task-07-inspecao-privacidade-localidade.md#retorno-cr--cancelamento-reinício-e-metadados-alterados).
+Sem causa/conteúdo/envio determinados ou aceite de privacidade. Antes de E,
+conferir só fonte/bundle, sem repetir cenário, abrir câmera ou mudar permissões.
+
+
+Conferência pós-R recebida: TalkBack f057283 limpa, bundle 86017456… igual ao P0,
+Metro na cópia TalkBack, sem mudança de rede, idle/nao-carregado e câmera desligada.
+Autor informou abertura manual por a antes desta fase; momento em relação aos
+snapshots não especificado, sem classificar como retomada automática ou explicar
+por suposição os metadados alterados. [Evidência e próximo E](task-07-inspecao-privacidade-localidade.md#retorno-da-identidade-pós-r--fonte-limpa-e-hash-coincidente).
+Hash igual limita-se aos momentos consultados; não prova C1/R1 com mesmos bytes,
+APK ou privacidade SDK/SO. Próximo erro seguro de permissão sem Capturar/OCR,
+preparação fora de E0/E1, ainda não executado. Sem repetição de C/R.
+
+
+Retorno posterior E: Durante o uso do app → Não permitir; retorno por Recentes,
+tela branca breve na preparação (sem causa/reinício comprovados), hash 86017456…
+reconfirmado antes de E0. Um Iniciar/diálogo/Não permitir terminou cancelled, sem
+câmera/revisão/retry ou erro/recarga/reinício percebidos após E0, por cerca de 5 s.
+E0/E1 IDs 4/5 com 16 entradas; mudou size-or-mtime de uma entrada não classificada,
+sem causa/conteúdo/envio determinados. [Evidência e preparação O/Q](task-07-inspecao-privacidade-localidade.md#retorno-e--negativa-de-permissão-e-mudança-não-classificada).
+Próximo: restaurar permissão da demo e consultar hash/contagens reverse/conexões,
+sem iniciar câmera ou alterar rede ainda. Privacidade/habilitação não aprovadas.
+
+
+Preparação offline recebida: permissão restaurada, Recentes sem a, cancelled/
+preview-1 com câmera desligada e sem campos/retomada, Fast Refresh desligado,
+hash 86017456… coincidente. Reverse8097Conhecido=1/OutrasLinhas=0; Wi-Fi/dados
+ligados e VPN não. USB/Bluetooth/Ethernet do telefone desconhecidos; Ethernet do
+PC não identifica rota do telefone. [Registro e esclarecimento dirigido](task-07-inspecao-privacidade-localidade.md#retorno-da-preparação-offline--permissão-e-reverse-conhecidos).
+Solicitado só estado de ancoragem e ligação física, sem alteração de rede/câmera.
+O/Q e monitoramento por UID/destino ainda não executados; habilitação bloqueada.
+
+
+Esclarecimento posterior: Ancoragem USB/Bluetooth desligadas, cabo USB direto
+PC→telefone, sem hub/adaptador Ethernet no telefone. [Condução O/Q](task-07-inspecao-privacidade-localidade.md#esclarecimento-das-conexões-e-condução-oq)
+preparada com consulta reverse 1/0→0/0→1/0, retirada/restauração só de 8097,
+Wi-Fi/dados originais e uma captura sintética com cancelamento; O1 também é Q0.
+Sem resultados físicos novos de O/Q ou observação por UID/destino presumidos;
+não equivale a isolamento universal/privacidade homologada.
+
+
+Retorno posterior O/Q: rádios Wi-Fi/dados/Bluetooth desligados, reverse 8097
+1/0→0/0→1/0, hash 86017456… conhecido. Reconhecimento sintético e cancelamento
+funcionaram; reconexão/estados originais restaurados, cancelled/sem campos/câmera/
+retomada/erro, espera programada 30 s sem pausa extra. O0/O1/Q1 IDs 6/7/8, 16
+entradas; uma mudança size-or-mtime DataTransport em cada par, sem conteúdo/
+causa/envio determinados ou prova de que seja a mesma entrada. [Rodada e diagnóstico consolidados](task-07-inspecao-privacidade-localidade.md#retorno-oq--leitura-desconectada-e-reconexão).
+Sem novas capturas pedidas: próximo M0 se artefato/Studio existirem e auditoria
+independente de SDK. Encoders OCR públicos examinados sem pixels/texto nessa
+subárvore, sem resolver ID do envelope ou SDK/SO integral. Habilitação bloqueada.
+
+
+Preparação M0 posterior: telefone reiniciado por atualização de SO, USB reconectado
+e a no Metro, idle/nao-carregado e câmera desligada. Studio padrão, aapt2 SDK36 e
+APK local de integração localizados por Test-Path, sem validar bytes/versões.
+[Próximo M0a e separação de ambientes](task-07-inspecao-privacidade-localidade.md#preparação-m0-após-atualização-do-so--arquivos-localizados):
+metadados do SO atualizado e hashes base.apk/local/JS, sem captura ou novo build.
+Rodada anterior preservada no ambiente anterior, sem homologação retroativa.
+
+
+M0a recebido pós-update: Android17/API37, patch2026-10-05 e build
+CP2A.260605.016.S731BXXUACZJC; device, bundle86017456…; única entrada APK,
+base instalado/APK local com SHA-25669d5a0b3… iguais. [Identidade e próximo M0b](task-07-inspecao-privacidade-localidade.md#retorno-m0a--apk-local-correspondente-e-referência-atual-do-so).
+Extrator manifesto-1 seleciona permissões/atributos diretos de application sem
+expor árvore/paths, com validação de hash e fixtures/aapt2 público, sem APK real.
+Próximo só leitura local estática; nenhuma nova captura ou build. Gate mantido.
+
+
+M0b recebido: manifesto-1/aapt2 2.20-13193326 e APK69d5a0b3… identificado.
+min24/target36, CAMERA/INTERNET declaradas; áudio/storage/mídia selecionadas
+não declaradas. allowBackup/usesCleartextTraffic/debuggable true, sem atributos
+fullBackupContent/dataExtractionRules/networkSecurityConfig declarados.
+[Diagnóstico e correção de fonte](task-07-inspecao-privacidade-localidade.md#retorno-m0b--manifesto-do-apk-identificado-e-configuração-de-backup):
+android.allowBackup=false na demo para futuro build, conferido pelo transformador
+real Expo. APK instalado permanece true, sem build/instalação ou mudança do ensaio.
+Elegibilidade não prova backup ocorrido; cleartext/INTERNET não provam upload.
+Ressalvas de transferência OEM, telemetria/ID e UID/destinos mantêm gate fechado.
+Sem nova captura; preservar artefatos e qualificar observação só de metadados.
