@@ -604,3 +604,11 @@ real Expo. APK instalado permanece true, sem build/instalação ou mudança do e
 Elegibilidade não prova backup ocorrido; cleartext/INTERNET não provam upload.
 Ressalvas de transferência OEM, telemetria/ID e UID/destinos mantêm gate fechado.
 Sem nova captura; preservar artefatos e qualificar observação só de metadados.
+
+
+Pós-merge: #74/#75 merged confirmados, staging9612c64; worktree Windows pos-merge
+no commit, limpa e allowBackup=false na fonte conforme autor. APK anterior intacto.
+[Regras explícitas e preparação](task-07-backup-pos-merge.md): plugin só da demo
+para exclusões legadas/cloud/D2D, sem alterar engine/fluxo clínico; requer futuro
+build/manifesto/recursos efetivos. OEM/cross-platform/telemetria/UID/destinos
+continuam pendentes. Próximo retorno só de versões Node/npm/Java; sem captura.

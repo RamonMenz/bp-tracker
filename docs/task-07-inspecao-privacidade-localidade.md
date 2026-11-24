@@ -1266,3 +1266,13 @@ o download do JAR 1.21.0 já falhou no mesmo ambiente na entrega #74. O CI verde
 da #74 é evidência daquela entrega, não desta. Checks remotos deste novo PR
 serão conferidos separadamente. Sem horas/despesas/saldos informados, produção,
 compilação Kotlin/APK, merge, deploy ou habilitação clínica.
+
+
+## Continuidade após merge — regras explícitas da demo
+
+PRs #74/#75 mesclados e staging9612c64 confirmado. Autor criou worktree pos-merge
+limpa nesse commit e devolveu allowBackup=false na fonte; APK instalado permanece
+69d5a0b3…/allowBackup=true. [Etapa de backup/transferência e próximo passo](task-07-backup-pos-merge.md)
+prepara plugin só da demo com exclusões legadas/cloud/D2D e checks reais Expo.
+Sem build/instalação ou novas capturas; lacunas OEM/cross-platform/telemetria/rede
+mantêm gate fechado. Próxima devolução é só Node/npm/Java do Windows.

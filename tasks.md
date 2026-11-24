@@ -196,3 +196,11 @@ As tarefas de verificação são parte da implementação, não uma promessa de 
 Se faltar capacidade, aplicar a ordem de corte do TAP: primeiro ampliação de modelo/regras/testes **além do necessário**, depois indicadores adicionais, depois serviço próprio e por último observabilidade complementar. Os testes e ajustes de segurança necessários às novas funções não são complementares e não podem ser cortados. O serviço próprio já não integra a stack local escolhida. TASK-28 é uma reserva limitada, não autorização para implementar todos os complementos.
 
 Após os complementos, se necessário, priorizar fotografia plenamente implementada e comparada e declarar voz parcial. Fotografia, confirmação obrigatória e Relatório Técnico Final com decisão/comparação são irredutíveis. Qualquer inviabilidade adicional, inclusive do PDF, deve ser explicitada e tratada conforme o TAP, sem corte silencioso ou flexibilização da privacidade. Este plano não autoriza prorrogação dos marcos oficiais.
+
+
+Continuidade TASK-04/06/07/18 pós-merge (parcial): #74/#75 mesclados, staging9612c64;
+worktree Windows pos-merge limpa e allowBackup=false na fonte confirmados pelo autor.
+[Etapa de backup/transferência](docs/task-07-backup-pos-merge.md) prepara exclusões
+legadas/cloud/D2D só da demo e teste dos mods reais Expo; não atualiza APK instalado.
+OEM/cross-platform, recursos empacotados, telemetria/ID e UID/destinos pendentes;
+sem nova captura ou conclusão/habilitação. Próximo retorno: versões Node/npm/Java.
