@@ -500,3 +500,13 @@ por suposição os metadados alterados. [Evidência e próximo E](task-07-inspec
 Hash igual limita-se aos momentos consultados; não prova C1/R1 com mesmos bytes,
 APK ou privacidade SDK/SO. Próximo erro seguro de permissão sem Capturar/OCR,
 preparação fora de E0/E1, ainda não executado. Sem repetição de C/R.
+
+
+Retorno posterior E: Durante o uso do app → Não permitir; retorno por Recentes,
+tela branca breve na preparação (sem causa/reinício comprovados), hash 86017456…
+reconfirmado antes de E0. Um Iniciar/diálogo/Não permitir terminou cancelled, sem
+câmera/revisão/retry ou erro/recarga/reinício percebidos após E0, por cerca de 5 s.
+E0/E1 IDs 4/5 com 16 entradas; mudou size-or-mtime de uma entrada não classificada,
+sem causa/conteúdo/envio determinados. [Evidência e preparação O/Q](task-07-inspecao-privacidade-localidade.md#retorno-e--negativa-de-permissão-e-mudança-não-classificada).
+Próximo: restaurar permissão da demo e consultar hash/contagens reverse/conexões,
+sem iniciar câmera ou alterar rede ainda. Privacidade/habilitação não aprovadas.

@@ -422,7 +422,7 @@ que os bytes permaneceram iguais em todos os instantes. Não repetir R ou tentar
 alterar o hash. Identidade atual suficiente para preparar nova baseline de E,
 sem aprovação de privacidade ou encerramento de tarefas.
 
-### Próximo grupo E — permissão negada, sem Capturar/OCR
+### Procedimento E — executado, retorno abaixo
 
 Mesmo Metro TalkBack/fonte f057283 e ferramentas inventario-1/583f61f; sem npm,
 update, novo APK, rede/reverse alterados ou indução de erro do motor/cleanup.
@@ -474,8 +474,85 @@ antes de E0; sem atualizar ferramenta ou perder o primeiro snapshot no meio.
 Devolver preparação (permissão antes/depois, retorno/reinício/a se usado), hash,
 dois JSONs/comparação, fase antes/depois, diálogo/opção/mensagem fixa, câmera/
 preview/revisão/retry, intervalo e erro/recarga/reinício. Não screenshot/tela de
-permissão, logs completos, dados de conta ou mídia. E ainda não executado nesta
-rodada; O/Q, M0, APK atual e UID/destinos continuam pendentes.
+permissão, logs completos, dados de conta ou mídia. Retorno de E recebido abaixo;
+O/Q, M0, APK atual e UID/destinos continuam pendentes.
+
+## Retorno E — negativa de permissão e mudança não classificada
+
+Registro em 24/11/2026, conforme relato/terminal do autor. Data/hora de execução
+não informadas; sem acesso direto ao aparelho. Ferramenta inventario-1 na cópia
+já preparada; HEAD/status da ferramenta não repetidos nesta devolução.
+
+| Item | Observação recebida | Alcance |
+|---|---|---|
+| Preparação | Câmera passou de Durante o uso do app para Não permitir; retorno por Recentes, sem a | Alteração somente da demo conforme condução; não houve nova captura relatada |
+| Carregamento da preparação | Tela branca por aproximadamente 1 s e depois tela normal | Não comprova, sozinha, morte de processo, recriação de Activity, crash ou sua causa |
+| Bundle antes de E0 | SHA-256 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 | Coincide com referências; preparação ficou antes do par de inventários |
+| Estado anterior ao gesto | idle/nao-carregado | Câmera ainda não iniciada |
+| Tentativa | Diálogo apareceu após um Iniciar; autor selecionou Não permitir | Recusa explícita no contexto da ação |
+| Encerramento | cancelled; Captura cancelada; resultado descartado.; câmera/preview desligados, sem revisão ou nova tentativa | Positivo para recusa/cancelamento no alcance observado, não erro de motor provocado |
+| Janela | Aproximadamente 5 s sem toque; sem comportamento/erro/recarga/reinício percebido após E0 | Relato, sem instrumentação interna do SDK/SO |
+| E0/E1 | IDs 4/5, 16 entradas em cada | Mesmas categorias: 1 bundle, 2 nomes DataTransport, 12 não classificados, 1 preferência com nome ML Kit |
+| Comparação | ChangedEntries 1; outro-nao-classificado, size-or-mtime, Files 1 | Uma entrada existente mudou tamanho e/ou mtime; sem adição/remoção detectada |
+
+**E positivo para recusa segura no alcance relatado.** cancelled é compatível com
+o cancelamento preservado durante modal/background, mas a sequência AppState não
+foi instrumentada nesta resposta: não atribuir causalidade exclusiva ao diálogo.
+Não exigir failed/permission-denied nem conceder para forçar outro resultado.
+
+A mudança não classificada não identifica conteúdo clínico, arquivo seguro,
+produtor, causa ou envio. Também não comprova que seja a mesma entrada não
+classificada de R. A tela branca/carregamento ocorreram antes da baseline E0;
+não atribuir a eles automaticamente a diferença E0→E1. Não ler arquivos ou
+ampliar logs, limpar cache, repetir E até delta zero ou tratar o caso como falha
+confirmada da implementação. Permissão ficou negada ao término conforme roteiro.
+
+### Próxima preparação de O/Q — restaurar permissão e identificar conexões
+
+Somente preparação, sem Capturar/Iniciar ou desligar rede ainda. Preservar Metro
+TalkBack/fonte f057283 e ferramenta 583f61f, sem atualização de código/APK.
+
+1. Na Informação do app do cliente Aferi — captura em avaliação, restaurar
+   Câmera para Durante o uso do app, opção anterior informada. Não alterar outros
+   apps/permissões, limpar dados/cache ou conceder para retomar pedido pendente.
+   Se o cliente não for identificável ou a opção não existir, parar e informar.
+2. Retornar por Recentes; se necessário, ícone uma vez ou a uma vez no Metro
+   TalkBack para carregar o JS. Registrar tela branca/reinício/carregamento se
+   percebidos, sem inferir causa. Esperado idle/cancelled, câmera desligada e sem
+   candidatos/retomada; não Iniciar só para carregar módulo. Conferir Fast Refresh.
+3. Obter só hash do bundle conhecido, sem recarregar até coincidir se divergir.
+4. Consultar os mapeamentos reverse no host, retendo saída bruta em memória e
+   exibindo **só contagens**. Não remover/criar mapeamento nesta preparação:
+
+```powershell
+$aferiReversePreparacao = @(& $aferiAdb -d reverse --list 2>&1)
+if ($LASTEXITCODE -ne 0) { throw 'reverse-unavailable' }
+$aferiReverseLinhas = @($aferiReversePreparacao | Where-Object { $_.ToString().Trim().Length -gt 0 })
+$aferiReverse8097 = @($aferiReverseLinhas | Where-Object { $_ -is [string] -and $_ -match '^\S+\s+tcp:8097\s+tcp:8097\s*$' })
+[pscustomobject]@{
+    Reverse8097Conhecido = $aferiReverse8097.Count
+    OutrasLinhas = $aferiReverseLinhas.Count - $aferiReverse8097.Count
+} | ConvertTo-Json
+```
+
+Uma linha no formato conhecido prova o mapeamento naquele momento, não ausência
+de tráfego externo. Zero linhas conhecidas é resultado válido a analisar; não
+criar rota por suposição. Outras linhas/duplicatas/formato desconhecido impedem
+alterar reverse até análise. Não devolver variáveis brutas, serial ou destinos
+privados; erro de comando/permissão gera impedimento sem dump alternativo.
+
+5. Informar apenas estado atual ligado/desligado/desconhecido de Wi-Fi/dados
+   móveis e se há internet por USB, Bluetooth, Ethernet ou VPN. Não enviar SSID,
+   IP, nome de VPN/operadora/conta ou screenshot. Se precisar abrir Configurações,
+   fazê-lo só com câmera desligada e voltar sem novo gesto. Não alterar conexões,
+   VPN, políticas corporativas ou instalar monitor para obter a resposta.
+
+Devolver permissão restaurada, forma de retorno, fase/Nativo/câmera/campos,
+Fast Refresh, hash, JSON de contagens reverse, conexões e reinício/erro percebidos.
+Só depois conduzir O (offline) e Q (reconexão), com remoção/restauração dirigida
+apenas do mapeamento reconhecido, se aplicável. Rede por UID/destinos segue NE:
+contagens de reverse e teste offline não são monitor de rede ou aceite de
+telemetria. Nenhum novo inventário ou captura solicitado nesta preparação.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -691,8 +768,10 @@ retorno sem retomada/campos/câmera, com mudanças de metadados descritas acima:
 DataTransport em C; bundle e entrada não classificada após R. Conteúdo/causa/envio
 não determinados. Fonte/bundle pós-R reconfirmados: f057283 limpa e hash igual
 ao P0; abertura manual por a registrada com momento relativo não especificado.
-Próximo E preparado, ainda não executado; O/Q, M0, APK atual e UID/destinos
-pendentes. Habilitação clínica bloqueada.
+E recebido positivo para negativa/cancelamento; uma entrada não classificada
+mudou size-or-mtime, sem conteúdo/causa/envio determinados. Próxima preparação:
+restaurar permissão e identificar reverse/conexões, sem câmera ou rede alterada.
+O/Q, M0, APK atual e UID/destinos pendentes; habilitação clínica bloqueada.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
