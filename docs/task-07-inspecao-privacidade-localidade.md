@@ -371,7 +371,7 @@ continua não classificada, sem chamá-la de clínica ou segura. Conferir soment
 o hash do JS conhecido antes da próxima tentativa de modalidade; não hashear
 arquivos desconhecidos/bancos. Inventários iguais de I/B não eliminam essas lacunas.
 
-### Próximo passo — identidade do bundle após R, sem câmera
+### Procedimento de identidade pós-R — retorno recebido abaixo
 
 Preservar fonte TalkBack/Metro e ferramenta 583f61f. Não repetir C/R nem fazer
 reload/reinstalação, alterar rede/permissões ou iniciar câmera. No PowerShell de
@@ -395,6 +395,87 @@ durante R, e fase/Nativo/câmera atuais. Não enviar paths pessoais, imagem,
 conteúdo de arquivo ou logs completos. E (erro seguro de permissão) só será
 conduzido depois dessa análise; por enquanto, nenhuma alteração de permissão.
 O/Q, M0, identidade atual do APK, UID/destinos e privacidade continuam pendentes.
+
+## Retorno da identidade pós-R — fonte limpa e hash coincidente
+
+Registro em 24/11/2026, conforme devolução do autor, sem data/hora de execução
+informadas ou acesso direto ao Windows/Samsung. HEAD TalkBack
+f057283876ea2126b485abd762e2886012b4c7ca e git status sem saída reconfirmados.
+Hash do bundle consultado:
+`860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388`, igual ao P0.
+Metro permaneceu aberto na cópia TalkBack, sem mudança de rede informada; estado
+atual idle/nao-carregado, câmera desligada.
+
+Sobre reload/atualização/reinstalação, o autor informou que, antes de começar
+esta fase de teste, fechou o app e o abriu novamente pressionando a no Metro.
+Registrar como abertura manual/carregamento, sem converter em falha ou retomada
+automática. O momento em relação a C0/C1/R1 não foi especificado; não afirmar
+que toda a janela ficou sem recarregamento ou atribuir a essa ação a mudança
+de metadados. O relato anterior de R descreveu retorno pelo ícone; os dois
+registros são preservados sem inventar uma ordem mais precisa.
+
+**Conclusão permitida:** os bytes do arquivo bundle nos momentos P0 e desta
+consulta pós-R coincidem pelo SHA-256. Isso não comprova o código em execução,
+identidade do APK, ausência de escrita ou conteúdo/causa da entrada desconhecida.
+C1/R1 não tiveram hashes: não afirmar que sua diferença foi apenas mtime nem
+que os bytes permaneceram iguais em todos os instantes. Não repetir R ou tentar
+alterar o hash. Identidade atual suficiente para preparar nova baseline de E,
+sem aprovação de privacidade ou encerramento de tarefas.
+
+### Próximo grupo E — permissão negada, sem Capturar/OCR
+
+Mesmo Metro TalkBack/fonte f057283 e ferramentas inventario-1/583f61f; sem npm,
+update, novo APK, rede/reverse alterados ou indução de erro do motor/cleanup.
+A permissão será alterada **somente no cliente de avaliação**, nunca no produto
+principal. Este cenário verifica recusa/permissão, não falhas internas de OCR.
+
+1. Partir de idle/cancelled, sem câmera/revisão, Fast Refresh desligado. Nas
+   Informações do app Aferi — captura em avaliação (com.ramonmenz.afericapturetest),
+   anotar a opção atual de Câmera e selecionar Não permitir. Se não identificar o
+   cliente com segurança, parar. Não limpar dados/cache, alterar outras permissões
+   ou configurações de outros apps.
+2. Voltar à demo por Recentes. Revogar permissão pode encerrar/recriar o processo;
+   registrar se percebeu isso. Se necessário para abri-la, usar o ícone uma vez;
+   se ficar no launcher, a no terminal do Metro TalkBack uma única vez é permitido
+   como preparação, anotando-o. Sem reload/seleção repetida de bundles. Se não
+   carregar a demo, parar e retornar impedimento, sem Iniciar.
+3. Antes de E0, conferir captura-5, idle/cancelled, câmera desligada e campos
+   ausentes. Não exigir associacao-1 ou preview-1 antes de gesto. Obter novamente
+   somente o hash do bundle conhecido, pois a preparação pode carregar JS. Se
+   diferente da referência 86017456… ou houver erro, parar sem Iniciar; não
+   recarregar até coincidir. Alterações de preparação ficam fora do par E0/E1.
+4. E0 pelo coletor e seu JSON. Se falhar, parar antes de gesto. Tocar em Iniciar
+   câmera Android **uma vez**. Se houver diálogo, escolher Não permitir/Negar
+   uma vez; se o SO recusar sem diálogo, não insistir. Não conceder para testar
+   nem iniciar novamente. Se houver orientação para Configurações, apenas anotar.
+5. Esperado: permissão negada ou cancelled se o modal/background cancelar a
+   tentativa, sem câmera/preview/revisão/OCR ou retry automático. Registrar fase,
+   mensagem/código fixos e diálogo; não exigir failed se cancelled foi observado.
+   Câmera aberta inesperadamente exige cancelar/sair e parar, sem Capturar.
+6. Após encerramento, observar aproximadamente 5 s sem novos toques; E1 e
+   comparação E0→E1. Manter permissão negada ao final: restauração será preparada
+   antes da próxima captura, fora deste par. Nenhum delta/total esperado fixado.
+
+Comandos intercalados com a preparação/gesto descritos:
+
+```powershell
+# Após voltar das Configurações, antes de E0 e sem iniciar câmera.
+& $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js
+$aferiE0 = New-AferiInventory -AdbPath $aferiAdb
+$aferiE0 | ConvertTo-Json -Depth 4
+# Um Iniciar; negar se houver diálogo; aguardar encerramento e observar.
+$aferiE1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiE1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiE0.Id -After $aferiE1.Id | ConvertTo-Json -Depth 5
+```
+
+Mesmo módulo/PowerShell entre E0/E1. Se terminal foi fechado, reimportar apenas
+antes de E0; sem atualizar ferramenta ou perder o primeiro snapshot no meio.
+Devolver preparação (permissão antes/depois, retorno/reinício/a se usado), hash,
+dois JSONs/comparação, fase antes/depois, diálogo/opção/mensagem fixa, câmera/
+preview/revisão/retry, intervalo e erro/recarga/reinício. Não screenshot/tela de
+permissão, logs completos, dados de conta ou mídia. E ainda não executado nesta
+rodada; O/Q, M0, APK atual e UID/destinos continuam pendentes.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -608,8 +689,10 @@ reconexao e recarga/reinicio; observacao e alcance; impedimento/proxima analise.
 Estado atualizado: P0/I/S/B/C/R recebidos. C/R positivos para cancelamento e
 retorno sem retomada/campos/câmera, com mudanças de metadados descritas acima:
 DataTransport em C; bundle e entrada não classificada após R. Conteúdo/causa/envio
-não determinados. Próximo passo é reconferir somente identidade da fonte/bundle,
-sem câmera. E/O/Q, M0 e UID/destinos ainda pendentes; habilitação clínica bloqueada.
+não determinados. Fonte/bundle pós-R reconfirmados: f057283 limpa e hash igual
+ao P0; abertura manual por a registrada com momento relativo não especificado.
+Próximo E preparado, ainda não executado; O/Q, M0, APK atual e UID/destinos
+pendentes. Habilitação clínica bloqueada.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 

@@ -490,3 +490,13 @@ módulo. C0→C1 mudou size-or-mtime de uma entrada DataTransport; C1→R1 mudou
 entrada bundle e uma não classificada. [Evidência, limites e hash dirigido pós-R](task-07-inspecao-privacidade-localidade.md#retorno-cr--cancelamento-reinício-e-metadados-alterados).
 Sem causa/conteúdo/envio determinados ou aceite de privacidade. Antes de E,
 conferir só fonte/bundle, sem repetir cenário, abrir câmera ou mudar permissões.
+
+
+Conferência pós-R recebida: TalkBack f057283 limpa, bundle 86017456… igual ao P0,
+Metro na cópia TalkBack, sem mudança de rede, idle/nao-carregado e câmera desligada.
+Autor informou abertura manual por a antes desta fase; momento em relação aos
+snapshots não especificado, sem classificar como retomada automática ou explicar
+por suposição os metadados alterados. [Evidência e próximo E](task-07-inspecao-privacidade-localidade.md#retorno-da-identidade-pós-r--fonte-limpa-e-hash-coincidente).
+Hash igual limita-se aos momentos consultados; não prova C1/R1 com mesmos bytes,
+APK ou privacidade SDK/SO. Próximo erro seguro de permissão sem Capturar/OCR,
+preparação fora de E0/E1, ainda não executado. Sem repetição de C/R.
