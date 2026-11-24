@@ -1,5 +1,14 @@
 # TASK-07 — continuidade, rodada técnica e resultados consolidados
 
+> **Integração posterior ao merge #72:** staging avançou para `f901bbb`;
+> a branch do PR #73 incorporou essa base em `f038d6f`. Uma expectativa do
+> teste de OCR tardio ainda exigia dois argumentos; foi ajustada para conferir
+> também os quatro códigos fixos do diagnóstico introduzido pela #72, mantendo
+> identidade da tentativa, candidato de B e entrega única. A falha foi reproduzida
+> antes do ajuste. Lint, TypeScript raiz/demo e 742 testes/67 suítes combinados
+> passaram. Nenhum código funcional foi alterado por essa correção. Os ensaios
+> físicos continuam vinculados a f057283; não homologam retroativamente o novo JS.
+
 > **Retomada posterior em 24/11/2026:** PR #71 confirmado mesclado, fonte
 > `e7256ad`, merge/staging `a3b996a`. O retrato Git abaixo preserva a consulta
 > anterior ao merge. Continuidade em [diagnóstico de associação](task-07-diagnostico-associacao.md)
@@ -88,6 +97,100 @@ registro não são datas presumidas de execução dos testes.
   indefinidas: usar testes controlados e registrar limites de hardware.
 
 ### Pendências e limite desta etapa
+
+Rodada posterior de ciclo de vida solicitada em 24/11/2026:
+[matriz TASK-07/10/18, fonte/APK, grupos e estados separados](task-07-ciclo-vida-samsung.md).
+O retorno inicial informa Metro desligado e terminal de mais cedo com f057283
+limpa, APK 69d5a0b3… e bundle 86017456…; G0 atual ainda pendente. Não é novo
+ensaio físico nem validação automática das etapas históricas abaixo.
+
+Retorno posterior G0: fonte limpa e hashes atuais de APK/bundle coincidentes,
+Metro/demo funcionais, idle/nao-carregado, Fast Refresh desligado e câmera sem
+uso ativo/revisão antiga. G0 passou para versão/carregamento; modelo atual não
+foi transcrito. [Análise e G1 liberado, sem Capturar/OCR](task-07-ciclo-vida-samsung.md#retorno-g0--versão-e-carregamento-confirmados):
+somente L03 e, se encerrar normalmente, L11; ambos sem resultado novo recebido.
+
+Retorno posterior G1: L03 e L11 passaram no alcance relatado, com cancelled,
+preview/uso ativo encerrados e sem revisão/retomada por aproximadamente 5 s.
+L03 informou preview-1/ready; L11, uma abertura percebida e Iniciar desabilitado.
+getprop confirmou modelo SM-S731B. [Evidência, limites e G2a](task-07-ciclo-vida-samsung.md#retorno-g1--cancelamento-no-preview-e-iniciar-repetido):
+próximos casos L06a/L07a (Home/troca de app no preview), ainda sem Capturar/OCR.
+Não comprova contagem nativa, liberação física de RAM/SDK ou demais fases.
+
+Retorno posterior G2a: autor atribuiu resultados iguais a L06a/L07a, ambos em
+ready/preview-1; uso ativo encerrou ao sair, retorno cancelled sem preview,
+revisão/retomada, recarga/reinício ou erro percebido, por aproximadamente 5 s.
+[Registro separado dos casos e limites](task-07-ciclo-vida-samsung.md#retorno-g2a--home-e-troca-de-app-no-preview).
+Passaram no alcance relatado, sem executar variantes de revisão ou OCR.
+Próximo grupo G2b: L08a/L09a, bloqueio/rotação no preview, ainda não executados.
+
+Retorno posterior G2b: L08a passou no alcance relatado (cancelled após bloqueio,
+câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s).
+L09a passou exclusivamente para rotação efetiva com relayout: ready/preview-1
+preservados, sem interrupção/reinício, sem captura automática, cancelamento
+final funcional. [Evidência e limites](task-07-ciclo-vida-samsung.md#retorno-g2b--bloqueio-e-rotação-com-relayout).
+Recriação real continua não executada. Próximo grupo G4a: L12/L13 com cartão
+sintético, sem confirmar; resultados ainda não recebidos.
+
+Retorno posterior G4a: L12 passou no alcance relatado — botão desabilitado ainda
+durante OCR, uma revisão correta e descarte após cancelar. L13 teve edição
+descartada ao recapturar, uma abertura sem OCR automático, cancelled/câmera
+encerrada, mas revisão/edição antiga teria reaparecido após cancelar.
+[Falha relatada sob esclarecimento e teste controlado](task-07-ciclo-vida-samsung.md#retorno-g4a--captura-bloqueada-durante-processamento-e-dúvida-de-descarte).
+Novas capturas pausadas; não aprovar L13 ou liberar próximo grupo até análise.
+
+Esclarecimento posterior do autor: leu desapareceu e respondeu sim por engano;
+revisão/edição antiga NÃO reapareceu. L13 passou no alcance corrigido, sem nova
+captura, sem defeito constatado ou alteração funcional. Pausa encerrada; teste
+dirigido do hook passou e fica como cobertura adicional, sem homologar hardware.
+Próximo grupo G2c: L06b/L08b, Home/bloqueio na revisão, ainda não executados.
+
+Retorno posterior G2c: autor atribuiu resultados iguais a L06b/L08b — revisão
+120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled,
+campos ausentes e nenhuma retomada por aproximadamente 5 s, sem comportamento
+ou erro percebido. [Casos separados e limites](task-07-ciclo-vida-samsung.md#retorno-g2c--home-e-bloqueio-durante-a-revisão).
+Passaram no alcance relatado, sem testar escrita ou OCR interrompido. Próximo
+grupo G2d: L07b/L09b, troca de app/rotação na revisão, ainda não executados.
+
+Retorno posterior G2d: L07b passou no alcance relatado — revisão/edição 130
+descartadas, cancelled com mensagem de cancelamento e nenhuma retomada por
+aproximadamente 5 s. L09b passou para relayout efetivo: reviewing/130 preservados,
+câmera desligada, sem captura/confirmação automáticas, campos descartados ao
+cancelar. [Evidências e limites](task-07-ciclo-vida-samsung.md#retorno-g2d--troca-de-app-e-rotação-durante-a-revisão).
+Recriação real continua NE. Próximo grupo G3a: uma tentativa L02/L04; fase
+rápida/incerta fica NE, sem repetir até acertar ou presumir OCR interrompido.
+
+Retorno posterior G3a: autor identificou opening em L02 e recognizing em L04
+no toque de Cancelar; ambos terminaram cancelled, câmera/preview encerrados,
+sem revisão/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
+[Passaram no alcance relatado](task-07-ciclo-vida-samsung.md#retorno-g3a--cancelamento-em-abertura-e-reconhecimento),
+sem instrumentação temporal do SDK, liberação física comprovada ou conclusão
+de L14/L15/L16. Próximo grupo G4b: L15/L10, closing e saída/retorno, sem OCR.
+
+Retorno posterior G4b: L15 passou para bloqueio de UI em closing (Iniciar
+desabilitado, nenhuma abertura, cancelled/câmera fechada). L10 passou no alcance
+relatado: Voltar → tela inicial → Recentes → idle/nao-carregado, câmera desligada
+e sem campos/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
+[Evidências e limites](task-07-ciclo-vida-samsung.md#retorno-g4b--bloqueio-em-closing-e-saída-por-voltar).
+Sem prova de ACK físico, morte de processo ou destruição de Activity. Próxima
+etapa é só preparar permissão negada para G3b; L01/L05 ainda não executados.
+
+Retorno posterior da preparação G3b: cliente identificado, Câmera Não permitir,
+fonte f057283 limpa, bundle 86017456… reconfirmado, idle/nao-carregado, sem
+câmera/campos antigos, Fast Refresh desligado, nenhum diálogo inesperado/erro.
+[Preparação aprovada no alcance relatado](task-07-ciclo-vida-samsung.md#retorno-da-preparação-g3b--permissão-negada-e-fonte-reconferida).
+Próximo passo: uma solicitação, Home antes de responder; L05 só se o mesmo
+diálogo permanecer pendente sem novo Iniciar/reload. L01/L05 ainda sem retorno.
+
+Retorno posterior G3b: pedido único mantido após Home, sem novo Iniciar/reload/
+reinício; conceder Durante o uso do app terminou cancelled, sem câmera/preview
+ou retomada por aproximadamente 5 s. L01 positivo na variante Home; L05 parcial
+porque fase anterior à concessão estava coberta pelo modal, sem confirmação
+temporal de cancelled antes de conceder. [Análise e consolidação da rodada](task-07-ciclo-vida-samsung.md#retorno-g3b--pedido-mantido-após-home-e-concessão-sem-retomada).
+Sem novo grupo físico liberado: L14/L16 cobertos com doubles, não executados
+em hardware; não induzir falha/sobreposição. Recriação real e auditoria SDK/SO
+permanecem abertas, TASK-07/10/18 parciais. Autor pode encerrar Metro/demo sem
+apagar cópias/dados; não presumir que já o fez.
 
 | Frente | Estado / próximo trabalho |
 |---|---|

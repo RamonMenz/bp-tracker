@@ -139,6 +139,34 @@ test('recaptura descarta revisão anterior e toques concorrentes não abrem duas
   await act(async () => { t.result.current.review.cancel(); await flush(); });
 });
 
+test('edição não reaparece ao cancelar preview após recaptura repetida sem novo OCR', async () => {
+  const t = await setup(); await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  await act(() => { t.result.current.review.edit('systolic', '130'); });
+  expect(t.result.current.review.state.draft?.systolic).toBe('130');
+  const previousReview = t.result.current.review;
+  await act(async () => {
+    for (let i = 0; i < 3; i++) previousReview.recapture();
+    await flush();
+  });
+  expect(t.permission).toHaveBeenCalledTimes(2);
+  expect(t.result.current.review.state.draft).toBeNull();
+  const attempt = t.result.current.captureState.attemptId;
+  await act(async () => { t.result.current.onStatus(attempt, 'ready'); await flush(); });
+  expect(t.result.current.captureState.phase).toBe('ready');
+  await act(async () => { t.result.current.review.cancel(); await flush(); });
+  await act(async () => {
+    // Eventos/handlers antigos não podem restaurar a revisão após cancelar.
+    t.result.current.onStatus(attempt, 'ready');
+    previousReview.edit('systolic', '130');
+    await flush();
+  });
+  expect(t.result.current.captureState.phase).toBe('cancelled');
+  expect(t.result.current.review.state).toMatchObject({ phase: 'cancelled', draft: null,
+    candidates: null, confirmed: null });
+  expect(t.handle.recognize).toHaveBeenCalledTimes(1);
+});
+
 test('contrato Android com linhas separadas passa pelo parser e preserva instante de captura', async () => {
   const t = await setup();
   t.handle.recognize.mockResolvedValue(PHOTO_INTERPRETATION_EXAMPLES.layout);
