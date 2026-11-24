@@ -1,5 +1,8 @@
 # TASK-07 — primeira coleta técnica de dependências
 
+> Continuidade: [serialização e transporte do identificador](#serialização-e-transporte-do-identificador)
+> e [diagnóstico de associação](task-07-diagnostico-associacao.md). Sem aceite de privacidade.
+
 Protocolo preparado em 23/11/2026; **primeira tentativa bloqueada por SDK não
 localizado; repetição recebida com as três consultas bem-sucedidas**.
 Complementa [retorno TalkBack](task-07-reteste-talkback.md). Não substitui auditoria
@@ -316,3 +319,69 @@ sem constatação de payload ou envio no Samsung.
 Qualquer evidência de persistência/envio clínico bloqueia habilitação; ausência
 de erro nos testes de interface não homologa privacidade. Nenhum conteúdo de
 evento/banco ou comportamento de rede no aparelho é presumido neste documento.
+
+## Serialização e transporte do identificador
+
+Inspeção estática em 24/11/2026, sem acesso ao Windows, APK ou sandbox Samsung.
+Os AARs públicos common 18.11.0 e text-recognition-common 19.1.0 foram obtidos
+novamente das URLs oficiais já vinculadas acima/no [registro anterior](task-07-rodada-tecnica-consolidada.md#auditoria-estática-complementar--identificador-de-instância-do-sdk).
+SHA-256 conferidos: respectivamente `66408a08dbb2465687ff5dd0c8f6410b56549ce3ecf449d9096f3712282131d0`
+e `3be02b3c3c829476100f01d0ab79f0b4a923da23909d3ac63e486d1a63381c58`.
+Não se confundem com hashes de arquivos instalados no telefone.
+
+Método reproduzível: abrir AAR como ZIP, extrair classes.jar para diretório
+temporário e executar o disassembler do JDK 21, sem carregar/executar o SDK:
+
+```sh
+java -m jdk.jdeps/com.sun.tools.javap.Main -c -p -classpath classes.jar NOME_COMPLETO_DA_CLASSE
+```
+
+Classes text-common abaixo usam o prefixo
+`com.google.android.gms.internal.mlkit_vision_text_common.`. A classe common
+é `com.google.mlkit.common.sdkinternal.SharedPrefManager`. Offsets são posições
+de bytecode dentro do método, não linhas de fonte nem rastreamento de execução.
+
+| Classe/método | Vínculo observado |
+|---|---|
+| SharedPrefManager.zza / getMlSdkInstanceId | Preferência privada `com.google.mlkit.internal`; chave `ml_sdk_instance_id`; UUID persistido por putString/apply se ausente (offsets 19–43) |
+| zzuc.zzc | Obtém ID do Task ou getMlSdkInstanceId (147–155), passa a zzsr.zzi (99), acopla builder a zztr.zzc (130) e entrega a zzts.zza (141) |
+| zzuf.zzc / zze | Implementação de zztr guarda o builder; zze materializa zzst, acopla ao evento e serializa via JSON ou encoder binário, ambos configurados por zzmq |
+| zzmq.configure / zzmg.encode | Registra zzst → zzmg (12–18); encoder lê zzst.zzi e adiciona ao descritor mlSdkInstanceId (113–120), com tag 9 definida no inicializador |
+| zztu.zzd / zztv construtor | Factory interna define boolean true e modo 1; zztv adiciona zzuk à lista quando zztu.zzc é true |
+| zzun.zzb / zzum.create | zzun materializa as opções padrão; zzum cria zzuc com SharedPrefManager e uma instância concreta de zztv |
+| zzuk construtor / zzb / zza | Inicializa TransportRuntime com CCTDestination.INSTANCE; zzb serializa zztr.zze e envolve em Event.ofData ou Event.ofTelemetry; zza chama Transport.send nos ramos JSON/proto |
+| zzui.get / zzug.apply | Transporte proto com nome FIREBASE_ML_SDK e Transformer que retorna o mesmo byte array; não há remoção de ID nesse Transformer |
+
+Avanço frente à inspeção anterior: o vínculo builder → encoder → bytes →
+Transport.send também existe no artefato específico de OCR. O ID não é apenas
+um nome de campo desconectado do serializador. Isso **não demonstra** execução,
+fila, envio, destino efetivo ou payload no aparelho; não é auditoria completa
+de todos os eventos, caminhos condicionais ou versões transitivas.
+
+Também examinado `com.google.mlkit.vision.text.internal.TextRecognizerTaskWithResource`:
+zze(InputImage) chama o método privado zzf tanto no sucesso quanto em
+MlKitException; zzf prepara a closure zzq e chama zzuc.zzf. A passagem de
+InputImage à closure não prova serialização de pixels: o corpo completo dessa
+closure e os demais produtores ainda precisam de auditoria. Não converter
+presença de parâmetro em alegação de mídia enviada ou ausência de mídia.
+
+O nome FIREBASE_ML_SDK não implica uso do banco clínico do Aferi. Event.ofData
+é uma categoria do DataTransport, não evidência de dados clínicos. Os métodos
+examinados não permitem concluir que imagens/texto/valores são enviados nem
+que todos os eventos os excluem. Não foi lido nem publicado ID de instalação.
+
+Um UUID persistente de instância pode permitir correlação; sua geração aleatória
+não comprova anonimização. A constituição exige telemetria nova anônima e
+agregada, sem identificadores pessoais: essa compatibilidade continua **não
+demonstrada**. Não chamar o SDK de anônimo/offline apenas por inferência local.
+Nenhum toggle interno, reflexão, remoção de dependência, alteração de manifest
+ou bloqueio artificial de rede foi adotado como solução de privacidade.
+
+Próximo trabalho técnico: rastrear quais produtores de eventos do reconhecedor
+embarcado atingem essa factory/configuração, revisar campos efetivamente
+preenchidos e APIs públicas documentadas aplicáveis às versões fixadas. Uma
+opção interna ofuscada não é uma configuração pública comprovada. Runtime
+exigirá ensaio isolado com dados sintéticos e observação dirigida que distinga
+OCR/dev launcher, incluindo armazenamento, logs e reconexão; não pedir dump de
+banco ou captura clínica ao autor. Manter habilitação clínica bloqueada até
+evidência dos critérios, sem substituir ML Kit/Tesseract definidos nas specs.
