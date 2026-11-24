@@ -166,6 +166,16 @@ câmera/campos antigos, Fast Refresh desligado, nenhum diálogo inesperado/erro.
 Próximo passo: uma solicitação, Home antes de responder; L05 só se o mesmo
 diálogo permanecer pendente sem novo Iniciar/reload. L01/L05 ainda sem retorno.
 
+Retorno posterior G3b: pedido único mantido após Home, sem novo Iniciar/reload/
+reinício; conceder Durante o uso do app terminou cancelled, sem câmera/preview
+ou retomada por aproximadamente 5 s. L01 positivo na variante Home; L05 parcial
+porque fase anterior à concessão estava coberta pelo modal, sem confirmação
+temporal de cancelled antes de conceder. [Análise e consolidação da rodada](task-07-ciclo-vida-samsung.md#retorno-g3b--pedido-mantido-após-home-e-concessão-sem-retomada).
+Sem novo grupo físico liberado: L14/L16 cobertos com doubles, não executados
+em hardware; não induzir falha/sobreposição. Recriação real e auditoria SDK/SO
+permanecem abertas, TASK-07/10/18 parciais. Autor pode encerrar Metro/demo sem
+apagar cópias/dados; não presumir que já o fez.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |

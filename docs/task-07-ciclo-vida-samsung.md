@@ -120,11 +120,11 @@ tratada como data/hora de execução quando esta não for informada.
 | Caso | Estado físico atual | Evidência / limitação | Versão |
 |---|---|---|---|
 | G0 — versão/carregamento | Passou no alcance relatado | HEAD limpo, APK e bundle reconfirmados; Metro/demo/idle/Fast Refresh verificados. Modelo complementado em G1 | V0 |
-| L01 | NE | Diálogo pode impedir acesso ao Cancelar; background é variante distinta | V0 |
+| L01 | Passou para saída por Home no alcance relatado | Pedido após um Iniciar; Home com pedido pendente; retorno/concessão terminou cancelled, sem câmera ou retomada. Botão Cancelar sob modal não testado | V0 |
 | L02 | Passou no alcance relatado | Autor identificou opening no instante de Cancelar; final cancelled, câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
 | L03 | Passou no alcance relatado | preview-1/ready, cancelamento → cancelled; preview/uso ativo encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
 | L04 | Passou no alcance relatado | Autor identificou recognizing no instante de Cancelar; final cancelled, câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s. Não identifica completion interno do SDK | V0 |
-| L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
+| L05 | Parcial: não retomada observada após concessão | Diálogo permaneceu sem novo Iniciar/reload/reinício; Durante o uso do app → cancelled, câmera desligada, sem retomada por aproximadamente 5 s. Fase antes de conceder coberta pelo modal, sem comprovação temporal independente do cancelamento anterior | V0 |
 | L06a / L06b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
 | L07a / L07b | Ambos passaram no alcance relatado | Preview: resultado anterior preservado. Revisão: edição 130 sem confirmar, retorno cancelled com mensagem de cancelamento, sem retomada por aproximadamente 5 s | V0 |
 | L08a / L08b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
@@ -133,9 +133,9 @@ tratada como data/hora de execução quando esta não for informada.
 | L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
 | L12 | Passou no alcance relatado | Uma revisão correta; botão desabilitou após primeiro toque; câmera encerrada e cancelled, sem reaparecimento por aproximadamente 5 s. Cliques adicionais não foram aceitos | V0 |
 | L13 | Passou no alcance relatado, após esclarecimento | Edição sumiu ao recapturar, uma abertura sem OCR automático e cancelled com câmera encerrada; autor corrigiu o sim inicial: leu desapareceu e confirmou que revisão/edição NÃO reapareceram | V0 |
-| L14 | NE | Tardio precisa ser distinguível, senão só teste controlado | V0 |
+| L14 | NE em hardware; cobertura controlada aprovada | Nenhuma conclusão antiga individualmente identificada durante nova tentativa no Samsung; L04 e ausência de revisão por 5 s não substituem esse cenário | V0 / portas simuladas |
 | L15 | Passou para bloqueio observável na UI | closing no gesto, Iniciar desabilitado, nenhuma abertura; final cancelled/câmera encerrada, sem novo toque por aproximadamente 5 s. ACK/exclusão/liberação física não comprovados | V0 |
-| L16 | NE | Não induzir falha no Samsung; parada obrigatória se ocorrer | V0 |
+| L16 | NE em hardware; cobertura controlada aprovada | Nenhuma falha espontânea relatada; doubles false/rejeição/timeout/ACK tardio mantêm blocked. Não induzir falha no Samsung | V0 / portas simuladas |
 
 ### Retorno G0 — versão e carregamento confirmados
 
@@ -414,11 +414,66 @@ solicitou reinstalação. Esse estado altera a permissão da baseline V0, não
 as fontes/JS identificados.
 
 Preparação passou no alcance relatado. Ainda não demonstra pedido pendente,
-cancelamento durante permissão (L01) ou concessão tardia (L05). **G3b liberado:**
+cancelamento durante permissão (L01) ou concessão tardia (L05). Na análise da preparação foi liberado G3b:
 uma solicitação explícita, Home antes de responder e retorno por Recentes.
 Conceder uma vez somente se o diálogo original continuar pendente sem novo
 Iniciar/reload. Se sumir, L05 fica NE; não pedir outro diálogo ou autorizar
 nas Configurações para simular a mesma solicitação. Sem Capturar/OCR.
+
+### Retorno G3b — pedido mantido após Home e concessão sem retomada
+
+Fonte: relato do autor. Preparação reconfirmou fonte/JS e permissão negada;
+nenhuma nova coleta de hashes por cenário. Data/hora de execução não informadas.
+Diálogo surgiu após um único Iniciar; Home usado com pedido pendente; ao voltar,
+diálogo continuava presente. Autor negou novo Iniciar/reload/reinício, concedeu
+Durante o uso do app; fase anterior coberta pelo modal, fase posterior cancelled.
+Câmera/preview permaneceram desligados, sem abertura/revisão/retomada por
+aproximadamente 5 s sem toque; nenhum comportamento/erro percebido, sem timeout
+relatado.
+
+L01 passou no alcance da saída por Home enquanto pedido pendia, sem testar
+botão Cancelar inacessível sob modal. Em L05, a não retomada após concessão é
+positiva e consistente com o guard; não é uma nova autorização nas Configurações.
+Porém, a fase imediatamente anterior à concessão estava coberta, sem sequência
+temporal instrumentada. Não afirmar que cancelled foi observado antes de
+conceder nem identidade interna da Promise por UI. L05 permanece parcial para
+o critério estrito de concessão após cancelamento já comprovado.
+
+Nenhum defeito identificado no relato; sem correção funcional ou nova regressão.
+Testes existentes do coordenador cobrem cancelamento com permissão pendente e
+concessão antiga enquanto uma nova tentativa aguarda, com portas simuladas;
+não dispensam a limitação física/temporal acima. Não pedir repetição do mesmo
+fluxo só para preencher a lacuna nem usar atraso artificial/ACK forçado.
+
+### Consolidação da rodada física e limites remanescentes
+
+Grupos guiados encerrados no alcance disponível, sem novo ensaio físico liberado.
+A matriz distingue resultados positivos de UI, relayout, permissão parcial e
+casos não executados. L14 teve teste controlado de OCR antigo chegando durante
+novo reconhecimento, sem contaminar/encerrar B; L16 teve doubles de falha e
+ACK tardio mantendo blocked, além do timeout/limpeza pendente. Todos fazem
+parte da suíte aprovada, não são execuções reais no Samsung. Não há razão para
+provocar cleanup falho ou sobrepor reconhecimentos físicos para reproduzi-los.
+
+Pendências técnicas: instrumentação temporal mínima e sanitizada, se necessária
+para L05/L14/lease nativo; recriação real da Activity; botão Cancelar durante
+permissão quando acessível; L16 real apenas se falha espontânea surgir e puder
+ser analisada sem bypass. Auditoria SDK/SO de RAM/armazenamento/logs/rede,
+privacidade, persistência clínica/filas/isolamento entre contas e legado conectado
+seguem suas frentes próprias. Não criar novos flags/dependências/API ofuscada
+por tentativa, mudar stack ou habilitar uso clínico com base nesta rodada.
+
+Fonte física: f057283, APK 69d5a0b3… e JS 86017456… conforme hashes completos
+reconfirmados acima; SM-S731B, captura-5/preview-1. Branch documental/de testes
+test/task-07-ciclo-vida-samsung sobre staging a3b996a, separada do PR #72. Houve
+cinco testes adicionados nesta branch (quatro de coordenador e um de hook),
+nenhuma correção funcional/novo APK. TASK-07/10/18 permanecem parciais.
+
+Próxima ação do autor: sem nova captura, conferir câmera desligada, fechar demo,
+encerrar Metro com Ctrl+C e restaurar NODE_OPTIONS no mesmo PowerShell com
+`$env:NODE_OPTIONS = $aferiCicloNodeOptionsAnteriores`; desconectar USB quando
+desejar. São instruções, não comprovação de que as executou. Preservar cópias,
+APK, dados e resultados; não reinstalar/limpar para encerrar a rodada.
 
 ### Execução controlada desta preparação
 
@@ -455,7 +510,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G3b (L01 por Home e L05 condicional à mesma solicitação).
+atual de condução é rodada física consolidada, sem novo grupo liberado.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -742,7 +797,7 @@ Não tocar em Iniciar/Capturar. L01/L05 serão conduzidos após esse retorno,
 sem confundir autorização nas Configurações com concessão da mesma solicitação
 pendente depois de cancelar; se o SO não preservar esse diálogo, registrar NE.
 
-**Grupo atual G3b: L01 por Home, L05 condicional; uma solicitação, sem Capturar.**
+**Procedimento G3b, já executado: L01 por Home e L05 condicional. Não repetir por rotina.**
 Mesma cópia/Metro e Fast Refresh desligado. Partir de idle/câmera desligada e
 permissão Não permitir, conforme retorno acima.
 
