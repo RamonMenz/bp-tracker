@@ -29,7 +29,7 @@ test('frame -> contrato -> candidatos, só após Capturar e liberação', async 
   expect(t.result).toHaveBeenCalledWith(expect.any(Number), { modality: 'photo', capturedAtMs: 1793001600000, fields: {
     systolic: { status: 'candidate', value: 120, basis: 'label' }, diastolic: { status: 'candidate', value: 80, basis: 'label' },
     pulse: { status: 'candidate', value: 72, basis: 'label' },
-  } });
+  } }, ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato']);
   expect(t.state().phase).toBe('reviewing');
 });
 test('permissão negada não abre câmera nem reconhecedor', async () => {

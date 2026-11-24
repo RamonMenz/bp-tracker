@@ -67,6 +67,39 @@ async function ready(t: Awaited<ReturnType<typeof setup>>) {
   await act(async () => { t.result.current.start(); await flush(); });
   await act(async () => { t.result.current.onStatus(t.result.current.captureState.attemptId, 'ready'); await flush(); });
 }
+test.each(['cancel', 'background', 'recapture', 'confirm'] as const)('diagnóstico da associação é descartado ao %s', async action => {
+  const t = await setup(); await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  expect(t.result.current.interpretationDiagnostic).toEqual(['ocr:linhas-presentes',
+    'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato']);
+  await act(async () => {
+    if (action === 'cancel') t.result.current.review.cancel();
+    if (action === 'background') listeners.forEach(listener => listener('background'));
+    if (action === 'recapture') t.result.current.review.recapture();
+    if (action === 'confirm') await t.result.current.review.confirm();
+    await flush();
+  });
+  expect(t.result.current.interpretationDiagnostic).toEqual([]);
+  expect(t.result.current.diagnostics.join(' ')).not.toContain('associacao:');
+  await act(async () => { t.result.current.review.cancel(); await flush(); });
+});
+
+test('diagnóstico não reaparece após cancelamento com OCR tardio ou falha de liberação', async () => {
+  const t = await setup(); await ready(t);
+  let complete!: (value: unknown) => void;
+  t.handle.recognize.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  await act(async () => { t.result.current.capture(); await flush(); });
+  await act(async () => { t.result.current.review.cancel(); await flush(); complete(fixture); await flush(); });
+  expect(t.result.current.interpretationDiagnostic).toEqual([]);
+  expect(t.result.current.review.state.draft).toBeNull();
+  t.handle.cancelCapture.mockResolvedValue(false);
+  await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  expect(t.result.current.captureState.phase).toBe('blocked');
+  expect(t.result.current.interpretationDiagnostic).toEqual([]);
+  expect(t.result.current.review.state.draft).toBeNull();
+});
+
 test('carrega sob ação, conecta OCR à revisão e confirma só em memória', async () => {
   const t = await setup();
   expect(loadAndroidPhotoBinding).not.toHaveBeenCalled();

@@ -16,7 +16,7 @@ const PHASES = {
 };
 export function AndroidPhotoCaptureScreen() {
   const { review, captureState, binding, attachCamera, start, capture, onStatus, busy,
-    diagnostics, diagnosticVersion, diagnosticAppState, diagnosticNativeRevision } = useAndroidPhotoReview();
+    diagnostics, interpretationDiagnostic, diagnosticVersion, diagnosticAppState, diagnosticNativeRevision } = useAndroidPhotoReview();
   const Camera = binding?.Camera;
   const active = ['opening', 'ready', 'recognizing'].includes(captureState.phase);
   return (
@@ -46,6 +46,10 @@ export function AndroidPhotoCaptureScreen() {
           </NativeText>
           <NativeText selectable style={{ fontSize: 14, color: '#0f172a' }}>
             {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
+          </NativeText>
+          <NativeText selectable style={{ fontSize: 16, color: '#0f172a' }}>
+            {'Associação: associacao-1\n'}
+            {interpretationDiagnostic.length ? interpretationDiagnostic.join('\n') : 'Sem diagnóstico de revisão ativa.'}
           </NativeText>
         </View>
       </Card>
