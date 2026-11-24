@@ -111,14 +111,15 @@ quando processing; ainda assim seu ACK não substitui inspeção física/SDK.
 
 ## Resultados desta rodada
 
-V0 = fonte f057283 e hashes da tabela, **pendente de G0/carregamento atual**.
+V0 = fonte f057283 e hashes da tabela, **reconfirmados no retorno G0 abaixo**.
+Modelo atual não transcrito; SM-S731B continua identificação histórica.
 NE = não executado nesta rodada. Não copiar aprovações de A–K/R1/R2 para V0.
 Retornos devem ganhar fonte/hash/condições por grupo; data de registro não será
 tratada como data/hora de execução quando esta não for informada.
 
 | Caso | Estado físico atual | Evidência / limitação | Versão |
 |---|---|---|---|
-| G0 — identidade | NE | Terminal anterior recebido; falta confirmar alterações posteriores, carregamento e Fast Refresh | V0 |
+| G0 — versão/carregamento | Passou no alcance relatado | HEAD limpo, APK e bundle reconfirmados; Metro/demo/idle/Fast Refresh verificados. Modelo atual ainda não transcrito | V0 |
 | L01 | NE | Diálogo pode impedir acesso ao Cancelar; background é variante distinta | V0 |
 | L02 | NE | Abertura pode ser rápida demais | V0 |
 | L03 | NE | Histórico A positivo não é nova execução | V0 |
@@ -135,6 +136,46 @@ tratada como data/hora de execução quando esta não for informada.
 | L14 | NE | Tardio precisa ser distinguível, senão só teste controlado | V0 |
 | L15 | NE | Closing pode ser rápido demais para interação | V0 |
 | L16 | NE | Não induzir falha no Samsung; parada obrigatória se ocorrer | V0 |
+
+### Retorno G0 — versão e carregamento confirmados
+
+Fonte: relato e comandos transcritos pelo autor nesta rodada. Data/hora da
+execução não informadas; não atribuir horário do terminal/registro ao ensaio.
+HEAD f057283876ea2126b485abd762e2886012b4c7ca e git status sem saída. Metro
+iniciado na cópia TalkBack/demos/android-capture, --dev-client --localhost,
+porta 8097, preservando NODE_OPTIONS e acrescentando a opção IPv4 orientada.
+
+| Verificação | Retorno / análise |
+|---|---|
+| SDK/ADB | Test-Path True; reverse tcp:8097 sem erro transcrito |
+| Status no computador | Content enumerou bytes decimais que decodificam exatamente packager-status:running |
+| Status no Samsung / demo | Ambos funcionaram segundo o autor |
+| UI inicial | captura-5, idle, Nativo nao-carregado; sem preview/câmera ativos ou revisão/valores antigos |
+| Fast Refresh | Autor confirmou desligado |
+| Bundle após carregar | 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388, igual ao hash anterior |
+| APK base, complemento solicitado | 69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c, igual ao anterior |
+| Alterações/reinstalação/outro bundle desde o terminal anterior | Autor respondeu acredito que não; não converter em certeza sobre histórico |
+| Modelo atual | Campo inicial em branco; complemento trouxe somente hash do APK. getprop solicitado junto à próxima devolução |
+| Erro percebido | Nenhum relatado |
+
+As 23 linhas numéricas recebidas (112, 97, 99, 107, 97, 103, 101, 114, 45,
+115, 116, 97, 116, 117, 115, 58, 114, 117, 110, 110, 105, 110, 103) são a
+codificação do texto de status, não 23 erros do Metro. O roteiro abaixo passa
+a converter byte[] em UTF-8 explicitamente, preservando Content já textual.
+Não é necessário repetir a consulta que já funcionou.
+
+G0 passou para identidade de versão/carregamento no alcance dos comandos e
+relato. Nativo nao-carregado é esperado antes do gesto de início; preview-1
+será conferido em L03. Hash igual identifica bytes iguais naqueles momentos,
+não comprova que nunca houve reinstalação do mesmo APK ou troca de bundle
+seguida de restauração. Essa reconstrução do histórico não é condição para
+identificar a versão atual. Também não prova todo código em execução, limpeza
+física de recursos ou privacidade de SDK/SO.
+
+**G1 liberado:** apenas L03 e, se encerrar normalmente, L11; nenhum Capturar/OCR.
+Os dois continuam NE até retorno do autor. Sem novo ensaio de permissão ou
+autorizações por suposição: se surgir diálogo em L03, parar e analisar o caso.
+Modelo atual será registrado se fornecido; não presumido pelo hash do APK.
 
 ### Execução controlada desta preparação
 
@@ -169,7 +210,9 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 ## Condução por grupos
 
-**Agora: apenas G0**, com Metro parado/câmera desligada. Não fazer L01–L16 ainda.
+**Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
+desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
+atual de condução é G1 (L03/L11), descrito ao final desta seção.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -197,7 +240,12 @@ No segundo PowerShell, usar SDK/ADB existentes:
 $aferiSdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
 $aferiAdb = Join-Path $aferiSdk 'platform-tools\adb.exe'
 & $aferiAdb reverse tcp:8097 tcp:8097
-(Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8097/status').Content
+$aferiRespostaStatus = Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8097/status'
+if ($aferiRespostaStatus.Content -is [byte[]]) {
+    [System.Text.Encoding]::UTF8.GetString($aferiRespostaStatus.Content)
+} else {
+    [string]$aferiRespostaStatus.Content
+}
 ```
 
 Esperado: reverse sem erro e packager-status:running. Conferir /status também
@@ -224,9 +272,25 @@ modelo confirmado; Metro carregou?; captura-5 visível?; câmera desligada?;
 Fast Refresh desligado?; hash do bundle após carregar ou erro sanitizado.
 Não enviar QR, serial, tela inteira, logs completos, imagens ou dados de conta.
 
-**Próximo grupo, após análise de G0: G1 = L03 + L11**, sem capturar/OCR. Os passos
-detalhados serão apresentados no chat; não executar os demais grupos da tabela
-por conta desta listagem. G2/G3/G4/G5 serão subdivididos para no máximo dois
+**Grupo atual, após análise de G0: G1 = L03 + L11**, sem capturar/OCR.
+Manter Metro aberto e Fast Refresh desligado. Primeiro, um início explícito:
+conferir preview-1, ready e preview visível, cancelar uma vez e observar sem
+toque por aproximadamente 5 s. Esperado: cancelled, preview/uso ativo de câmera
+encerrados, sem revisão ou retomada. Diálogo de permissão ou marcador Nativo
+diferente de preview-1 encerra o caso para análise, sem avançar por tentativa.
+
+Somente se L03 encerrar normalmente, três toques rápidos em Iniciar. Esperado:
+uma abertura observável, Iniciar desabilitado enquanto ocupado e nenhuma
+revisão. Ao chegar a ready, cancelar uma vez e observar novamente. Quantidade
+de previews percebidos não é contagem comprovada de instâncias nativas.
+
+Devolver L03/L11 separadamente: fase antes/depois, Nativo, encerramento de
+preview/indicador, revisão/retomada indevidas, erro/código e intervalo observado
+(aproximado ou medido). Em L11, aberturas percebidas e estado do botão Iniciar.
+Se possível, incluir apenas a saída getprop ro.product.model ainda pendente.
+Não fazer o segundo caso se o primeiro falhar; regras de parada continuam
+obrigatórias. Não executar os demais grupos da tabela por conta desta listagem.
+G2/G3/G4/G5 serão subdivididos para no máximo dois
 casos por devolução, distinguindo sempre variante/fase observada. Ao terminar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar
 `$env:NODE_OPTIONS = $aferiCicloNodeOptionsAnteriores`. Não apagar pastas/dados.

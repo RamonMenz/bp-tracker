@@ -88,6 +88,12 @@ O retorno inicial informa Metro desligado e terminal de mais cedo com f057283
 limpa, APK 69d5a0b3… e bundle 86017456…; G0 atual ainda pendente. Não é novo
 ensaio físico nem validação automática das etapas históricas abaixo.
 
+Retorno posterior G0: fonte limpa e hashes atuais de APK/bundle coincidentes,
+Metro/demo funcionais, idle/nao-carregado, Fast Refresh desligado e câmera sem
+uso ativo/revisão antiga. G0 passou para versão/carregamento; modelo atual não
+foi transcrito. [Análise e G1 liberado, sem Capturar/OCR](task-07-ciclo-vida-samsung.md#retorno-g0--versão-e-carregamento-confirmados):
+somente L03 e, se encerrar normalmente, L11; ambos sem resultado novo recebido.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
