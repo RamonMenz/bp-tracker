@@ -193,7 +193,7 @@ OCR ou valores candidatos integram eventos; também não foi demonstrada sua
 ausência. Persistência de eventos técnicos não equivale, sozinha, a persistência
 clínica, e inferência local não garante ausência de telemetria.
 
-## Próxima coleta mínima — identidade e capacidade de consulta de rede
+## Coleta mínima proposta — identidade e capacidade de consulta de rede
 
 Sem repetir os testes de captura, confirmar HEAD/status da cópia consultada:
 
@@ -218,10 +218,76 @@ que deve ser registrado. Esses comandos ainda não medem tráfego. Retornar só
 HEAD/status, a linha do pacote alvo e a ajuda/erro, sem serial ou outros apps.
 Não usar dump global de rede, captura de payload, root, banco, logcat completo
 ou limpar estatísticas. Se a ajuda não estiver disponível, não ampliar a coleta
-por tentativa. A próxima instrução deve escolher uma consulta limitada ao UID
-com base na interface disponível, antes de propor ensaio sintético controlado.
+por tentativa. O retorno e a alternativa limitada ao app estão registrados abaixo.
 Contadores por UID não distinguem OCR/dev launcher/Metro dentro do mesmo app,
 não mostram payload/destino e não bastam para homologar privacidade.
+
+## Retorno da coleta mínima — identidade confirmada, interface indisponível
+
+O autor enviou novamente HEAD `4dc010599747bcb6de2b5e2f939f030e9cbe4ea8` e
+git status --short sem saída. Isso confirma o estado da cópia de integração
+nesse momento; não é verificação retroativa de cada consulta nem vínculo
+criptográfico entre fonte, projeto Android gerado, APK instalado e JS carregado.
+
+Saída sanitizada relevante:
+
+```text
+package:com.ramonmenz.afericapturetest uid:10033
+cmd netstats help → No shell command implementation.
+```
+
+O UID 10033 identifica o pacote nessa instalação/usuário Android; reconfirmar
+se houver reinstalação ou troca de usuário. A resposta de netstats indica
+ausência de implementação da interface shell acionada, não ausência de serviço,
+de bytes trafegados, de telemetria ou de permissões em outras interfaces.
+Não houve medição de tráfego nessa coleta. Data/hora da execução não informadas.
+
+Não usar como substituto automático dumpsys netstats com --uid, --uid=10033 ou
+-h. Nas implementações de referência examinadas ([Android 12/AOSP](https://github.com/aosp-mirror/platform_frameworks_base/blob/android-12.0.0_r1/services/core/java/com/android/server/net/NetworkStatsService.java)
+e [Lineage 23.0/Connectivity](https://github.com/LineageOS/android_packages_modules_Connectivity/blob/lineage-23.0/service-t/src/com/android/server/net/NetworkStatsService.java)),
+--uid habilita detalhamento por UIDs, sem selecionar um único app, e argumentos
+desconhecidos não garantem saída de ajuda. Essas referências não são inspeção do
+firmware Samsung, mas impedem presumir um filtro seguro por tentativa.
+
+## Próxima observação — uso de dados do app na interface Samsung
+
+Este é um ensaio complementar proposto, **ainda não executado**. Não substitui
+auditoria de payload/destinos, nem a medição precisa por UID, que continua
+indisponível pelo comando consultado. Não pede nova build ou instalação.
+
+1. Manter o cliente de teste já carregado, sem captura em andamento, conectado
+   por USB/reverse e com Fast Refresh desativado. Usar somente cartão sintético.
+   Registrar se houve recarga/reinício durante a observação e qual conexão de
+   internet está ativa. Se o app não estiver pronto, resolver isso antes de
+   iniciar a observação; não contar o download inicial do bundle como captura.
+2. No Samsung, procurar Configurações → Conexões → Uso de dados → Uso de dados
+   Wi-Fi (ou opção equivalente) e selecionar somente o app da demo Aferi. Se o
+   teste usar dados móveis, consultar a tela correspondente. A tela deve cobrir
+   a conexão usada: um contador exclusivamente móvel não mede tráfego Wi-Fi.
+   Se essa tela não existir ou não for possível distinguir o app, informar o
+   impedimento e parar, sem exportar lista de apps/dump global.
+3. Anotar T0: período exibido, conexão, total e valores de primeiro/segundo plano
+   se disponíveis, com unidades e precisão exibidas. Não redefinir contadores,
+   limpar dados, alterar restrições de rede ou instalar monitor de tráfego.
+4. Voltar à demo, deixar sem interação por aproximadamente um minuto e retornar
+   à mesma tela de uso de dados. Anotar T1 e o intervalo efetivamente observado;
+   se não o mediu, declarar aproximado. Manter o mesmo período/conexão.
+5. Voltar à demo, iniciar e capturar uma vez o cartão sintético 120/80/72,
+   observar a revisão e cancelar. A câmera deve encerrar; nenhuma confirmação
+   clínica é solicitada. Aguardar aproximadamente um minuto, mantendo a demo
+   aberta, e retornar à mesma tela para anotar T2 e o intervalo observado.
+6. Retornar apenas os valores/textos da tela do app nos três momentos, revisão
+   obtida/cancelamento, recarga/reinício se houver e eventuais limitações. Não
+   enviar tela com outros apps, contas, SSID, dados de operadora ou valores reais.
+
+Como interpretar: os deltas T1−T0 e T2−T1 só são calculáveis se período/unidades
+e atualização dos contadores permitirem. Os intervalos incluem ida/volta às
+configurações e não isolam o instante da captura. A UI pode arredondar ou
+atualizar com atraso: igualdade exibida não significa zero bytes. Aumento
+mostra uso atribuído ao app pela UI, sem distinguir Metro/dev launcher/OCR/
+outros componentes, conteúdo ou destino. Sem controle de duração/atualização,
+não comparar taxas nem atribuir causalidade. A observação não homologa
+privacidade mesmo que a captura funcione e os números permaneçam iguais.
 
 ## Retorno esperado
 
