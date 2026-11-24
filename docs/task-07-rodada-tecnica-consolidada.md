@@ -1,5 +1,43 @@
 # TASK-07 — continuidade, rodada técnica e resultados consolidados
 
+> **Retomada após #72/#73 em 24/11/2026:** ambos confirmados mesclados;
+> staging consultada `81af92f4d3763e1e89f910e01c296decf83b5778`. #64 também
+> confirmado mesclado, com fonte documental e5ba822 e merge 6f7a249. Nenhum PR
+> aberto retornado na consulta inicial desta retomada. Retratos anteriores abaixo
+> são históricos. Checkout work/3f8220f limpo preservado; nova worktree isolada,
+> branch docs/task-07-auditoria-produtores, baseada na staging consultada.
+> CI do head #73/66cfbf4 concluído com sucesso na
+> [execução 45424685209](https://github.com/RamonMenz/bp-tracker/actions/runs/45424685209).
+> Novo avanço: [produtores e rota adicional de telemetria](task-07-auditoria-dependencias.md#produtores-de-eventos-e-limites-da-inspeção).
+> A rodada associacao-1 permanece sem retorno físico registrado; usar a
+> [fonte fixa e protocolo atualizados](task-07-diagnostico-associacao.md).
+> Sem novo ensaio físico ou conclusão de tarefa. Não repetir A–K/R1/R2.
+
+## Verificações da retomada após #73
+
+Entrega documental; revisão do coordenador/hook/adaptador não motivou mudança
+funcional nesta etapa. Sem novos testes artificiais para espelhar documentação.
+Código, locks, regras, fontes nativas e artefatos históricos preservados.
+
+| Verificação executada | Resultado / limite |
+|---|---|
+| Instalação pelos locks, raiz e Functions | Aprovada com --ignore-scripts; nenhuma dependência atualizada |
+| npm run lint | Aprovado |
+| npm run typecheck + tsc --noEmit -p demos/android-capture/tsconfig.json | Aprovados |
+| npm test -- --ci --runInBand | 742 testes / 67 suítes aprovados; avisos preexistentes de act em edição/tema, sem falha |
+| Functions: build e Jest --runInBand | 16 testes / 1 suíte e compilação aprovados; Node local 24.19.0 diverge do 20 declarado, aviso EBADENGINE preservado |
+| npm run test:rules | Bloqueado no download do JAR Firestore 1.21.0 de storage.googleapis.com, antes da execução das regras; projeto fictício demo-aferi-task11 |
+| Manifesto histórico | Tamanho e SHA-256 dos 11 artefatos conferidos; nenhum patch reaplicado |
+| Links e whitespace | 36 links/âncoras locais dos três documentos conferidos; git diff --check aprovado |
+| AARs públicos | Três hashes conferidos, javap/JDK 21; sem execução do SDK |
+
+CI desta entrega deve ser consultado no novo PR. A aprovação remota da #73
+citada acima pertence ao head 66cfbf4 e não substitui checks do novo head.
+Sem build Kotlin/APK, dispositivo, produção, merge, deploy ou habilitação clínica.
+TASK-07/10/18 continuam parciais. Pendências: auditoria completa do SDK/SO,
+retorno associacao-1, displays reais/corpus/comparação e integração clínica com
+confirmação/fila/contas/legado em homologação. Horas/despesas/saldos não informados.
+
 > **Integração posterior ao merge #72:** staging avançou para `f901bbb`;
 > a branch do PR #73 incorporou essa base em `f038d6f`. Uma expectativa do
 > teste de OCR tardio ainda exigia dois argumentos; foi ajustada para conferir
