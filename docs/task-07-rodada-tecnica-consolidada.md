@@ -94,6 +94,13 @@ uso ativo/revisão antiga. G0 passou para versão/carregamento; modelo atual nã
 foi transcrito. [Análise e G1 liberado, sem Capturar/OCR](task-07-ciclo-vida-samsung.md#retorno-g0--versão-e-carregamento-confirmados):
 somente L03 e, se encerrar normalmente, L11; ambos sem resultado novo recebido.
 
+Retorno posterior G1: L03 e L11 passaram no alcance relatado, com cancelled,
+preview/uso ativo encerrados e sem revisão/retomada por aproximadamente 5 s.
+L03 informou preview-1/ready; L11, uma abertura percebida e Iniciar desabilitado.
+getprop confirmou modelo SM-S731B. [Evidência, limites e G2a](task-07-ciclo-vida-samsung.md#retorno-g1--cancelamento-no-preview-e-iniciar-repetido):
+próximos casos L06a/L07a (Home/troca de app no preview), ainda sem Capturar/OCR.
+Não comprova contagem nativa, liberação física de RAM/SDK ou demais fases.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |

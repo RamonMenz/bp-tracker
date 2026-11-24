@@ -19,7 +19,7 @@ Não há confirmação clínica, fila ou inspeção de produção nesta rodada.
 | APK base instalado consultado nesse terminal | SHA-256 69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c |
 | Arquivo bundle no sandbox consultado nesse terminal | SHA-256 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 |
 | Marcadores a conferir ao carregar | captura-5 / preview-1, explicação acessível da confirmação; não identificam sozinhos o JS inteiro |
-| Pacote / aparelho | com.ramonmenz.afericapturetest; Samsung S25 FE SM-S731B histórico, a reconfirmar nesta rodada |
+| Pacote / aparelho | com.ramonmenz.afericapturetest; modelo SM-S731B reconfirmado por getprop no retorno G1; Samsung S25 FE informado historicamente |
 | PR #72 | Aberto, fonte efca9b0ae24aacaac37d24be043434468954a377; associacao-1 não integra staging nem a cópia f057283 escolhida |
 
 Comparação de fontes executada: f057283 → a3b996a não apresenta diferenças em
@@ -112,17 +112,17 @@ quando processing; ainda assim seu ACK não substitui inspeção física/SDK.
 ## Resultados desta rodada
 
 V0 = fonte f057283 e hashes da tabela, **reconfirmados no retorno G0 abaixo**.
-Modelo atual não transcrito; SM-S731B continua identificação histórica.
+Modelo atual SM-S731B reconfirmado por getprop no retorno G1 abaixo.
 NE = não executado nesta rodada. Não copiar aprovações de A–K/R1/R2 para V0.
 Retornos devem ganhar fonte/hash/condições por grupo; data de registro não será
 tratada como data/hora de execução quando esta não for informada.
 
 | Caso | Estado físico atual | Evidência / limitação | Versão |
 |---|---|---|---|
-| G0 — versão/carregamento | Passou no alcance relatado | HEAD limpo, APK e bundle reconfirmados; Metro/demo/idle/Fast Refresh verificados. Modelo atual ainda não transcrito | V0 |
+| G0 — versão/carregamento | Passou no alcance relatado | HEAD limpo, APK e bundle reconfirmados; Metro/demo/idle/Fast Refresh verificados. Modelo complementado em G1 | V0 |
 | L01 | NE | Diálogo pode impedir acesso ao Cancelar; background é variante distinta | V0 |
 | L02 | NE | Abertura pode ser rápida demais | V0 |
-| L03 | NE | Histórico A positivo não é nova execução | V0 |
+| L03 | Passou no alcance relatado | preview-1/ready, cancelamento → cancelled; preview/uso ativo encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
 | L04 | NE | Histórico D não executado por OCR rápido; não repetir indefinidamente | V0 |
 | L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
 | L06a / L06b | NE / NE | Há relatos históricos Home, sem promoção para esta rodada | V0 |
@@ -130,7 +130,7 @@ tratada como data/hora de execução quando esta não for informada.
 | L08a / L08b | NE / NE | Há relatos históricos de bloqueio, sem promoção para esta rodada | V0 |
 | L09a / L09b | NE / NE | Histórico H só relayout, sem recriação demonstrada | V0 |
 | L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
-| L11 | NE | Observação de UI não basta para contagem nativa | V0 |
+| L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
 | L12 | NE | Observação de UI não basta para contagem nativa | V0 |
 | L13 | NE | Descarte da edição é observável, concorrência interna pode não ser | V0 |
 | L14 | NE | Tardio precisa ser distinguível, senão só teste controlado | V0 |
@@ -172,10 +172,39 @@ seguida de restauração. Essa reconstrução do histórico não é condição p
 identificar a versão atual. Também não prova todo código em execução, limpeza
 física de recursos ou privacidade de SDK/SO.
 
-**G1 liberado:** apenas L03 e, se encerrar normalmente, L11; nenhum Capturar/OCR.
-Os dois continuam NE até retorno do autor. Sem novo ensaio de permissão ou
-autorizações por suposição: se surgir diálogo em L03, parar e analisar o caso.
-Modelo atual será registrado se fornecido; não presumido pelo hash do APK.
+Na análise de G0, foi liberado G1: apenas L03 e, se encerrasse normalmente,
+L11; nenhum Capturar/OCR. O retorno recebido posteriormente está abaixo.
+O modelo atual foi complementado por getprop em G1, sem inferi-lo pelo hash.
+
+### Retorno G1 — cancelamento no preview e Iniciar repetido
+
+Fonte: relato do autor e saída selecionada de getprop. Data/hora da execução
+não informadas. Baseline V0 do G0 mantida como referência; não houve nova coleta
+de HEAD/APK/bundle por cenário nem informação de mudança. Nativo preview-1 foi
+explicitamente informado em L03; não foi transcrito separadamente em L11.
+
+| Caso | Evidência recebida | Resultado e alcance |
+|---|---|---|
+| L03 | preview-1; ready com preview; cancelled após cancelar; preview/uso ativo encerrados; sem revisão ou retomada automática; aproximadamente 5 s sem toque; nenhum erro observado | Passou para cancelamento durante preview e ausência de retomada na janela relatada |
+| L11 | Executado; uma abertura percebida; Iniciar desabilitado enquanto ocupado; cancelled após cancelar; preview/uso ativo encerrados; sem revisão ou retomada; aproximadamente 5 s sem toque; nenhum erro observado | Passou para resposta observável aos toques repetidos em Iniciar e encerramento subsequente |
+| Modelo | adb shell getprop ro.product.model retornou SM-S731B | Modelo atual reconfirmado; não é serial, versão do Android/API ou prova de composição do APK |
+
+Nenhum defeito identificado nesses dois relatos; não há correção funcional ou
+novo teste de regressão justificado por esse retorno. A janela de 5 s é
+aproximada e não mede latência de cleanup. Não observar retomada nessa janela
+não é garantia universal sobre respostas futuras.
+
+Uma abertura percebida e botão bloqueado não comprovam contagem interna de
+instâncias, ausência universal de concorrência, encerramento do reconhecedor
+ou descarte físico de RAM. Tampouco houve captura/OCR, confirmação/escrita,
+ensaio de permissão/abertura lenta, cleanup falho ou resultado tardio. Aprovação
+de L03/L11 não é aprovação de L01/L02/L04/L14/L15/L16 nem de privacidade SDK/SO.
+ACK simulado dos testes continua separado desta observação física de UI.
+
+**G2a liberado:** somente L06a (Home no preview) e, se encerrar normalmente,
+L07a (troca de app no preview), sem Capturar/OCR. Ambos continuam NE até retorno.
+Nenhuma repetição de G0/G1 ou nova coleta de hashes é solicitada por rotina;
+se houve alteração/reinstalação/recarga inesperada, reavaliar a identidade antes.
 
 ### Execução controlada desta preparação
 
@@ -212,7 +241,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G1 (L03/L11), descrito ao final desta seção.
+atual de condução é G2a (L06a/L07a), descrito ao final desta seção.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -272,7 +301,7 @@ modelo confirmado; Metro carregou?; captura-5 visível?; câmera desligada?;
 Fast Refresh desligado?; hash do bundle após carregar ou erro sanitizado.
 Não enviar QR, serial, tela inteira, logs completos, imagens ou dados de conta.
 
-**Grupo atual, após análise de G0: G1 = L03 + L11**, sem capturar/OCR.
+**Procedimento G1, já executado no retorno acima: L03 + L11**, sem capturar/OCR.
 Manter Metro aberto e Fast Refresh desligado. Primeiro, um início explícito:
 conferir preview-1, ready e preview visível, cancelar uma vez e observar sem
 toque por aproximadamente 5 s. Esperado: cancelled, preview/uso ativo de câmera
@@ -287,10 +316,34 @@ de previews percebidos não é contagem comprovada de instâncias nativas.
 Devolver L03/L11 separadamente: fase antes/depois, Nativo, encerramento de
 preview/indicador, revisão/retomada indevidas, erro/código e intervalo observado
 (aproximado ou medido). Em L11, aberturas percebidas e estado do botão Iniciar.
-Se possível, incluir apenas a saída getprop ro.product.model ainda pendente.
+O modelo solicitado junto ao grupo foi fornecido no retorno G1.
 Não fazer o segundo caso se o primeiro falhar; regras de parada continuam
 obrigatórias. Não executar os demais grupos da tabela por conta desta listagem.
-G2/G3/G4/G5 serão subdivididos para no máximo dois
-casos por devolução, distinguindo sempre variante/fase observada. Ao terminar,
+Os grupos seguintes são subdivididos para no máximo dois casos por devolução,
+distinguindo sempre variante/fase observada.
+
+**Grupo atual G2a: L06a + L07a, somente preview.** Manter a mesma demo/Metro,
+Fast Refresh desligado e cartão sintético como alvo; não tocar em Capturar.
+
+1. L06a: iniciar por um único gesto e conferir ready/preview-1/preview visível.
+   Ir à tela inicial do Android por Home; observar se o uso ativo da câmera
+   encerrou. Voltar por Recentes, sem Iniciar, e observar por aproximadamente
+   5 s. Esperado: cancelled, sem preview/revisão ou retomada automática.
+2. L07a, somente se o anterior encerrou normalmente e a câmera está desligada:
+   iniciar uma vez e esperar ready. Por Recentes, abrir um app neutro como
+   Relógio, sem outra câmera; observar a tela desse app efetivamente aberta.
+   Retornar à demo por Recentes, sem Iniciar, e observar aproximadamente 5 s.
+   Esperado: câmera/preview encerrados, cancelled, sem revisão/retomada.
+
+Devolver cada caso: ready antes da saída, Nativo, uso ativo encerrado ao sair,
+fase/preview no retorno, revisão/retomada, intervalo aproximado ou medido,
+erro/código e recarga/reinício percebidos. Se app:background estiver visível
+no painel, transcrever apenas esse código; a ausência no ring buffer não prova
+que o evento não ocorreu. Não pedir conteúdo do outro app ou logs completos.
+
+Não fazer L07a se L06a falhar. Parar diante de câmera presa, concorrência,
+blocked/cleanup-failed/resource-busy inesperado; sem reload/reinstalação/bypass.
+Não executar variantes de revisão (L06b/L07b) nem os demais grupos ainda.
+Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar
 `$env:NODE_OPTIONS = $aferiCicloNodeOptionsAnteriores`. Não apagar pastas/dados.
