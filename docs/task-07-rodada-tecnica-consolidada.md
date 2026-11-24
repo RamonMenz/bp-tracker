@@ -470,3 +470,13 @@ mudanças de entrada/tamanho/mtime detectadas. Autor confirmou espera programada
 reinício/erro. [Evidência, alcance e próximo S/B](task-07-inspecao-privacidade-localidade.md#retorno-i--coletor-no-windows-e-controle-idle).
 Positivo para controle/capacidade, sem prova de conteúdo/temporários/rede/SDK/SO;
 S/B e demais grupos desta rodada ainda pendentes, habilitação clínica bloqueada.
+
+
+Retorno posterior S/B: leitura sintética correta em ready/preview-1, revisão e
+câmera encerrada; 16 entradas nos três snapshots. S0→S1 mudou tamanho e/ou mtime
+de uma entrada com nome DataTransport; conteúdo/causa/envio não determinados.
+S1→B1 sem mudanças detectadas; cancelled, campos ausentes e câmera desligada por
+aproximadamente 5 s. O sim inicial para retomada foi corrigido pelo autor como
+erro de marcação: **não houve retomada**. Pausa encerrada sem reteste/defeito
+constatado. [Registro, limites e próximo C/R](task-07-inspecao-privacidade-localidade.md#retorno-sb--captura-mudança-de-metadados-e-descarte).
+Não ler bancos ou repetir captura por delta zero. Habilitação permanece bloqueada.

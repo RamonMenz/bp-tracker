@@ -190,7 +190,7 @@ Nenhum arquivo foi demonstrado seguro ou clínico por essa classificação. A
 preferência com nome ML Kit e o bundle já estavam presentes em I0; o controle
 não determina quando ou por que foram criados. Hash de mídia não foi solicitado.
 
-### Próximo grupo S/B — sucesso e background na mesma revisão
+### Procedimento S/B — executado, retorno abaixo
 
 Sem atualização de código/APK, npm, reload, rede, reverse ou opções de segurança.
 Usar fonte TalkBack f057283/Metro existentes e coletor inventario-1 em 583f61f.
@@ -243,7 +243,94 @@ Devolver os três JSONs e duas comparações; fase/Nativo/preview antes da captu
 correspondência com o cartão sim/não, revisão/fase após OCR e câmera encerrada;
 Home/retorno, fase/campos/câmera/retomada, intervalo e erro/recarga/reinício.
 Sem screenshot, OCR bruto, conteúdo de arquivo ou valores reais. As regras de
-parada obrigatória continuam. S/B ainda não executados nesta rodada.
+parada obrigatória continuam. Retorno e esclarecimento recebidos abaixo;
+não repetir S/B por rotina.
+
+## Retorno S/B — captura, mudança de metadados e descarte
+
+Registro em 24/11/2026, baseado no relato e JSONs do autor. Data/hora da execução
+não informadas; sem acesso direto ao aparelho. Não houve nova identidade de
+fonte/APK/bundle transcrita nessa devolução; a condução manteve versões P0/I,
+sem atribuir hash atual de APK ou nova confirmação criptográfica por cenário.
+
+| Observação | Resultado recebido | Alcance |
+|---|---|---|
+| S antes de Capturar | preview-1, ready, preview visível | Marcador/fase observados pelo autor |
+| S reconhecimento | Revisão obtida, campos correspondem ao cartão sintético; câmera/preview encerrados; sem erro/recarga/reinício percebidos | Positivo nesse percurso; sem valores reais, confirmação ou avaliação de medidores |
+| S0/S1 | inventario-1, IDs 3/4; 16 arquivos em cada | Categorias em ambos: 1 bundle, 2 nomes DataTransport, 12 não classificados, 1 preferência com nome ML Kit |
+| S0→S1 | ChangedEntries 1; datatransport-nome, size-or-mtime, Files 1 | Uma entrada existente mudou de tamanho e/ou mtime; relatório não separa qual dos dois, arquivo específico ou conteúdo |
+| B retorno | cancelled, campos antigos ausentes, câmera/preview desligados; aproximadamente 5 s sem toque; sem erro/recarga/reinício percebidos | Descarte/retorno observados pelo autor |
+| S1/B1 | IDs 4/5, 16 arquivos em cada, mesmas categorias; ChangedEntries 0, Changes vazio | Nenhuma adição/remoção ou mudança de tamanho/mtime detectada nesse par |
+
+**Correção rastreável da resposta de B:** o autor inicialmente marcou sim em
+Houve retomada automática?, em tensão com os demais campos. Novas capturas foram
+pausadas e foi solicitado esclarecimento sem repetir o teste. O autor confirmou:
+**Não houve retomada; marquei sim por engano.** B é positivo no alcance corrigido;
+a pausa foi encerrada sem reteste, defeito confirmado ou alteração funcional.
+
+A mudança de uma entrada classificada por nome como DataTransport **não prova**
+que imagem, OCR ou valores clínicos foram persistidos, nem que houve envio de
+rede. Também não demonstra que o conteúdo seja apenas técnico/anônimo. O par
+S0→S1 inclui abrir câmera/criar reconhecedor/inferir/liberar e atividade do Dev
+Client/SO: não atribuir a mudança a uma operação específica. É compatível com
+rotas técnicas identificadas na auditoria como hipótese, sem causa comprovada.
+Comparação estável de I ou B não transforma essa diferença em medição causal.
+Não ler/copiar/hashear conteúdo de bancos ou ampliar logs para investigá-la.
+
+S/B positivos para leitura sintética e descarte no alcance relatado; metadados
+com a diferença acima registrada. Privacidade, rede/UID/destino, arquivos
+transitórios/conteúdo e SDK/SO continuam sem homologação. Não repetir para tentar
+obter delta zero, não limpar dados, desativar telemetria por reflexão ou trocar SDK.
+
+### Próximo grupo C/R — cancelamento no preview e reinício
+
+Mesma demo/Metro/fonte TalkBack e coletor inventario-1 de ferramentas em 583f61f.
+Sem Capturar/OCR, confirmação, alteração de rede/código/APK ou atualização de
+worktree. Se houve mudança de versão ou impedimento desde S/B, informar antes.
+
+1. Partir de cancelled/idle, câmera desligada e sem revisão. C0 no PowerShell.
+   Um Iniciar; conferir ready/preview-1/preview. Não Capturar. Cancelar captura
+   uma vez; câmera/preview devem encerrar. Observar aproximadamente 5 s sem toque,
+   sem revisão/retomada. C1 e comparação C0→C1. Se falhar coletor/permissão/preview
+   ou cleanup, parar; não repetir abertura, não fazer R nem contornar blocked.
+2. R somente se C terminou saudável, câmera desligada, candidatos ausentes e
+   nenhuma retomada: usar C1 como R0 e executar force-stop **só da demo**:
+
+```powershell
+& $aferiAdb -d shell am force-stop com.ramonmenz.afericapturetest
+```
+
+3. Abrir uma vez o ícone do cliente Aferi — captura em avaliação, com o Metro
+   anterior aberto. Não tocar em Iniciar/Capturar/reload. Se não identificar o
+   ícone ou ficar no launcher/menu sem carregar a demo normalmente, parar e
+   informar esse destino/impedimento; não escolher bundles por tentativa.
+4. Na demo carregada, observar aproximadamente 5 s. Esperado: nenhum candidato,
+   câmera ou retomada; idle/nao-carregado são compatíveis com inicialização nova.
+   Registrar fase/marcador efetivos, inclusive recarga/carregamento percebido:
+   force-stop torna este reinício deliberado, não um erro espontâneo. R1 e
+   comparação C1→R1. Não presumir sobrescrita física da RAM/SDK por esse comando.
+
+Comandos intercalados com as ações, mantendo o mesmo módulo entre as coletas:
+
+```powershell
+$aferiC0 = New-AferiInventory -AdbPath $aferiAdb
+$aferiC0 | ConvertTo-Json -Depth 4
+# Iniciar uma vez, esperar ready, cancelar e observar; sem Capturar.
+$aferiC1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiC1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiC0.Id -After $aferiC1.Id | ConvertTo-Json -Depth 5
+# Só após C saudável: force-stop, abrir ícone uma vez e observar a demo.
+$aferiR1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiR1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiC1.Id -After $aferiR1.Id | ConvertTo-Json -Depth 5
+```
+
+Não usar force-stop como bypass de falha de cleanup; neste grupo ele é cenário
+planejado somente após encerramento normal. Sem clear-data/cache, reinstalação,
+root, banco, imagem, logs completos ou ferramentas de rede. Nenhum delta/total é
+preestabelecido; carregamento/launcher podem alterar metadados. Retornar três
+JSONs/duas comparações e fases/Nativo/preview/câmera/campos/retomada, intervalos,
+erros e forma de retorno. C/R ainda não executados nesta rodada.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -454,11 +541,11 @@ ferramenta de rede/versao/filtro; destinos por alias/porta/contagens ou NE;
 reconexao e recarga/reinicio; observacao e alcance; impedimento/proxima analise.
 ```
 
-Estado atualizado: P0 e grupo I recebidos e analisados acima. Coletor executado
-pelo autor em Windows PowerShell 5.1; I0/I1 com 16 entradas estáveis e UI idle
-sem câmera/revisão/retomada/erro. Próximo grupo S/B preparado, ainda sem execução
-nesta rodada. O/Q e UID/destinos novos **não executados**; observações históricas
-mantêm suas fontes e limites.
+Estado atualizado: P0/I/S/B recebidos e analisados acima. S0→S1 teve uma
+mudança size-or-mtime na categoria datatransport-nome, sem conteúdo/causa/envio
+identificados; S1→B1 estável. B esclarecido como sem retomada, sem reteste.
+Próximo C/R preparado, ainda não executado; O/Q e UID/destinos novos também
+**não executados**. Privacidade/habilitação permanecem bloqueadas.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
