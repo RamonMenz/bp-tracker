@@ -127,8 +127,8 @@ tratada como data/hora de execução quando esta não for informada.
 | L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
 | L06a / L06b | Passou no alcance relatado / NE | Home em ready/preview-1; uso ativo encerrou; retorno cancelled, sem preview/revisão/retomada por aproximadamente 5 s, sem reinício/erro percebido | V0 |
 | L07a / L07b | Passou no alcance relatado / NE | Troca de app em ready/preview-1; mesmos resultados relatados de L06a. Variante em revisão não executada | V0 |
-| L08a / L08b | NE / NE | Há relatos históricos de bloqueio, sem promoção para esta rodada | V0 |
-| L09a / L09b | NE / NE | Histórico H só relayout, sem recriação demonstrada | V0 |
+| L08a / L08b | Passou no alcance relatado / NE | ready/preview-1 antes de bloquear; retorno cancelled, câmera/preview encerrados, sem revisão/retomada ou erro percebido por aproximadamente 5 s | V0 |
+| L09a / L09b | Passou para relayout / NE | Rotação efetiva, ready/preview-1 preservados sem interrupção/reinício ou captura automática; cancelamento final encerrou câmera. Recriação real continua NE | V0 |
 | L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
 | L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
 | L12 | NE | Observação de UI não basta para contagem nativa | V0 |
@@ -225,9 +225,35 @@ persistência/telemetria ou comportamento na revisão (L06b/L07b permanecem NE).
 Nenhum defeito encontrado nesses relatos; sem correção funcional ou nova
 regressão justificada. ACK simulado continua separado da observação física.
 
-**G2b liberado:** apenas L08a (bloqueio no preview) e, se normal, L09a (rotação
-no preview). Nenhum Capturar/OCR. L08a/L09a continuam NE até devolução. Não
+Na análise de G2a foi liberado G2b: apenas L08a (bloqueio no preview) e, se
+normal, L09a (rotação no preview), sem Capturar/OCR. Retorno posterior abaixo. Não
 repetir G0/G1/G2a ou hashes por rotina; identidade deve ser revista se mudar.
+
+### Retorno G2b — bloqueio e rotação com relayout
+
+Fonte: relato separado de L08a e L09a pelo autor. Data/hora da execução não
+informadas. V0 herdada de G0/G1, sem novos hashes/HEAD por caso ou códigos
+AppState transcritos. Modelo SM-S731B reconfirmado anteriormente em G1.
+
+| Caso | Evidência recebida | Resultado |
+|---|---|---|
+| L08a | ready/preview-1 antes de bloquear; cancelled ao retornar; preview/uso ativo encerrados; nenhuma revisão/retomada; aproximadamente 5 s sem toque; nenhum comportamento ou erro percebido | Passou no alcance relatado para bloqueio no preview |
+| L09a | ready/preview-1 inicial; orientação/layout mudaram efetivamente; somente relayout, sem interrupção/reinício; ready/preview-1 após girar; nenhuma captura/revisão/retomada automática; cancelamento final encerrou câmera; nenhum erro percebido | Passou para rotação com relayout e cancelamento final. Recriação/interrupção por rotação não executadas |
+
+Em L08a, a resposta sobre recarga/reinício foi nenhum comportamento ou erro
+percebido: não transformar isso em rastreamento do processo/Activity. Em L09a,
+o autor explicitamente distinguiu relayout de interrupção/reinício. Não atribuir
+à rotação o abandono esperado para uma recriação que não ocorreu.
+
+Nenhum defeito identificado nos relatos; sem correção funcional ou nova
+regressão justificada. Não comprova cleanup interno de SDK/RAM, ausência de
+persistência/telemetria, OCR interrompido, resultados tardios, variantes de
+revisão L08b/L09b ou aprovação integral de TASK-07/10/18.
+
+**G4a liberado:** somente L12 (Capturar repetido) e, se normal, L13 (Tirar outra
+fotografia repetido). Ambos continuam NE até retorno. São casos observáveis de
+captura/revisão com cartão sintético; fases rápidas de G3 e falha de cleanup
+não são presumidas testadas. Nenhuma confirmação/escrita solicitada.
 
 ### Execução controlada desta preparação
 
@@ -264,7 +290,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G2b (L08a/L09a), descrito ao final desta seção.
+atual de condução é G4a (L12/L13), descrito ao final desta seção.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -367,7 +393,8 @@ que o evento não ocorreu. Não pedir conteúdo do outro app ou logs completos.
 Não fazer L07a se L06a falhar. Parar diante de câmera presa, concorrência,
 blocked/cleanup-failed/resource-busy inesperado; sem reload/reinstalação/bypass.
 Não executar variantes de revisão (L06b/L07b) nem os demais grupos ainda.
-**Grupo atual G2b: L08a + L09a, somente preview.** Mesma demo/Metro, Fast Refresh
+
+**Procedimento G2b, já executado: L08a + L09a, somente preview.** Mesma demo/Metro, Fast Refresh
 desligado e cartão sintético; não tocar em Capturar. Não alterar opções de
 desenvolvedor do Android para forçar destruição/recriação da Activity.
 
@@ -391,6 +418,34 @@ observada e informar cancelamento final. Códigos AppState visíveis são opcion
 sem evidência específica, recriação real permanece não executada/inconclusiva.
 Parar diante de câmera presa, concorrência ou cleanup falho; não fazer o segundo
 caso se o primeiro falhar nem usar reload/reinstalação/bypass.
+
+**Grupo atual G4a: L12 + L13, cartão sintético e confirmação não solicitada.**
+Manter Metro, cópia TalkBack e Fast Refresh desligado. Não trocar código/APK,
+não recarregar, não usar imagem de medidor real nem confirmar valores.
+
+1. L12: iniciar uma vez, esperar ready/preview-1 e enquadrar o cartão sintético
+   SYS 120 / DIA 80 / PUL 72. Dar três toques rápidos em Capturar e reconhecer.
+   Observar se surge uma única revisão, sem revisões sucessivas; câmera/preview
+   devem encerrar. Se o primeiro toque concluir antes dos seguintes, registrar
+   essa limitação, sem afirmar toques durante OCR ou repetir até acertar.
+   Conferir apenas correspondência com o cartão, sem editar/confirmar. Cancelar
+   revisão e observar aproximadamente 5 s: sem campos/revisão/retomada antiga.
+2. L13, somente se o caso anterior terminou sem falha e câmera desligada:
+   iniciar e capturar uma vez o mesmo cartão para obter nova revisão. Editar
+   apenas SYS para o valor sintético 130, sem confirmar. Dar três toques rápidos
+   em Tirar outra fotografia. Esperado: revisão/edição antigas somem e há uma
+   única nova abertura observável, sem OCR automático. Não tocar em Capturar
+   nessa nova abertura. Ao chegar a ready, cancelar captura e observar cerca
+   de 5 s; câmera encerra e nenhuma revisão/edição antiga reaparece.
+
+Devolver L12/L13 separados: sequência observada, quantidade de revisões/aberturas
+percebidas, fase final, campos conferem com cartão (L12), descarte da edição
+sintética (L13), câmera/preview encerrados, retomada/edição antigas, intervalo,
+erro/código e recarga/reinício percebidos. Se não foi possível atingir os toques
+enquanto ocupado, declarar; observação sem erro não comprova exclusão nativa.
+Se não houver revisão em L12 ou na preparação de L13, parar e descrever, sem
+inventar campos ou preencher manualmente para contornar. As regras de parada
+por câmera presa, concorrência ou cleanup falho continuam obrigatórias.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar

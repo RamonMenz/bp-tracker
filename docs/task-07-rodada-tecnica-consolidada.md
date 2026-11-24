@@ -108,6 +108,14 @@ revisão/retomada, recarga/reinício ou erro percebido, por aproximadamente 5 s.
 Passaram no alcance relatado, sem executar variantes de revisão ou OCR.
 Próximo grupo G2b: L08a/L09a, bloqueio/rotação no preview, ainda não executados.
 
+Retorno posterior G2b: L08a passou no alcance relatado (cancelled após bloqueio,
+câmera/preview encerrados, sem revisão/retomada por aproximadamente 5 s).
+L09a passou exclusivamente para rotação efetiva com relayout: ready/preview-1
+preservados, sem interrupção/reinício, sem captura automática, cancelamento
+final funcional. [Evidência e limites](task-07-ciclo-vida-samsung.md#retorno-g2b--bloqueio-e-rotação-com-relayout).
+Recriação real continua não executada. Próximo grupo G4a: L12/L13 com cartão
+sintético, sem confirmar; resultados ainda não recebidos.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
