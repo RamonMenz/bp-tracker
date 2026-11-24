@@ -282,7 +282,7 @@ com a diferença acima registrada. Privacidade, rede/UID/destino, arquivos
 transitórios/conteúdo e SDK/SO continuam sem homologação. Não repetir para tentar
 obter delta zero, não limpar dados, desativar telemetria por reflexão ou trocar SDK.
 
-### Próximo grupo C/R — cancelamento no preview e reinício
+### Procedimento C/R — executado, retorno abaixo
 
 Mesma demo/Metro/fonte TalkBack e coletor inventario-1 de ferramentas em 583f61f.
 Sem Capturar/OCR, confirmação, alteração de rede/código/APK ou atualização de
@@ -330,7 +330,71 @@ planejado somente após encerramento normal. Sem clear-data/cache, reinstalaçã
 root, banco, imagem, logs completos ou ferramentas de rede. Nenhum delta/total é
 preestabelecido; carregamento/launcher podem alterar metadados. Retornar três
 JSONs/duas comparações e fases/Nativo/preview/câmera/campos/retomada, intervalos,
-erros e forma de retorno. C/R ainda não executados nesta rodada.
+erros e forma de retorno. Retorno recebido abaixo; não repetir por rotina.
+
+## Retorno C/R — cancelamento, reinício e metadados alterados
+
+Registro em 24/11/2026; fonte: relato/terminal do autor, sem acesso direto ao
+Windows/Samsung. Data/hora da execução não informadas. A importação do módulo
+foi repetida antes de C0: os IDs reiniciaram em 1, comportamento compatível com
+reinicialização do estado em memória. Não comparar esses IDs aos de sessões
+anteriores. O ^C transcrito depois da importação não demonstra interrupção de
+inventário ou parada do Metro; as coletas seguintes retornaram normalmente.
+
+| Item | Resultado recebido | Alcance |
+|---|---|---|
+| C preview/cancelamento | preview-1/ready e preview visível; após Cancelar, cancelled e câmera/preview encerrados | Positivo no cenário sem Capturar/OCR solicitado, conforme roteiro |
+| C observação | Aproximadamente 5 s sem novos toques; sem revisão/retomada, erro/recarga/reinício percebidos | Relato, sem medição instrumental de recursos internos |
+| C0/C1 | inventario-1, IDs 1/2, 16 entradas em cada | Mesmas categorias: 1 bundle, 2 nomes DataTransport, 12 não classificados, 1 preferência com nome ML Kit |
+| C0→C1 | ChangedEntries 1; datatransport-nome, size-or-mtime, Files 1 | Entrada existente com tamanho e/ou mtime alterados; conteúdo/causa/envio não determinados |
+| R comando | am force-stop somente do pacote da demo; terminal sem erro transcrito; autor não percebeu erro | Exit code/PID não coletados; não inferir liberação física de RAM |
+| R retorno | Autor abriu o ícone pela lista de apps; demo padrão de captura/revisão carregou; idle/Nativo não carregado, câmera desligada e campos ausentes | Retorno normal relatado, sem seleção repetida de bundles informada |
+| R observação | Aproximadamente 5 s sem toque; sem abertura/retomada automática ou erro/impedimento percebido | Reinício deliberado não é crash espontâneo |
+| R1 | Id 3, 16 entradas, mesmas categorias de C0/C1 | Snapshot posterior ao retorno descrito pelo autor |
+| C1→R1 | ChangedEntries 2; bundle-dev-client-nome e outro-nao-classificado, size-or-mtime, 1 entrada por categoria | Sem adição/remoção detectada; não identifica qual metadado ou conteúdo mudou |
+
+**C/R positivos no alcance relatado** para cancelamento/retorno sem candidatos
+ou câmera automáticos. Não demonstram manifesto/APK efetivos, sobrescrita de RAM,
+conteúdo dos arquivos, ausência de temporários/logs/tráfego ou conformidade SDK/SO.
+Não houve nova identidade de fonte/APK/bundle transcrita nesta devolução.
+
+A categoria DataTransport mudou também numa janela sem Capturar/OCR solicitado.
+Isso impede atribuir exclusivamente ao reconhecimento a diferença de S0→S1.
+Criar reconhecedor/preview, eventos adiados de etapas anteriores ou outra
+atividade são hipóteses, não causas comprovadas. Não presumir que seja a mesma
+entrada individual de S, pois o relatório agrupa nomes sem expor paths. Não ler
+bancos, excluir eventos ou repetir capturas para obter delta zero.
+
+Após R, mudança no bundle é compatível com carregamento do Dev Client como
+hipótese; não comprova bytes iguais nem identifica novo código. A outra entrada
+continua não classificada, sem chamá-la de clínica ou segura. Conferir somente
+o hash do JS conhecido antes da próxima tentativa de modalidade; não hashear
+arquivos desconhecidos/bancos. Inventários iguais de I/B não eliminam essas lacunas.
+
+### Próximo passo — identidade do bundle após R, sem câmera
+
+Preservar fonte TalkBack/Metro e ferramenta 583f61f. Não repetir C/R nem fazer
+reload/reinstalação, alterar rede/permissões ou iniciar câmera. No PowerShell de
+comandos, consultar a fonte e o único hash permitido:
+
+```powershell
+git -C C:\dev\aferi-task07-talkback rev-parse HEAD
+git -C C:\dev\aferi-task07-talkback status --short
+& $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js
+```
+
+Referência P0: fonte f057283876ea2126b485abd762e2886012b4c7ca limpa e bundle
+860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388. Não exigir
+coincidência por tentativa: hash diferente ou arquivo ausente exige analisar o
+carregamento/identidade, não recarregar até coincidir. Hash igual limita a
+conclusão à igualdade desse arquivo nesses momentos, sem provar toda execução.
+
+Devolver HEAD/status/hash ou impedimento e informar se Metro permaneceu no
+terminal/pasta TalkBack, se houve reload/atualização/reinstalação/mudança de rede
+durante R, e fase/Nativo/câmera atuais. Não enviar paths pessoais, imagem,
+conteúdo de arquivo ou logs completos. E (erro seguro de permissão) só será
+conduzido depois dessa análise; por enquanto, nenhuma alteração de permissão.
+O/Q, M0, identidade atual do APK, UID/destinos e privacidade continuam pendentes.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -541,11 +605,11 @@ ferramenta de rede/versao/filtro; destinos por alias/porta/contagens ou NE;
 reconexao e recarga/reinicio; observacao e alcance; impedimento/proxima analise.
 ```
 
-Estado atualizado: P0/I/S/B recebidos e analisados acima. S0→S1 teve uma
-mudança size-or-mtime na categoria datatransport-nome, sem conteúdo/causa/envio
-identificados; S1→B1 estável. B esclarecido como sem retomada, sem reteste.
-Próximo C/R preparado, ainda não executado; O/Q e UID/destinos novos também
-**não executados**. Privacidade/habilitação permanecem bloqueadas.
+Estado atualizado: P0/I/S/B/C/R recebidos. C/R positivos para cancelamento e
+retorno sem retomada/campos/câmera, com mudanças de metadados descritas acima:
+DataTransport em C; bundle e entrada não classificada após R. Conteúdo/causa/envio
+não determinados. Próximo passo é reconferir somente identidade da fonte/bundle,
+sem câmera. E/O/Q, M0 e UID/destinos ainda pendentes; habilitação clínica bloqueada.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 

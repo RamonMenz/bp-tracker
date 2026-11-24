@@ -480,3 +480,13 @@ aproximadamente 5 s. O sim inicial para retomada foi corrigido pelo autor como
 erro de marcação: **não houve retomada**. Pausa encerrada sem reteste/defeito
 constatado. [Registro, limites e próximo C/R](task-07-inspecao-privacidade-localidade.md#retorno-sb--captura-mudança-de-metadados-e-descarte).
 Não ler bancos ou repetir captura por delta zero. Habilitação permanece bloqueada.
+
+
+Retorno posterior C/R: cancelamento em ready/preview-1 terminou cancelled, câmera
+encerrada e sem revisão/retomada; force-stop sem erro percebido, retorno pelo ícone
+à demo idle/Nativo não carregado, sem campos/câmera/retomada. Janelas relatadas de
+aproximadamente 5 s; 16 entradas nos snapshots IDs 1/2/3 após reimportação do
+módulo. C0→C1 mudou size-or-mtime de uma entrada DataTransport; C1→R1 mudou uma
+entrada bundle e uma não classificada. [Evidência, limites e hash dirigido pós-R](task-07-inspecao-privacidade-localidade.md#retorno-cr--cancelamento-reinício-e-metadados-alterados).
+Sem causa/conteúdo/envio determinados ou aceite de privacidade. Antes de E,
+conferir só fonte/bundle, sem repetir cenário, abrir câmera ou mudar permissões.
