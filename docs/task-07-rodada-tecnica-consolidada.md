@@ -173,6 +173,23 @@ trabalho é técnico: rastrear produtores/serializadores e compatibilidade da
 telemetria, mantendo a investigação do layout G-Tech BSPII separada. Não há
 aprovação de privacidade, medidor real, persistência clínica ou TASK-07.
 
+### Layout do G-Tech BSPII — esclarecimento do autor
+
+Autor descreveu `SIS\nmmHg`, `DIA\nmmHg` e `PULSO\nmin`, cada conjunto à direita
+do valor, com quebra de linha entre rótulo/unidade. Não forneceu foto ou medidas
+de caixas; não inferir posições verticais exatas ou a saída real do OCR.
+Não é necessário enviar fotografia com valores reais para esta reprodução.
+
+O interpretador já aceita SIS/DIA/PULSO, ignora mmHg/min e admite número à
+esquerda do rótulo. Dois testes adicionais usam valores/coordenadas sintéticos
+inspirados nessa descrição: unidade agrupada com rótulo ou em linha separada,
+com permutação da ordem dos tokens. Não alteram as regras para fazer o ensaio
+passar; tampouco comprovam a detecção ML Kit de letras/dígitos/sete segmentos.
+Ausência de candidatos no medidor continua sem causa determinada: texto omitido
+ou confundido pelo OCR e geometria real fora das associações permanecem hipóteses.
+Após esse complemento: lint, TypeScript raiz e 726 testes/66 suítes aprovados,
+incluindo 43 testes de interpretação. Sem alterações no código de produção.
+
 ## Auditoria estática complementar — identificador de instância do SDK
 
 Por javap -c -p nos AARs públicos common 18.11.0 e
