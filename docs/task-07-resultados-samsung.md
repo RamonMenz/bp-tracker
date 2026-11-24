@@ -1,5 +1,10 @@
 # TASK-07 — resultados relatados no Samsung
 
+> Para retomar, começar pelo [ponto de continuidade consolidado](task-07-rodada-tecnica-consolidada.md#ponto-de-retomada--consolidação-do-aprendizado-deste-chat).
+> R1/R2 e o layout BSPII têm registros posteriores nesse documento. O histórico
+> abaixo é preservado; pendências antigas não devem ser repetidas sem consultar
+> as evidências complementares.
+
 Registro recebido em **12/11/2026** nesta conversa. Fonte: relatório textual do
 autor e saída de comandos por ele fornecida. A data/hora exata das capturas e o
 fuso dos horários do inventário não foram informados; não são inferidos deste
@@ -616,7 +621,7 @@ integrais de aceite. Situação no alcance recebido, sem marcar tarefas concluí
 | S06 | Validação/correção/confirmação em memória e cancelamento relatados | Não comprova persistência clínica |
 | S07 | F positivo no alcance relatado | Sem retomada automática; não comprova privacidade integral |
 | S08 | J1/J2/J3 positivos nos cartões sintéticos relatados; J1 corrigido pelo autor | Sem ampliar cobertura a displays reais, outros layouts ou acurácia geral |
-| S09 | K2/K3 positivos; reteste K1 com bloqueio/motivo identificáveis por navegação | Anúncio automático não observado; demais limites de acessibilidade/contraste não presumidos |
+| S09 | K2/K3 e reteste K1 positivos no alcance descrito; R2 posterior confirma regra ouvida após editar e descarte de campos/motivo | Reteste inicial não observou anúncio automático; R2 não detalha foco/fala integral. Acessibilidade/contraste integrais não presumidos |
 
 Após K, todos os nove grupos receberam alguma evidência. **Quatro permanecem
 parciais com complementos** (S03/S04/S05/S09). S01/S02/S06/S07/S08 têm resultados positivos no

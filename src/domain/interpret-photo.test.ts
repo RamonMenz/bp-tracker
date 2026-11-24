@@ -66,6 +66,20 @@ test('linhas separadas de ML Kit/Tesseract associadas por layout ancorado, indep
 test('valor à esquerda do rótulo na mesma linha', () => {
   expect(interpretPhoto(photoObservation([photoLine('120', 0.1, 0.2, 0.2), photoLine('SYS', 0.5, 0.2, 0.12)])).fields.systolic).toEqual(c(120, 'layout'));
 });
+test.each([false, true])('layout sintético inspirado no relato BSPII, unidades separadas: %s', separateUnits => {
+  // Coordenadas/valores propostos, não extraídos de foto ou medidos no aparelho.
+  const tokens = [['120', 'SIS', 'mmHg'], ['80', 'DIA', 'mmHg'], ['72', 'PULSO', 'min']]
+    .flatMap(([value, label, unit], index) => {
+      const y = 0.12 + index * 0.28;
+      return [photoLine(value, 0.15, y, 0.3, 0.16),
+        ...(separateUnits
+          ? [photoLine(label, 0.65, y, 0.2, 0.07), photoLine(unit, 0.65, y + 0.08, 0.2, 0.06)]
+          : [photoLine(`${label}\n${unit}`, 0.65, y, 0.2, 0.15)])];
+    });
+  const result = interpretPhoto(photoObservation(tokens));
+  expect(result.fields).toEqual({ systolic: c(120, 'layout'), diastolic: c(80, 'layout'), pulse: c(72, 'layout') });
+  expect(interpretPhoto(photoObservation([...tokens].reverse()))).toEqual(result);
+});
 test('rótulos acima dos valores em colunas separadas, sem emprestar por ordem textual', () => {
   const tokens = [photoLine('SYS', 0.1, 0.1, 0.12), photoLine('DIA', 0.45, 0.1, 0.12), photoLine('PUL', 0.8, 0.1, 0.12),
     photoLine('72', 0.8, 0.25, 0.12), photoLine('120', 0.1, 0.25, 0.12), photoLine('80', 0.45, 0.25, 0.12)];

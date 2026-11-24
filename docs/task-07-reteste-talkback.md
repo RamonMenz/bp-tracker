@@ -1,5 +1,9 @@
 # TASK-07 — comunicação da confirmação e reteste TalkBack
 
+> **Retorno posterior:** R2 confirmou descarte de campos/motivo e ausência da
+> edição antiga na nova captura. Consultar o [ponto de retomada consolidado](task-07-rodada-tecnica-consolidada.md#ponto-de-retomada--consolidação-do-aprendizado-deste-chat)
+> antes de repetir preparação ou testes. O relato inicial abaixo é histórico.
+
 Preparado em 19/11/2026 sobre staging `8c869c0`, branch
 `fix/task-07-confirmacao-acessivel`, em worktree separado para preservar a frente
 documental do [PR #69](https://github.com/RamonMenz/bp-tracker/pull/69).
