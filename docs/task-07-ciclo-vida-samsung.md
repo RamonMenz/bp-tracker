@@ -126,9 +126,9 @@ tratada como data/hora de execução quando esta não for informada.
 | L04 | NE | Histórico D não executado por OCR rápido; não repetir indefinidamente | V0 |
 | L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
 | L06a / L06b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
-| L07a / L07b | Passou no alcance relatado / NE | Troca de app em ready/preview-1; mesmos resultados relatados de L06a. Variante em revisão não executada | V0 |
+| L07a / L07b | Ambos passaram no alcance relatado | Preview: resultado anterior preservado. Revisão: edição 130 sem confirmar, retorno cancelled com mensagem de cancelamento, sem retomada por aproximadamente 5 s | V0 |
 | L08a / L08b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
-| L09a / L09b | Passou para relayout / NE | Rotação efetiva, ready/preview-1 preservados sem interrupção/reinício ou captura automática; cancelamento final encerrou câmera. Recriação real continua NE | V0 |
+| L09a / L09b | Ambos passaram para relayout | Preview: resultado anterior preservado. Revisão: reviewing/edição 130 preservados, câmera desligada, sem captura/confirmação automáticas; campos descartados ao cancelar. Recriação real continua NE | V0 |
 | L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
 | L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
 | L12 | Passou no alcance relatado | Uma revisão correta; botão desabilitou após primeiro toque; câmera encerrada e cancelled, sem reaparecimento por aproximadamente 5 s. Cliques adicionais não foram aceitos | V0 |
@@ -321,10 +321,33 @@ de conta testadas; ausência de erro percebido não rastreia processo/Activity
 nem homologa SDK/SO. Nenhum defeito relatado que justifique correção funcional
 ou nova regressão. TASK-07/10/18 continuam parciais.
 
-**G2d liberado:** somente L07b (troca de app na revisão) e, se normal, L09b
-(rotação na revisão). Ambos continuam NE; distinguir relayout de interrupção
+Na análise de G2c foi liberado G2d: somente L07b (troca de app na revisão) e,
+se normal, L09b (rotação na revisão); distinguir relayout de interrupção
 real e não presumir recriação. Sem confirmar; preservar cópia/Metro e Fast
 Refresh desligado, sem repetir hashes ou casos já recebidos por rotina.
+
+### Retorno G2d — troca de app e rotação durante a revisão
+
+Fonte: dois relatos separados do autor. Baseline V0 herdada, sem nova coleta
+de HEAD/APK/bundle por caso ou códigos AppState transcritos. Data/hora de
+execução não informadas.
+
+| Caso | Retorno recebido | Resultado |
+|---|---|---|
+| L07b | Revisão obtida/câmera encerrada; SYS editada para 130 sem confirmar; cancelled ao retornar; mensagem de cancelamento em vez de campos; nenhuma retomada por aproximadamente 5 s sem toque; nenhum comportamento/erro percebido | Passou no alcance relatado |
+| L09b | Orientação/layout mudaram efetivamente; somente relayout; reviewing após girar, edição 130 preservada e câmera desligada; nenhuma captura/confirmação automática; campos desapareceram após cancelar; nenhum erro percebido | Passou para relayout e descarte final. Recriação/interrupção por rotação não executadas |
+
+Preservar a edição em relayout e descartá-la em background são comportamentos
+distintos e esperados. Os relatos não comprovam recriação da Activity, fila/
+escrita clínica, cleanup físico de RAM/SDK ou privacidade integral. Não houve
+defeito relatado que justifique correção funcional ou nova regressão.
+
+**G3a liberado:** uma tentativa dirigida de L02 (cancelar abertura) e, se tudo
+encerrar normalmente, uma de L04 (cancelar OCR), somente cartão sintético.
+São os primeiros ensaios dirigidos desses casos nesta rodada; histórico D já
+registrava OCR rápido. Não repetir indefinidamente ou alterar resolução/mídia/
+SDK para alongar fases. Se a fase não for observável no instante da ação,
+registrar NE para o alvo, mesmo que cancelamento posterior funcione.
 
 ### Execução controlada desta preparação
 
@@ -361,7 +384,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G2d (L07b/L09b).
+atual de condução é G3a (L02/L04), uma tentativa por alvo rápido.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -540,7 +563,7 @@ campos para contornar falha do OCR. Sem imagens/PIN/áudio/logs clínicos.
 Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
 inesperado, sem reload/reinstalação/bypass. Não confirmar ou salvar valores.
 
-**Grupo atual G2d: L07b + L09b, revisão do cartão sintético, sem confirmar.**
+**Procedimento G2d, já executado: L07b + L09b, revisão sem confirmar.**
 Mesma cópia/Metro, Fast Refresh desligado. Não instalar APK, trocar código ou
 alterar opções de desenvolvedor para forçar recriação.
 
@@ -566,6 +589,35 @@ orientação/layout, relayout ou interrupção observada e descarte ao cancelar
 no final. Sem confirmação, mídia, dados do outro app ou logs completos.
 Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
 inesperado; não fazer o segundo caso se o primeiro falhar nem usar bypass.
+
+**Grupo atual G3a: L02 + L04, cancelamento de fases rápidas.** Mesma cópia/Metro,
+Fast Refresh desligado e cartão sintético. Uma tentativa por caso; sem atraso
+artificial, troca de mídia/resolução ou injeção de falha no APK.
+
+1. L02: partir de câmera desligada/cancelled e Cancelar captura visível. Iniciar
+   uma vez e tentar Cancelar captura enquanto aparecer opening/Preparando
+   câmera. Se ready surgir antes, ou se não for possível identificar a fase
+   no instante do toque, marcar NE para abertura. Cancelar o preview apenas
+   para encerrar com segurança, sem transformar esse cancelamento em aprovação
+   de L02. Não capturar nesse caso. Após encerramento, observar cerca de 5 s
+   sem toque; esperado: cancelled, câmera/preview encerrados, sem revisão/
+   retomada ou ready tardio reabrindo o fluxo.
+2. L04, somente se o caso anterior encerrou normalmente: iniciar por novo gesto,
+   aguardar ready/preview-1, enquadrar o cartão e tocar Capturar uma vez.
+   Tentar Cancelar captura durante recognizing/Lendo o quadro em memória.
+   Se reviewing já estiver presente, ou a fase do toque for incerta, registrar
+   NE para OCR interrompido e cancelar a revisão apenas para descarte. Não
+   repetir até acertar. Esperado, se o alvo foi atingido: cancelled após
+   liberação, câmera encerrada e nenhum candidato/revisão tardios, observando
+   aproximadamente 5 s sem toque.
+
+Devolver L02/L04 separados: alvo observável ou rápido demais, fase no instante
+de Cancelar (ou incerta), fase final, preview/uso ativo encerrados, revisão/
+retomada tardias, intervalo e erro/recarga/reinício percebidos. Código recognizing
+no histórico, sozinho, não comprova que o toque ocorreu durante OCR. ACK ou
+UI cancelada não comprovam cleanup físico. Não confirmar/salvar valores.
+Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
+inesperado; não executar o segundo caso se o primeiro falhar nem usar bypass.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar

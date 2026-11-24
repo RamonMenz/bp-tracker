@@ -136,6 +136,14 @@ ou erro percebido. [Casos separados e limites](task-07-ciclo-vida-samsung.md#ret
 Passaram no alcance relatado, sem testar escrita ou OCR interrompido. Próximo
 grupo G2d: L07b/L09b, troca de app/rotação na revisão, ainda não executados.
 
+Retorno posterior G2d: L07b passou no alcance relatado — revisão/edição 130
+descartadas, cancelled com mensagem de cancelamento e nenhuma retomada por
+aproximadamente 5 s. L09b passou para relayout efetivo: reviewing/130 preservados,
+câmera desligada, sem captura/confirmação automáticas, campos descartados ao
+cancelar. [Evidências e limites](task-07-ciclo-vida-samsung.md#retorno-g2d--troca-de-app-e-rotação-durante-a-revisão).
+Recriação real continua NE. Próximo grupo G3a: uma tentativa L02/L04; fase
+rápida/incerta fica NE, sem repetir até acertar ou presumir OCR interrompido.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
