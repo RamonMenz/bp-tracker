@@ -538,3 +538,11 @@ causa/envio determinados ou prova de que seja a mesma entrada. [Rodada e diagnó
 Sem novas capturas pedidas: próximo M0 se artefato/Studio existirem e auditoria
 independente de SDK. Encoders OCR públicos examinados sem pixels/texto nessa
 subárvore, sem resolver ID do envelope ou SDK/SO integral. Habilitação bloqueada.
+
+
+Preparação M0 posterior: telefone reiniciado por atualização de SO, USB reconectado
+e a no Metro, idle/nao-carregado e câmera desligada. Studio padrão, aapt2 SDK36 e
+APK local de integração localizados por Test-Path, sem validar bytes/versões.
+[Próximo M0a e separação de ambientes](task-07-inspecao-privacidade-localidade.md#preparação-m0-após-atualização-do-so--arquivos-localizados):
+metadados do SO atualizado e hashes base.apk/local/JS, sem captura ou novo build.
+Rodada anterior preservada no ambiente anterior, sem homologação retroativa.

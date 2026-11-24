@@ -743,7 +743,8 @@ habilitação clínica bloqueada**. Não há defeito funcional confirmado que ju
 mudar captura/parser/stack ou dispensar guardrails. Não pedir novas capturas por
 lacunas que os snapshots não conseguem resolver. Próximo trabalho: manifesto
 M0 se houver artefato/ferramenta existentes e auditoria independente do SDK.
-Disponibilidade de Android Studio/APK local foi solicitada ao autor, sem build,
+Arquivos candidatos de Studio/aapt2/APK foram localizados depois da atualização
+de SO; identidade atual e versão pós-update ainda pendentes. Sem build,
 instalação, upload ou novo ensaio físico. Monitor por UID/destino continua NE.
 
 ### Complemento independente — encoders do evento OCR
@@ -771,6 +772,95 @@ clínicos; isso não cobre os demais produtores/envelopes/módulos nativos/logs 
 implementação dos transportes. O ID persistente já rastreado fica no envelope
 comum, fora desses objetos: o complemento não resolve anonimização. Nenhum
 payload ou banco do aparelho foi lido. Habilitação permanece bloqueada.
+
+## Preparação M0 após atualização do SO — arquivos localizados
+
+Registro em 24/11/2026. Autor informou reinício do telefone por atualização de
+SO, reconexão USB e abertura manual por a no Metro. Estado atual idle/nao-carregado,
+câmera desligada e conexões restauradas. Versão/build/patch pós-atualização ainda
+não informados; não presumir que o firmware seja o dos ensaios anteriores.
+I/S/B/C/R/E/O/Q permanecem evidências do ambiente anterior, sem nova execução
+atribuída ao SO atualizado. Não repetir capturas por essa mudança neste momento.
+
+Consulta de existência retornou AndroidStudioPadrao=true, Aapt2Sdk36=true e
+ApkIntegracao=true. Isso localiza candidatos, não identifica versão/assinatura,
+conteúdo ou correspondência do APK local ao instalado. Nenhum binário foi
+executado por essa consulta; não houve build, instalação ou upload solicitado.
+
+**Próximo M0a, só metadados:** reconfirmar alvo USB e obter Android/API/patch/build
+público pós-update, hash do JS conhecido e SHA-256 do base.apk atual/local. Não
+usar fingerprint, serial, Android ID, banco, mídia, dumps ou APK exportado. Após
+comparar, inspecionar manifesto do artefato correspondente com ferramenta já
+existente; aapt2/Studio ainda sem versão executada registrada.
+
+Comandos de versão (um por vez):
+
+```powershell
+$aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $aferiAdb -d get-state
+& $aferiAdb -d shell getprop ro.build.version.release
+& $aferiAdb -d shell getprop ro.build.version.sdk
+& $aferiAdb -d shell getprop ro.build.version.security_patch
+& $aferiAdb -d shell getprop ro.build.display.id
+& $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js
+```
+
+APK local candidato: C:\dev\aferi-task07-integracao\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk.
+O caminho instalado deve ser obtido via pm path **só do pacote da demo**, retido
+em variável, validado como /data/app/.../base.apk sem caracteres de shell e sem
+travessia. Consultar hash com run-as/sha256sum; publicar só digest e contagem de
+entradas APK. Contagem >1 limita comparação ao base e exige revisar splits antes
+de declarar o conjunto instalado identificado. Hash local obtido por Get-FileHash,
+sem imprimir path. Se run-as/path/hash falhar, parar sem root/chmod/pull/novo build.
+
+Comparação sanitizada, após get-state retornar device; não imprimir as variáveis
+intermediárias. O bloco foi verificado com sete fixtures PowerShell 7.5.4/Linux
+(igualdade, splits, divergência, path injetado/travessia, erro nativo e hash inválido),
+sem ADB/aparelho real. Em caso de erro, devolver só código fixo e parar.
+
+```powershell
+$aferiApkLocal = 'C:\dev\aferi-task07-integracao\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+$aferiPacoteM0 = 'com.ramonmenz.afericapturetest'
+if (-not (Test-Path -LiteralPath $aferiApkLocal -PathType Leaf -ErrorAction SilentlyContinue)) {
+    throw 'apk-local-unavailable'
+}
+try {
+    $aferiPathsM0 = @(& $aferiAdb -d shell pm path $aferiPacoteM0 2>&1)
+} catch { throw 'apk-path-unavailable' }
+if ($LASTEXITCODE -ne 0 -or $aferiPathsM0.Count -lt 1) { throw 'apk-path-unavailable' }
+$aferiValidosM0 = @($aferiPathsM0 | Where-Object {
+    $_ -is [string] -and
+    $_.Trim() -match '^package:/data/app/[A-Za-z0-9_./=+~\-]+\.apk$' -and
+    $_ -notmatch '/\.\./'
+})
+if ($aferiValidosM0.Count -ne $aferiPathsM0.Count) { throw 'apk-path-unexpected' }
+$aferiBaseM0 = @($aferiValidosM0 | Where-Object { $_.Trim().EndsWith('/base.apk') })
+if ($aferiBaseM0.Count -ne 1) { throw 'apk-base-unavailable' }
+$aferiBasePathM0 = $aferiBaseM0[0].Trim().Substring(8)
+try {
+    $aferiHashM0 = @(& $aferiAdb -d shell run-as $aferiPacoteM0 sha256sum $aferiBasePathM0 2>&1)
+} catch { throw 'apk-installed-hash-unavailable' }
+if ($LASTEXITCODE -ne 0 -or $aferiHashM0.Count -ne 1 -or
+    $aferiHashM0[0] -isnot [string] -or
+    $aferiHashM0[0] -notmatch '^(?<Digest>[0-9a-fA-F]{64})\s') {
+    throw 'apk-installed-hash-unavailable'
+}
+$aferiInstaladoM0 = $Matches.Digest.ToLowerInvariant()
+try {
+    $aferiLocalM0 = (Get-FileHash -LiteralPath $aferiApkLocal -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+} catch { throw 'apk-local-hash-unavailable' }
+[pscustomobject]@{
+    EntradasApkInstaladas = $aferiValidosM0.Count
+    Sha256BaseInstalado = $aferiInstaladoM0
+    Sha256ApkLocal = $aferiLocalM0
+    BaseCoincideComLocal = ($aferiInstaladoM0 -eq $aferiLocalM0)
+} | ConvertTo-Json
+```
+
+Hashes iguais identificam bytes dos arquivos consultados, não a cadeia de build,
+todo runtime ou ausência de persistência. Diferentes não autorizam reinstalar
+para obter coincidência. Nenhuma leitura de manifesto ou nova captura pedida
+antes desse retorno de identidade. Habilitação clínica continua bloqueada.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -994,7 +1084,9 @@ cabo direto sem adaptador confirmados. O/Q recebidos positivos no alcance
 funcional; reverse 1/0→0/0→1/0, rádios desligados em O e restaurados em Q;
 16 entradas nos snapshots, uma mudança DataTransport em cada comparação, sem
 conteúdo/causa/envio determinados. Rodada consolidada; M0/APK/UID/destinos e
-privacidade pendentes, habilitação clínica bloqueada.
+privacidade pendentes, habilitação clínica bloqueada. Atualização de SO posterior
+registrada: candidatos Studio/aapt2/APK encontrados, próxima comparação de
+identidade/versões sem captura; ensaios anteriores não homologam o novo SO.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 
