@@ -104,6 +104,62 @@ carregada; se ausente, registrar pendente, sem reload para fabricar coincidênci
 & $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js
 ```
 
+## Retorno P0 — identidade e estado inicial recebidos
+
+Registro em 24/11/2026, com base no relato e terminal do autor. Data/hora da
+execução não informadas; sem acesso direto ao Windows/Samsung. Omitidos caminho
+pessoal do ADB/perfil e qualquer dado além dos metadados necessários.
+
+| Item | Evidência recebida | Alcance |
+|---|---|---|
+| Cópia que alimenta Metro | aferi-task07-talkback; HEAD f057283876ea2126b485abd762e2886012b4c7ca; status sem saída | Limpa no momento da consulta; branch sem saída é compatível com HEAD destacado, não erro |
+| ADB/USB | 1.0.41; pacote 37.0.1-15733141; get-state device | Executável localizado e comunicação com alvo USB disponível |
+| Aparelho | SM-S731B; Android 17; API 37 | Reconferidos por getprop nesta devolução |
+| Pacote/UID | com.ramonmenz.afericapturetest; 10033 | Pacote e UID reconfirmados; não são observação de tráfego |
+| Bundle no sandbox | SHA-256 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 | Coincide com histórico TalkBack; não prova sozinho código em execução nem identidade do APK |
+| Metro/demo | Metro aberto; demo estava fechada e foi aberta para consultar marcadores | Estado relatado; não houve nova captura informada |
+| UI | captura-5; Nativo nao-carregado; idle; associacao-1 ausente | Compatível com fonte f057283 e módulo ainda não carregado por gesto; não iniciar só para mudar marcador |
+| Descarte/câmera | Sem revisão antiga; câmera desligada; Fast Refresh desligado; sem impedimento percebido | Estado inicial relatado, sem inspeção de RAM/SDK/SO |
+| Reinstalação | Autor não sabe se houve reinstalação desde a última rodada | Identidade atual do APK não reconfirmada; não assumir a do APK histórico |
+| Ferramenta de rede | Autor não sabe se existe ferramenta compatível | UID/destinos seguem NE; não instalar monitor nem ampliar dumps por tentativa |
+
+**Análise:** P0 suficiente para iniciar prova de capacidade do coletor e controle
+idle, sem câmera/OCR, mudança de JS/APK ou ajuste de rede. Não aprova privacidade,
+localidade, manifesto instalado ou habilitação. M0, identidade atual do APK e
+observação por UID/destinos continuam pendentes. Não repetir P0 inteiro por rotina.
+
+Conferência estática f057283 → staging 81af92f: sem diferenças no módulo nativo
+foto, useCandidateReview.ts e photo-android.native.ts. Hook, coordenador e tela
+têm diferenças do diagnóstico associacao-1; não tratar os dois JS como idênticos.
+O primeiro controle não inicia modalidade e não exige esse diagnóstico.
+
+### Próximo grupo I — capacidade do coletor e controle sem modalidade
+
+Preservar Metro e fonte f057283. Usar o PowerShell de comandos, não o terminal
+ocupado pelo Metro. Preparar a worktree **só de ferramentas** conforme seção
+seguinte, fixando `583f61fa4a444d944e31178829706313b1b86795` (inventario-1 já
+validado no CI do PR #75). O novo commit documental do retorno não muda o coletor.
+Se destino existir, parar e informar; não apagar/reutilizar sem verificar.
+
+1. Conferir HEAD/status da worktree de ferramentas e versão do PowerShell;
+   importar o módulo sem alterar política de execução. Nenhum npm/prebuild/APK.
+2. Manter demo aberta em idle, sem câmera/revisão, e Metro aberto. Executar I0
+   com New-AferiInventory. Se falhar, devolver só código/erro sanitizado e parar,
+   sem executar find/stat manualmente, mudar permissões ou instalar ferramentas.
+3. Se I0 funcionar, não tocar no celular/código, abrir Configurações, iniciar
+   câmera, recarregar ou mudar rede. Aguardar cerca de 30 s e executar I1 e a
+   comparação no mesmo PowerShell/módulo. Informar intervalo real ou aproximado.
+4. Devolver HEAD/status da ferramenta, versão PowerShell, JSON de I0/I1/comparação,
+   fases/marcadores, câmera/revisão/retomada, recarga/reinício/erro percebidos.
+   Relatórios têm só categorias/contagens, sem paths ou conteúdo de arquivos.
+
+Esperado: Tool inventario-1 nas saídas; nenhuma abertura de câmera, revisão ou
+retomada. **Não existe quantidade esperada de arquivos nem delta zero obrigatório.**
+Mudança de cache/bundle/eventos pode ocorrer sem OCR: registrar e analisar, sem
+chamá-la de vazamento ou arquivo seguro por nome. Igualdade de tamanho/mtime não
+prova igualdade de conteúdo nem ausência de temporários. I0/I1 ainda não executados.
+Somente após analisar esse retorno será conduzido o próximo cenário de captura.
+
 ### M0 — manifesto efetivo, sem exportar APK
 
 Se o autor ainda possui o APK local do build já instalado, e seu hash foi
@@ -130,7 +186,8 @@ Em pasta Git existente, com destino novo e inexistente:
 
 ```powershell
 git fetch origin docs/task-07-inspecao-privacidade
-git worktree add --detach C:\dev\aferi-task07-privacidade FETCH_HEAD
+git cat-file -e '583f61fa4a444d944e31178829706313b1b86795^{commit}'
+git worktree add --detach C:\dev\aferi-task07-privacidade 583f61fa4a444d944e31178829706313b1b86795
 cd C:\dev\aferi-task07-privacidade
 git rev-parse HEAD
 git status --short
@@ -312,10 +369,10 @@ ferramenta de rede/versao/filtro; destinos por alias/porta/contagens ou NE;
 reconexao e recarga/reinicio; observacao e alcance; impedimento/proxima analise.
 ```
 
-Estado inicial desta etapa: revisão de código e dependências realizada; coletor
-validado com fixtures; P0 solicitado e ainda sem retorno registrado. Inventários,
-O/Q e UID/destinos novos **não executados**, sem datas/horários ou resultados
-atribuídos ao Samsung. Observações históricas continuam com suas fontes e limites.
+Estado atualizado: P0 recebido e analisado acima; fonte f057283 limpa e
+estado idle/câmera desligada compatíveis com o controle inicial. Coletor validado
+com fixtures/CI, ainda não executado no Samsung. I0/I1, O/Q e UID/destinos novos
+**não executados**; demais observações históricas mantêm suas fontes e limites.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 

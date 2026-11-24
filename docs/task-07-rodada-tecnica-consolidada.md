@@ -451,3 +451,12 @@ Coletor PowerShell inventario-1 compara metadados em memória, sem ler conteúdo
 ou expor caminhos nos relatórios. P0 solicitado, sem retorno físico registrado;
 rede por UID/destino ainda sem ferramenta qualificada. Não executar toda a matriz
 sem condução nem repetir A–K/R1/R2. Habilitação clínica continua bloqueada.
+
+
+Retorno posterior P0 recebido: fonte f057283 limpa, ADB 1.0.41/pacote 37.0.1,
+Samsung SM-S731B/Android 17/API 37, demo UID 10033 e bundle 86017456… reconfirmados.
+Metro aberto; demo aberta para conferir captura-5/nao-carregado/idle, câmera
+sem uso/revisão antiga e Fast Refresh desligado. associacao-1 ausente é compatível
+com a fonte antiga. Reinstalação desconhecida e APK atual sem hash reconfirmado;
+rede por UID/destinos sem ferramenta identificada. [Análise e próximo controle I](task-07-inspecao-privacidade-localidade.md#retorno-p0--identidade-e-estado-inicial-recebidos),
+sem câmera/OCR ou troca de JS/APK; não presume conformidade ou conclusão de tarefa.
