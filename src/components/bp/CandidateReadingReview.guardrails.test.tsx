@@ -24,12 +24,15 @@ beforeEach(() => jest.clearAllMocks());
 test('confirmação em andamento bloqueia edição e data; duplo toque não envia duas vezes', async () => {
   await render(<Harness />); await fireEvent.press(screen.getByRole('button', { name: 'Carregar caso sintético' }));
   await fireEvent.press(screen.getByRole('button', { name: 'Confirmar e salvar medição' }));
+  expect(screen.getByText('Confirmação em andamento. Aguarde.')).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Confirmar e salvar medição' })).toBeDisabled();
   expect(screen.getByLabelText('Sistólica').props.editable).toBe(false);
   expect(screen.getByLabelText('Observação').props.editable).toBe(false);
   expect(screen.getByRole('button', { name: /Data e hora:/ })).toBeDisabled();
   await fireEvent.press(screen.getByRole('button', { name: 'Confirmar e salvar medição' })); expect(confirm).toHaveBeenCalledTimes(1);
   await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' })); acknowledge(true);
   expect(await screen.findByText('Revisão cancelada. Candidatos descartados.')).toBeTruthy();
+  expect(screen.queryByText('Confirmação em andamento. Aguarde.')).toBeNull();
   expect(screen.queryByText('Medição salva após confirmação explícita.')).toBeNull();
 });
 test('campos assistidos não solicitam autocomplete ou correção automática do navegador', async () => {

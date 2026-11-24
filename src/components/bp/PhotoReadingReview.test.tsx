@@ -26,6 +26,35 @@ test('rotula simulação, mostra campos editáveis e confirma só em memória', 
   expect(screen.queryByLabelText('Sistólica')).toBeNull();
 });
 
+test('explica disponibilidade e motivo da confirmação sem depender do botão desabilitado', async () => {
+  await render(<PhotoReviewDemoScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Simular candidatos completos' }));
+  expect(screen.getByText('Confirmação disponível. Confira os valores antes de confirmar.')).toBeTruthy();
+  await fireEvent.changeText(screen.getByLabelText('Sistólica'), '70');
+  const explanation = 'Confirmação indisponível. Sistólica: A sistólica deve ser maior que a diastólica.';
+  expect(screen.getByText(explanation).props.accessibilityLiveRegion).toBe('polite');
+  const button = screen.getByRole('button', { name: 'Confirmar simulação' });
+  expect(button).toBeDisabled();
+  expect(button.props.accessibilityHint).toBe(explanation);
+  await fireEvent.press(button);
+  expect(screen.queryByText('Confirmação demonstrada somente em memória.')).toBeNull();
+  await fireEvent.changeText(screen.getByLabelText('Sistólica'), '130');
+  expect(screen.queryByText(explanation)).toBeNull();
+  expect(screen.getByText('Confirmação disponível. Confira os valores antes de confirmar.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Confirmar simulação' }));
+  expect(screen.getByText('130 por 80 mmHg')).toBeTruthy();
+  expect(screen.queryByText(/Confirmação disponível\./)).toBeNull();
+});
+
+test('explicação de confirmação indisponível é descartada ao cancelar', async () => {
+  await render(<PhotoReviewDemoScreen />);
+  await fireEvent.press(screen.getByRole('button', { name: 'Simular campo incerto' }));
+  expect(screen.getByText('Confirmação indisponível. Sistólica: Informe a sistólica.')).toBeTruthy();
+  await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+  expect(screen.queryByText(/Confirmação indisponível\./)).toBeNull();
+  expect(screen.getByText('Revisão cancelada. Candidatos descartados.')).toBeTruthy();
+});
+
 test('incerteza é textual e vazio; preenchimento habilita; cancelar descarta', async () => {
   await render(<PhotoReviewDemoScreen />);
   await fireEvent.press(screen.getByRole('button', { name: 'Simular campo incerto' }));
