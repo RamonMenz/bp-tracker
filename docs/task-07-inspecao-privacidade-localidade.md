@@ -27,7 +27,7 @@ e a worktree do PR #74 foram preservadas. Sem acesso a outro chat ou Windows.
 | DataTransport | runtime 2.2.6 / backend-cct 2.3.3 na árvore recebida anteriormente | Banco técnico/envio possíveis; conteúdo não inspecionado |
 | Samsung histórico | SM-S731B, Android/API 17/37 relatados | Reconfirmar P0; não presumir estado atual |
 | APK/bundle históricos | Identidades no [ciclo de vida](task-07-ciclo-vida-samsung.md) | Hash de arquivo não comprova todo runtime nem privacidade |
-| Coletor desta etapa | inventario-1, PowerShell 7.5.4/Linux nos checks | Windows PowerShell/ADB/Samsung ainda sem execução |
+| Coletor desta etapa | inventario-1, PowerShell 7.5.4/Linux nos checks | Windows PowerShell 5.1/ADB/Samsung executados pelo autor no grupo I; ver retorno |
 
 ## Caminho revisado e diagnóstico
 
@@ -133,7 +133,7 @@ foto, useCandidateReview.ts e photo-android.native.ts. Hook, coordenador e tela
 têm diferenças do diagnóstico associacao-1; não tratar os dois JS como idênticos.
 O primeiro controle não inicia modalidade e não exige esse diagnóstico.
 
-### Próximo grupo I — capacidade do coletor e controle sem modalidade
+### Procedimento do grupo I — executado, retorno abaixo
 
 Preservar Metro e fonte f057283. Usar o PowerShell de comandos, não o terminal
 ocupado pelo Metro. Preparar a worktree **só de ferramentas** conforme seção
@@ -157,8 +157,93 @@ Esperado: Tool inventario-1 nas saídas; nenhuma abertura de câmera, revisão o
 retomada. **Não existe quantidade esperada de arquivos nem delta zero obrigatório.**
 Mudança de cache/bundle/eventos pode ocorrer sem OCR: registrar e analisar, sem
 chamá-la de vazamento ou arquivo seguro por nome. Igualdade de tamanho/mtime não
-prova igualdade de conteúdo nem ausência de temporários. I0/I1 ainda não executados.
-Somente após analisar esse retorno será conduzido o próximo cenário de captura.
+prova igualdade de conteúdo nem ausência de temporários. O retorno deste grupo
+está registrado abaixo; não repetir por rotina.
+
+## Retorno I — coletor no Windows e controle idle
+
+Registro em 24/11/2026; fonte: saídas do terminal e complemento do autor.
+Data/hora da execução não informadas, sem inspeção direta pelo Codex. Caminhos
+pessoais e progresso de download não foram arquivados como evidência de teste.
+
+| Item | Resultado recebido | Alcance |
+|---|---|---|
+| Ferramentas | Worktree nova em 583f61fa4a444d944e31178829706313b1b86795; status sem saída | Fonte do coletor fixada, sem modificar cópia TalkBack do Metro |
+| PowerShell | 5.1.26100.9818 | Importação e chamadas New/Compare bem-sucedidas no ambiente do autor |
+| I0 | inventario-1, Id 1, Files 16 | Snapshot de arquivos regulares no escopo definido; sem leitura de conteúdo |
+| I1 | inventario-1, Id 2, Files 16 | Mesmo total e mesmas categorias de I0 |
+| Categorias em cada snapshot | bundle-dev-client-nome: 1; datatransport-nome: 2; outro-nao-classificado: 12; preferencia-mlkit-nome: 1 | Classificação por nome, sem determinar conteúdo, produtor ou causa |
+| Comparação | BeforeFiles 16; AfterFiles 16; ChangedEntries 0; Changes vazio | Sem adição/remoção ou mudança de tamanho/mtime detectadas nas entradas comparadas |
+| Espera | Start-Sleep -Seconds 30 concluído; autor informou sem pausa adicional | Espera programada, sem cronometragem integral entre snapshots; não atribuir exatamente 30 s a toda janela |
+| UI e recursos | Demo permaneceu idle; câmera desligada; sem revisão/retomada automática, recarga, reinício ou erro | Complemento explícito do autor; não inferido dos JSONs |
+
+**Grupo I positivo nesse alcance:** capacidade do coletor demonstrada em Windows
+PowerShell 5.1/ADB/Samsung e estabilidade dos metadados entre snapshots sem
+modalidade ativa. Não valida o coletor em todo Windows/firmware, captura/OCR,
+liberação física de RAM, conteúdo dos 12 arquivos não classificados, anonimização,
+logs, rede ou ausência de temporários entre consultas.
+
+As duas entradas DataTransport não significam necessariamente dois bancos;
+podem corresponder aos nomes de banco/auxiliares aceitos pela whitelist. Não
+foram retornados caminhos individuais, lidos bancos/prefs nem capturados eventos.
+Nenhum arquivo foi demonstrado seguro ou clínico por essa classificação. A
+preferência com nome ML Kit e o bundle já estavam presentes em I0; o controle
+não determina quando ou por que foram criados. Hash de mídia não foi solicitado.
+
+### Próximo grupo S/B — sucesso e background na mesma revisão
+
+Sem atualização de código/APK, npm, reload, rede, reverse ou opções de segurança.
+Usar fonte TalkBack f057283/Metro existentes e coletor inventario-1 em 583f61f.
+Se algo mudou desde P0/I, informar antes da captura; APK atual segue sem identidade
+reconfirmada e rede por UID/destino sem ferramenta qualificada. Habilitação
+clínica permanece bloqueada. Este ensaio usa só o cartão sintético arquivado.
+
+1. Conferir demo ativa, idle, sem revisão/câmera, captura-5 e Fast Refresh
+   desligado. Não exigir associacao-1. No PowerShell das ferramentas, executar
+   S0 e imprimir seu JSON. Se coletor falhar, parar antes de iniciar a câmera.
+2. Iniciar câmera **uma vez**. Esperado: Nativo preview-1, ready e preview visível.
+   Se diálogo de permissão, erro, marcador diferente ou câmera/preview anormais,
+   não capturar nem repetir: encerrar com segurança e retornar impedimento.
+3. Enquadrar somente cartão SYS 120 / DIA 80 / PUL 72, sem dados pessoais em volta,
+   e Capturar e reconhecer uma vez. Esperado: revisão/campos correspondem ao
+   cartão, câmera/preview encerrados. Não editar/confirmar. Sem revisão ou câmera
+   presa, parar; não preencher campos para contornar OCR nem repetir até acertar.
+4. Com revisão ainda ativa e câmera encerrada, executar S1 e comparar S0→S1.
+   Se comando falhar, cancelar a revisão para descarte, não fazer B; devolver erro.
+5. Somente se S terminou normalmente: manter a mesma revisão, usar Home uma vez
+   e retornar por Recentes, sem Iniciar/reload. Esperado: cancelled, câmera
+   desligada, campos antigos ausentes e nenhuma retomada automática. Observar
+   aproximadamente 5 s sem toque; informar janela efetiva/aproximada.
+6. Executar B1 e comparar S1→B1. S1 faz o papel de B0: não há captura adicional.
+   Se campos/câmera permanecerem indevidamente, cancelar/sair para segurança e
+   parar; registrar o comportamento anterior à correção manual, sem aprovar B.
+
+Comandos, **intercalados com as ações acima**, não como bloco para rodar de uma vez:
+
+```powershell
+$aferiS0 = New-AferiInventory -AdbPath $aferiAdb
+$aferiS0 | ConvertTo-Json -Depth 4
+# Depois de uma captura: revisão ativa, câmera/preview encerrados.
+$aferiS1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiS1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiS0.Id -After $aferiS1.Id | ConvertTo-Json -Depth 5
+# Depois de Home/Recentes e observação sem novo início.
+$aferiB1 = New-AferiInventory -AdbPath $aferiAdb
+$aferiB1 | ConvertTo-Json -Depth 4
+Compare-AferiInventory -Before $aferiS1.Id -After $aferiB1.Id | ConvertTo-Json -Depth 5
+```
+
+Manter mesmo módulo/PowerShell entre S0/S1/B1; não reimportar/limpar inventários
+até terminar ambas as comparações. IDs não precisam começar em 1 nem nomes de
+categorias/contagens precisam continuar iguais aos de I. Alterações são evidência
+a analisar; zero mudanças também não aprova privacidade. Não repetir só para
+obter resultado igual a I ou trocar classificações desconhecidas por suposição.
+
+Devolver os três JSONs e duas comparações; fase/Nativo/preview antes da captura,
+correspondência com o cartão sim/não, revisão/fase após OCR e câmera encerrada;
+Home/retorno, fase/campos/câmera/retomada, intervalo e erro/recarga/reinício.
+Sem screenshot, OCR bruto, conteúdo de arquivo ou valores reais. As regras de
+parada obrigatória continuam. S/B ainda não executados nesta rodada.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -369,10 +454,11 @@ ferramenta de rede/versao/filtro; destinos por alias/porta/contagens ou NE;
 reconexao e recarga/reinicio; observacao e alcance; impedimento/proxima analise.
 ```
 
-Estado atualizado: P0 recebido e analisado acima; fonte f057283 limpa e
-estado idle/câmera desligada compatíveis com o controle inicial. Coletor validado
-com fixtures/CI, ainda não executado no Samsung. I0/I1, O/Q e UID/destinos novos
-**não executados**; demais observações históricas mantêm suas fontes e limites.
+Estado atualizado: P0 e grupo I recebidos e analisados acima. Coletor executado
+pelo autor em Windows PowerShell 5.1; I0/I1 com 16 entradas estáveis e UI idle
+sem câmera/revisão/retomada/erro. Próximo grupo S/B preparado, ainda sem execução
+nesta rodada. O/Q e UID/destinos novos **não executados**; observações históricas
+mantêm suas fontes e limites.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 

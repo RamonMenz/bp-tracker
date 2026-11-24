@@ -460,3 +460,13 @@ sem uso/revisão antiga e Fast Refresh desligado. associacao-1 ausente é compat
 com a fonte antiga. Reinstalação desconhecida e APK atual sem hash reconfirmado;
 rede por UID/destinos sem ferramenta identificada. [Análise e próximo controle I](task-07-inspecao-privacidade-localidade.md#retorno-p0--identidade-e-estado-inicial-recebidos),
 sem câmera/OCR ou troca de JS/APK; não presume conformidade ou conclusão de tarefa.
+
+
+Retorno posterior I recebido: coletor inventario-1 em 583f61f limpa executado no
+Windows PowerShell 5.1.26100.9818. I0/I1 com 16 arquivos (1 bundle, 2 nomes de
+DataTransport, 12 não classificados, 1 preferência com nome ML Kit); zero
+mudanças de entrada/tamanho/mtime detectadas. Autor confirmou espera programada
+30 s sem pausa adicional, idle/câmera desligada, sem revisão/retomada/recarga/
+reinício/erro. [Evidência, alcance e próximo S/B](task-07-inspecao-privacidade-localidade.md#retorno-i--coletor-no-windows-e-controle-idle).
+Positivo para controle/capacidade, sem prova de conteúdo/temporários/rede/SDK/SO;
+S/B e demais grupos desta rodada ainda pendentes, habilitação clínica bloqueada.
