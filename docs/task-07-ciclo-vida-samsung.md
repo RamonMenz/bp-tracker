@@ -129,12 +129,12 @@ tratada como data/hora de execução quando esta não for informada.
 | L07a / L07b | Ambos passaram no alcance relatado | Preview: resultado anterior preservado. Revisão: edição 130 sem confirmar, retorno cancelled com mensagem de cancelamento, sem retomada por aproximadamente 5 s | V0 |
 | L08a / L08b | Passou / Passou no alcance relatado | Preview: resultado anterior preservado. Revisão: cartão 120/80/72, câmera já encerrada, edição 130 sem confirmar; retorno cancelled e campos ausentes, sem retomada por aproximadamente 5 s | V0 |
 | L09a / L09b | Ambos passaram para relayout | Preview: resultado anterior preservado. Revisão: reviewing/edição 130 preservados, câmera desligada, sem captura/confirmação automáticas; campos descartados ao cancelar. Recriação real continua NE | V0 |
-| L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
+| L10 | Passou no alcance relatado | Voltar levou à tela inicial; retorno por Recentes em idle/nao-carregado, câmera/preview desligados e sem campos/retomada por aproximadamente 5 s. Destruição da Activity/processo não demonstrada | V0 |
 | L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
 | L12 | Passou no alcance relatado | Uma revisão correta; botão desabilitou após primeiro toque; câmera encerrada e cancelled, sem reaparecimento por aproximadamente 5 s. Cliques adicionais não foram aceitos | V0 |
 | L13 | Passou no alcance relatado, após esclarecimento | Edição sumiu ao recapturar, uma abertura sem OCR automático e cancelled com câmera encerrada; autor corrigiu o sim inicial: leu desapareceu e confirmou que revisão/edição NÃO reapareceram | V0 |
 | L14 | NE | Tardio precisa ser distinguível, senão só teste controlado | V0 |
-| L15 | NE | Closing pode ser rápido demais para interação | V0 |
+| L15 | Passou para bloqueio observável na UI | closing no gesto, Iniciar desabilitado, nenhuma abertura; final cancelled/câmera encerrada, sem novo toque por aproximadamente 5 s. ACK/exclusão/liberação física não comprovados | V0 |
 | L16 | NE | Não induzir falha no Samsung; parada obrigatória se ocorrer | V0 |
 
 ### Retorno G0 — versão e carregamento confirmados
@@ -371,10 +371,36 @@ e esses cancelamentos não comprovam toda a barreira de reabertura L15 nem
 cleanup falho L16. L01/L05 de permissão continuam NE nesta rodada. Testes
 controlados desses casos não são promovidos a execução física.
 
-**G4b liberado:** L15 (uma tentativa de observar bloqueio durante closing) e,
+Na análise de G3a foi liberado G4b: L15 (uma tentativa de observar bloqueio durante closing) e,
 se o encerramento for normal, L10 (uma saída/retorno por Voltar Android).
 Sem Capturar/OCR neste grupo. Closing rápido demais ou destino que não permita
 retorno à demo ficam documentados como limite, sem repetir até acertar.
+
+### Retorno G4b — bloqueio em closing e saída por Voltar
+
+Fonte: dois relatos separados do autor. Baseline V0 herdada; sem nova coleta
+de hashes/HEAD por cenário. Data/hora de execução não informadas.
+
+| Caso | Retorno recebido | Resultado |
+|---|---|---|
+| L15 | closing observável e no instante do gesto; Iniciar desabilitado; nenhuma nova abertura; final cancelled com câmera/preview fechados; aproximadamente 5 s sem toque; nenhum erro percebido | Passou para bloqueio observável na UI durante closing |
+| L10 | Voltar levou à tela inicial do celular; retorno por Recentes em idle/nao-carregado; câmera/preview desligados; sem campos antigos/retomada por aproximadamente 5 s; nenhum comportamento/erro percebido | Passou no alcance relatado para saída/retorno |
+
+Em L15, o botão bloqueou a interação, não foram demonstrados callbacks de
+início concorrentes aceitos. Não tratar esse resultado como ACK físico ou prova
+de liberação de todos os recursos do reconhecedor. Em L10, idle/nao-carregado
+é compatível com nova inicialização, mas não prova morte do processo ou
+destruição da Activity; não contradiz a ausência de reinício percebido pelo autor.
+Nenhum defeito relatado justifica alteração funcional ou nova regressão.
+
+L01/L05 (cancelamento/permissão tardia) continuam NE nesta rodada. L14 precisa
+de conclusão antiga distinguível; L16 não será provocado no hardware. L04
+positivo e ACKs simulados não concluem essas pendências. Recriação real por
+rotação e privacidade SDK/SO também permanecem sem homologação.
+
+**Próxima etapa: preparar permissão negada para G3b, sem Iniciar câmera.**
+Isso pode reiniciar a demo; conferir carregamento/versão antes de solicitar
+novo diálogo. Não limpar dados, reinstalar ou reabrir múltiplas solicitações.
 
 ### Execução controlada desta preparação
 
@@ -411,7 +437,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G4b (L15/L10), sem Capturar/OCR.
+atual de condução é preparação de G3b, sem Iniciar câmera.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -646,7 +672,7 @@ UI cancelada não comprovam cleanup físico. Não confirmar/salvar valores.
 Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
 inesperado; não executar o segundo caso se o primeiro falhar nem usar bypass.
 
-**Grupo atual G4b: L15 + L10, sem Capturar/OCR.** Mesma cópia/Metro, Fast Refresh
+**Procedimento G4b, já executado: L15 + L10, sem Capturar/OCR.** Mesma cópia/Metro, Fast Refresh
 desligado e cartão sintético como alvo do preview. Uma tentativa por caso.
 
 1. L15: iniciar uma vez e esperar ready/preview-1. Cancelar captura e observar
@@ -675,6 +701,28 @@ recarga/reinício percebidos, intervalo e erro. Não presumir Activity destruíd
 por sair da tela. Se uso ativo da câmera não encerrar ao sair, interromper
 o ensaio sem iniciar novamente. Valem todas as regras de parada/bloqueio,
 sem bypass/reload/reinstalação, e nenhuma confirmação de valores.
+
+**Etapa atual: preparação G3b, sem executar L01/L05 ainda.** Com câmera desligada,
+Metro aberto e cópia preservada, abrir Informações do app somente do cliente
+Aferi — captura em avaliação (com.ramonmenz.afericapturetest). Em Permissões →
+Câmera, selecionar Não permitir. Não alterar permissões do produto principal,
+limpar dados/cache ou reinstalar. Se não identificar o cliente com segurança,
+parar e relatar. Voltar à demo pela forma usual; se não voltar diretamente,
+usar `a` no Metro uma vez para abrir o cliente existente, sem Iniciar câmera.
+
+Conferir captura-5, estado inicial/câmera desligada e Fast Refresh desligado.
+Se surgir diálogo de câmera sem gesto Iniciar, não conceder por tentativa;
+parar e informar. Recolher HEAD/status e hash do bundle após esse carregamento
+pelos comandos G0 já documentados, usando Terminal 2 para não parar o Metro.
+Esperado: fonte f057283 limpa e bundle 86017456…; hash diferente não é falha
+automática, exige identificar a fonte, sem recarregar até coincidir. A revogação
+não instala outro APK; novo hash de APK só se houver reinstalação/mudança.
+
+Devolver: cliente identificado, permissão Não permitir aplicada, HEAD/status,
+hash JS ou erro, estado/Nativo/câmera, Fast Refresh e reinício/diálogo inesperado.
+Não tocar em Iniciar/Capturar. L01/L05 serão conduzidos após esse retorno,
+sem confundir autorização nas Configurações com concessão da mesma solicitação
+pendente depois de cancelar; se o SO não preservar esse diálogo, registrar NE.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar

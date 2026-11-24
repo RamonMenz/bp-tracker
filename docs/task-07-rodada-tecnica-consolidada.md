@@ -151,6 +151,14 @@ sem revisão/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
 sem instrumentação temporal do SDK, liberação física comprovada ou conclusão
 de L14/L15/L16. Próximo grupo G4b: L15/L10, closing e saída/retorno, sem OCR.
 
+Retorno posterior G4b: L15 passou para bloqueio de UI em closing (Iniciar
+desabilitado, nenhuma abertura, cancelled/câmera fechada). L10 passou no alcance
+relatado: Voltar → tela inicial → Recentes → idle/nao-carregado, câmera desligada
+e sem campos/retomada por aproximadamente 5 s, sem comportamento/erro percebido.
+[Evidências e limites](task-07-ciclo-vida-samsung.md#retorno-g4b--bloqueio-em-closing-e-saída-por-voltar).
+Sem prova de ACK físico, morte de processo ou destruição de Activity. Próxima
+etapa é só preparar permissão negada para G3b; L01/L05 ainda não executados.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |
