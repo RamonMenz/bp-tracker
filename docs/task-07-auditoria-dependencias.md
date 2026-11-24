@@ -251,6 +251,11 @@ firmware Samsung, mas impedem presumir um filtro seguro por tentativa.
 
 ## Próxima observação — uso de dados do app na interface Samsung
 
+**Replanejamento em 24/11/2026:** T0/T1/T2 passa a ser opcional, sem impedir o
+avanço técnico. O [roteiro consolidado](task-07-rodada-tecnica-consolidada.md)
+prioriza testes controlados e dois complementos físicos, preservando abaixo o
+protocolo original e suas limitações. Nenhuma medição T0/T1/T2 foi recebida.
+
 Este é um ensaio complementar proposto, **ainda não executado**. Não substitui
 auditoria de payload/destinos, nem a medição precisa por UID, que continua
 indisponível pelo comando consultado. Não pede nova build ou instalação.

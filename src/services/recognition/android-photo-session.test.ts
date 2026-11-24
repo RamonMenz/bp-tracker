@@ -98,3 +98,58 @@ test('desmontagem libera e ignora resultado tardio', async () => {
   const t = setup(); await t.ready(); t.session.dispose(); await t.session.settled();
   expect(t.ports.close).toHaveBeenCalled(); expect(t.result).not.toHaveBeenCalled(); expect(t.session.start()).toBe(false);
 });
+
+test('cancelar abertura ignora status tardios enquanto uma nova tentativa abre', async () => {
+  const t = setup();
+  t.session.start(); await flush();
+  const old = t.state().attemptId;
+  expect(t.state().phase).toBe('opening');
+  await t.session.cancel();
+  expect(t.state().phase).toBe('cancelled');
+  expect(t.ports.recognize).not.toHaveBeenCalled();
+  expect(t.session.start()).toBe(true); await flush();
+  const next = t.state().attemptId;
+  expect(next).not.toBe(old);
+  t.session.status(old, 'ready');
+  t.session.status(old, 'camera-failed'); await flush();
+  expect(t.state().phase).toBe('opening');
+  expect(t.session.capture()).toBe(false);
+  t.session.status(next, 'ready'); await flush();
+  expect(t.state().phase).toBe('ready');
+  await t.session.cancel();
+  expect(t.result).not.toHaveBeenCalled();
+});
+
+test('cancelar durante fechamento descarta candidatos já calculados e exige novo gesto', async () => {
+  const t = setup(); let release!: (value: boolean) => void;
+  t.ports.close.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  await t.ready(); t.session.capture(); await flush();
+  expect(t.state().phase).toBe('closing');
+  const cancellation = t.session.cancel();
+  expect(t.session.start()).toBe(false);
+  release(true); await cancellation;
+  expect(t.state().phase).toBe('cancelled');
+  expect(t.result).not.toHaveBeenCalled();
+  expect(t.ports.open).toHaveBeenCalledTimes(1);
+  expect(t.session.start()).toBe(true); await flush();
+  expect(t.ports.open).toHaveBeenCalledTimes(2);
+  await t.session.cancel();
+});
+
+test.each(['permission', 'opening'])('timeout em %s fecha e permite somente novo início explícito', async phase => {
+  jest.useFakeTimers();
+  const t = setup();
+  if (phase === 'permission') t.ports.requestPermission.mockImplementationOnce(() => new Promise(() => {}));
+  t.session.start(); await flush();
+  expect(t.state().phase).toBe(phase);
+  await jest.advanceTimersByTimeAsync(phase === 'permission' ? 30000 : 20000);
+  await t.session.settled();
+  expect(t.state()).toMatchObject({ phase: 'cancelled', issue: 'timeout' });
+  expect(t.ports.close).toHaveBeenCalledTimes(1);
+  expect(t.ports.recognize).not.toHaveBeenCalled();
+  expect(t.result).not.toHaveBeenCalled();
+  const previousOpens = t.ports.open.mock.calls.length;
+  expect(t.session.start()).toBe(true); await flush();
+  expect(t.ports.open).toHaveBeenCalledTimes(previousOpens + 1);
+  await t.session.cancel();
+});
