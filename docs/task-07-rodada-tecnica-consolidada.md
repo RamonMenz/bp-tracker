@@ -116,6 +116,19 @@ final funcional. [Evidência e limites](task-07-ciclo-vida-samsung.md#retorno-g2
 Recriação real continua não executada. Próximo grupo G4a: L12/L13 com cartão
 sintético, sem confirmar; resultados ainda não recebidos.
 
+Retorno posterior G4a: L12 passou no alcance relatado — botão desabilitado ainda
+durante OCR, uma revisão correta e descarte após cancelar. L13 teve edição
+descartada ao recapturar, uma abertura sem OCR automático, cancelled/câmera
+encerrada, mas revisão/edição antiga teria reaparecido após cancelar.
+[Falha relatada sob esclarecimento e teste controlado](task-07-ciclo-vida-samsung.md#retorno-g4a--captura-bloqueada-durante-processamento-e-dúvida-de-descarte).
+Novas capturas pausadas; não aprovar L13 ou liberar próximo grupo até análise.
+
+Esclarecimento posterior do autor: leu desapareceu e respondeu sim por engano;
+revisão/edição antiga NÃO reapareceu. L13 passou no alcance corrigido, sem nova
+captura, sem defeito constatado ou alteração funcional. Pausa encerrada; teste
+dirigido do hook passou e fica como cobertura adicional, sem homologar hardware.
+Próximo grupo G2c: L06b/L08b, Home/bloqueio na revisão, ainda não executados.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |

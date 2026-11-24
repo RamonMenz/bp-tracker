@@ -131,8 +131,8 @@ tratada como data/hora de execução quando esta não for informada.
 | L09a / L09b | Passou para relayout / NE | Rotação efetiva, ready/preview-1 preservados sem interrupção/reinício ou captura automática; cancelamento final encerrou câmera. Recriação real continua NE | V0 |
 | L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
 | L11 | Passou no alcance relatado | Uma abertura percebida, Iniciar desabilitado enquanto ocupado; cancelamento → cancelled e câmera encerrada; sem revisão/retomada por aproximadamente 5 s. Contagem nativa não demonstrada | V0 |
-| L12 | NE | Observação de UI não basta para contagem nativa | V0 |
-| L13 | NE | Descarte da edição é observável, concorrência interna pode não ser | V0 |
+| L12 | Passou no alcance relatado | Uma revisão correta; botão desabilitou após primeiro toque; câmera encerrada e cancelled, sem reaparecimento por aproximadamente 5 s. Cliques adicionais não foram aceitos | V0 |
+| L13 | Passou no alcance relatado, após esclarecimento | Edição sumiu ao recapturar, uma abertura sem OCR automático e cancelled com câmera encerrada; autor corrigiu o sim inicial: leu desapareceu e confirmou que revisão/edição NÃO reapareceram | V0 |
 | L14 | NE | Tardio precisa ser distinguível, senão só teste controlado | V0 |
 | L15 | NE | Closing pode ser rápido demais para interação | V0 |
 | L16 | NE | Não induzir falha no Samsung; parada obrigatória se ocorrer | V0 |
@@ -250,10 +250,58 @@ regressão justificada. Não comprova cleanup interno de SDK/RAM, ausência de
 persistência/telemetria, OCR interrompido, resultados tardios, variantes de
 revisão L08b/L09b ou aprovação integral de TASK-07/10/18.
 
-**G4a liberado:** somente L12 (Capturar repetido) e, se normal, L13 (Tirar outra
-fotografia repetido). Ambos continuam NE até retorno. São casos observáveis de
+Na análise de G2b foi liberado G4a: somente L12 (Capturar repetido) e, se
+normal, L13 (Tirar outra fotografia repetido). São casos observáveis de
 captura/revisão com cartão sintético; fases rápidas de G3 e falha de cleanup
 não são presumidas testadas. Nenhuma confirmação/escrita solicitada.
+
+### Retorno G4a — captura bloqueada durante processamento e dúvida de descarte
+
+Fonte: relato do autor, baseline V0 herdada, sem nova coleta de hashes/HEAD
+por cenário; data/hora de execução não informadas.
+
+- L12: uma revisão, campos conferem com o cartão; OCR ainda não havia terminado,
+  mas botão ficou desabilitado, impedindo clicar mais de uma vez. Câmera/preview
+  encerraram; cancelled após cancelar; sem revisão/valores antigos reaparecendo
+  por aproximadamente 5 s sem novos toques; nenhum comportamento/erro percebido.
+  Passou para bloqueio observável do botão e descarte; não demonstra callbacks
+  concorrentes aceitos, exclusão interna nativa ou liberação física do SDK.
+- L13: edição sintética 130 desapareceu ao recapturar; uma nova abertura
+  percebida, sem captura automática; cancelled e câmera/preview encerrados após
+  cancelar. Porém respondeu sim à pergunta sobre revisão/edição antiga
+  reaparecer, durante aproximadamente 5 s, embora sem erro percebido.
+  O reaparecimento relatado contradiz o critério de descarte: não aprovar L13.
+
+**Pausa inicialmente aplicada.** Solicitado esclarecimento sem repetir o
+ensaio: quais elementos reapareceram (campos com 130, valores originais, somente
+mensagem/painel ou erro de preenchimento do relato), antes/depois de Cancelar e
+se continuam visíveis. Não interpretar silêncio como correção do relato; não
+pedir screenshot, reload, reinstalação ou nova captura para reproduzir.
+
+Inspeção do caminho próprio: cancel limpa draft/candidates/confirmed e invalida
+tentativa; receive só aceita revisão waiting da tentativa atual. Acrescentado
+teste dirigido ao hook: uma captura sintética, edição 130, três recapturas,
+novo ready, cancelamento e eventos/handler antigos. Estado final cancelled sem
+draft/candidates/confirmed; apenas um recognize. Os 14 testes do hook passaram,
+incluindo esse novo caso. Resultado com portas simuladas não reproduziu a
+restauração no hook e não refuta a observação de aparelho/UI/SDK. Não foi feita
+correção funcional nem presumida causa. ACK simulado não comprova recursos
+físicos liberados.
+
+**Esclarecimento posterior recebido:** autor informou ter lido desapareceu na
+pergunta sobre reaparecimento. Corrigiu explicitamente: revisão/edição antiga
+NÃO reapareceu. A resposta inicial permanece documentada como erro de leitura
+do relato, não defeito constatado do app. L13 passou no alcance relatado após
+essa correção, sem repetição de captura. Pausa encerrada; nenhum defeito/correção
+funcional presumido. O teste dirigido fica como cobertura adicional do descarte.
+
+Verificação após o retorno: lint, TypeScript e 731 testes/66 suítes aprovados
+(um novo teste do hook); hook com 14 testes aprovados, portas simuladas. Links
+e whitespace conferidos. Nenhum teste simulado comprova cleanup físico.
+
+**Próximo grupo G2c liberado:** somente L06b (Home na revisão) e, se normal,
+L08b (bloqueio na revisão), com cartão sintético e edição 130, sem confirmar.
+Ambos continuam NE até devolução; não repetir L12/L13 ou hashes por rotina.
 
 ### Execução controlada desta preparação
 
@@ -290,7 +338,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G4a (L12/L13), descrito ao final desta seção.
+atual de condução é G2c (L06b/L08b), após esclarecimento de L13.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -419,7 +467,7 @@ sem evidência específica, recriação real permanece não executada/inconclusi
 Parar diante de câmera presa, concorrência ou cleanup falho; não fazer o segundo
 caso se o primeiro falhar nem usar reload/reinstalação/bypass.
 
-**Grupo atual G4a: L12 + L13, cartão sintético e confirmação não solicitada.**
+**Procedimento G4a, já executado; L13 esclarecido sem reteste.**
 Manter Metro, cópia TalkBack e Fast Refresh desligado. Não trocar código/APK,
 não recarregar, não usar imagem de medidor real nem confirmar valores.
 
@@ -446,6 +494,28 @@ enquanto ocupado, declarar; observação sem erro não comprova exclusão nativa
 Se não houver revisão em L12 ou na preparação de L13, parar e descrever, sem
 inventar campos ou preencher manualmente para contornar. As regras de parada
 por câmera presa, concorrência ou cleanup falho continuam obrigatórias.
+
+**Grupo atual G2c: L06b + L08b, revisão do cartão sintético, sem confirmar.**
+Manter cópia/Metro e Fast Refresh desligado. O alerta L13 foi esclarecido pelo
+autor; não houve alteração de código/APK para continuar.
+
+1. L06b: iniciar e capturar uma vez o cartão 120/80/72. Conferir revisão e
+   câmera/preview encerrados; editar somente SYS para 130, sem confirmar. Ir
+   por Home e retornar por Recentes, sem Iniciar. Observar aproximadamente 5 s.
+   Esperado: cancelled, campos/revisão/edição antiga ausentes, câmera desligada
+   e nenhuma retomada automática.
+2. L08b, apenas se o anterior terminou normalmente: iniciar por novo gesto e
+   capturar uma vez o mesmo cartão; na revisão, com câmera encerrada, editar
+   SYS para 130 sem confirmar. Bloquear pelo botão lateral, desbloquear e voltar
+   à demo sem Iniciar. Observar aproximadamente 5 s. Mesmo descarte esperado.
+
+Devolver cada caso: revisão obtida, câmera desligada antes de sair, edição
+sintética feita, fase no retorno, campos/edição antigos presentes ou ausentes,
+retomada automática, intervalo aproximado/medido e recarga/reinício/erro percebido.
+Se revisão/câmera não estiverem como esperado na preparação, parar; não preencher
+campos para contornar falha do OCR. Sem imagens/PIN/áudio/logs clínicos.
+Parar por câmera presa, concorrência, blocked/cleanup-failed/resource-busy
+inesperado, sem reload/reinstalação/bypass. Não confirmar ou salvar valores.
 
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar
