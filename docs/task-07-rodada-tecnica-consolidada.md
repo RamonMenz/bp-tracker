@@ -439,3 +439,15 @@ presença impede presumir telemetria exclusivamente anônima/agregada; requer
 avaliação frente à constituição. Não afirmar que valores clínicos são enviados
 nem que os eventos contêm apenas métricas. Nenhuma API de SDK foi alterada ou
 desabilitada por tentativa; auditoria de dados, destinos e runtime segue aberta.
+
+
+## Inspeção dirigida de privacidade e localidade — continuidade
+
+Em 24/11/2026, sobre staging 81af92f, foi preparado o
+[diagnóstico e protocolo TASK-04/06/07/18](task-07-inspecao-privacidade-localidade.md).
+PR #74 permanece aberto no início dessa etapa e foi consultado como evidência,
+sem presumir merge; nova branch docs/task-07-inspecao-privacidade independente.
+Coletor PowerShell inventario-1 compara metadados em memória, sem ler conteúdo
+ou expor caminhos nos relatórios. P0 solicitado, sem retorno físico registrado;
+rede por UID/destino ainda sem ferramenta qualificada. Não executar toda a matriz
+sem condução nem repetir A–K/R1/R2. Habilitação clínica continua bloqueada.
