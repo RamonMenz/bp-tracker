@@ -42,6 +42,8 @@ export function useAndroidPhotoReview() {
   // Somente codigos de controle limitados a 18 entradas em memoria. Nunca incluir
   // observacoes, candidatos, texto OCR, valores clinicos ou excecoes de SDK.
   const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
+  // Uma única projeção da revisão atual, nunca no histórico de eventos.
+  const [interpretationDiagnostic, setInterpretationDiagnostic] = useState<readonly string[]>([]);
   const diagnosticMounted = useRef(true);
   const record = useCallback((code: string) => {
     if (diagnosticMounted.current) setDiagnostics(previous => [...previous.slice(-17), code]);
@@ -87,8 +89,10 @@ export function useAndroidPhotoReview() {
         if (next.issue) record(`falha:${next.issue}`);
         setCaptureState(next);
       }
-    }, (_attemptId, candidates) => {
-      if (sessions.session === session) review.receive(access.attempt(), candidates);
+    }, (_attemptId, candidates, diagnostic) => {
+      if (sessions.session === session && review.receive(access.attempt(), candidates)) {
+        setInterpretationDiagnostic(diagnostic);
+      }
     });
     sessions.session = session;
     record('sessao:criada');
@@ -110,6 +114,7 @@ export function useAndroidPhotoReview() {
       record(`app:${safeAppState(state)}`);
       if (state !== 'active') {
         record('cancelamento:mudanca-do-app');
+        setInterpretationDiagnostic([]);
         review.cancel(); void session.cancel();
       }
     });
@@ -142,23 +147,36 @@ export function useAndroidPhotoReview() {
       }
       const accepted = session.start();
       record(accepted ? 'inicio:aceito' : 'inicio:recusado');
-      if (accepted) access.setAttempt(review.recapture());
+      if (accepted) {
+        setInterpretationDiagnostic([]);
+        access.setAttempt(review.recapture());
+      }
     } catch {
       record('modulo:falha');
       setCaptureState({ phase: 'failed', attemptId: 0, issue: 'unsupported' });
     }
     return access.attempt();
   }
-  function cancel() { record('toque:cancelar'); review.cancel(); void sessionsRef.current.session?.cancel(); }
+  function cancel() {
+    record('toque:cancelar'); setInterpretationDiagnostic([]);
+    review.cancel(); void sessionsRef.current.session?.cancel();
+  }
+  async function confirm() {
+    const confirmed = await review.confirm();
+    if (confirmed && diagnosticMounted.current) setInterpretationDiagnostic([]);
+    return confirmed;
+  }
   const onStatus = useCallback((attemptId: number, code: string) => {
     record(`nativo:${safeNativeStatus(code)}`);
     sessionsRef.current.session?.status(attemptId, code);
   }, [record]);
   const busy = ['permission', 'opening', 'ready', 'recognizing', 'closing', 'blocked'].includes(captureState.phase);
-  return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+  return { review: { ...review, recapture: start, cancel, confirm, recaptureDisabled: busy }, captureState,
     binding, attachCamera, start,
     capture: () => { record('toque:capturar'); return sessionsRef.current.session?.capture() ?? false; },
-    onStatus, busy, diagnostics, diagnosticVersion: 'captura-5' as const,
+    onStatus, busy, diagnostics,
+    interpretationDiagnostic: review.state.phase === 'reviewing' ? interpretationDiagnostic : [],
+    diagnosticVersion: 'captura-5' as const,
     diagnosticNativeRevision: binding?.nativeRevision ?? 'nao-carregado',
     diagnosticAppState: safeAppState(AppState.currentState) };
 }

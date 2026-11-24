@@ -1,5 +1,12 @@
 # TASK-07 — continuidade, rodada técnica e resultados consolidados
 
+> **Retomada posterior em 24/11/2026:** PR #71 confirmado mesclado, fonte
+> `e7256ad`, merge/staging `a3b996a`. O retrato Git abaixo preserva a consulta
+> anterior ao merge. Continuidade em [diagnóstico de associação](task-07-diagnostico-associacao.md)
+> (novo JS `associacao-1`, sem alterar APK/parser) e na
+> [auditoria de serialização/transporte](task-07-auditoria-dependencias.md#serialização-e-transporte-do-identificador).
+> Sem nova execução física ou aceite de privacidade; não repetir A–K/R1/R2.
+
 Rodada técnica registrada em 24/11/2026, baseada na staging 8e2d132 (PRs #69/#70
 mesclados) e no trabalho documental do PR #71. Sem acesso ao Windows/Samsung.
 Não conclui TASK-07, privacidade ou habilitação clínica.

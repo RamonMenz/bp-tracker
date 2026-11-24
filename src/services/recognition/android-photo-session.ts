@@ -2,6 +2,7 @@ import type { CandidateSet } from '@/domain/assisted-entry';
 import { interpretPhoto, parseOcr } from '@/domain/interpret-photo';
 
 import { Attempt } from './capture-attempt';
+import { describePhotoInterpretation } from './photo-interpretation-diagnostic';
 import { PhotoCaptureError, type AndroidPhotoPorts, type PhotoCaptureCode } from './photo-capture-contract';
 
 export type PhotoPhase = 'idle' | 'permission' | 'opening' | 'ready' | 'recognizing' | 'closing' | 'reviewing' | 'cancelled' | 'failed' | 'blocked';
@@ -10,7 +11,7 @@ const BUSY = new Set<PhotoPhase>(['permission', 'opening', 'ready', 'recognizing
 
 /** Coordinator da PoC adaptado: nenhuma mídia/observação bruta em estado React. */
 export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (state: PhotoCaptureState) => void,
-  onCandidates: (attemptId: number, candidates: CandidateSet) => void) {
+  onCandidates: (attemptId: number, candidates: CandidateSet, diagnostic: readonly string[]) => void) {
   let state: PhotoCaptureState = { phase: 'idle', attemptId: 0, issue: null };
   let current: Attempt | null = null;
   let completion: Promise<void> = Promise.resolve();
@@ -33,6 +34,7 @@ export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (st
   }
   async function run(attempt: Attempt) {
     let candidates: CandidateSet | null = null;
+    let diagnostic: readonly string[] = [];
     let issue: PhotoCaptureCode | null = null;
     try {
       emit('permission');
@@ -57,7 +59,9 @@ export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (st
         throw new PhotoCaptureError(code === 'cancelled' || code === 'timeout' || code === 'resource-busy' || code === 'frame-failed'
           ? code : 'engine-failed');
       }
-      candidates = interpretPhoto(parseOcr(raw));
+      const observation = parseOcr(raw);
+      candidates = interpretPhoto(observation);
+      diagnostic = describePhotoInterpretation(observation, candidates);
     } catch (error) {
       issue = error instanceof PhotoCaptureError ? error.code : 'engine-failed';
     } finally {
@@ -69,7 +73,7 @@ export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (st
       else if (issue) emit('failed', issue);
       else if (candidates) {
         emit('reviewing');
-        onCandidates(attempt.id, candidates);
+        onCandidates(attempt.id, candidates, diagnostic);
       }
       attempt.cancel();
       if (current === attempt) current = null;
