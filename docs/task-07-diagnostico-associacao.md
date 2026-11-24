@@ -39,6 +39,12 @@ estar errados. As regras conservadoras do parser foram preservadas.
 
 ## Uma rodada curta no Windows/Samsung — ainda não executada
 
+Atualização após #72/#73: ambos mesclados; usar a fonte fixa de staging
+`81af92f4d3763e1e89f910e01c296decf83b5778` abaixo. Ela contém associacao-1 e a
+integração dos testes. Não buscar uma branch móvel para identificar o ensaio.
+Isso não altera APK/Kotlin. Os ensaios antigos continuam vinculados a f057283,
+sem homologar retroativamente esse JS. Não houve retorno novo nesta retomada.
+
 Não repetir A–K/R1/R2. Usar apenas o cartão sintético já arquivado. A investigação
 da telemetria está aberta: esta rodada não pede nova medição real, foto/áudio,
 banco, logcat, dump global, limpeza de dados, atualização de SDK ou reinstalação.
@@ -49,8 +55,9 @@ preservando as cópias integração/TalkBack e escolhendo destino **inexistente*
 ```powershell
 cd C:\dev\aferi-task07-integracao
 git status --short
-git fetch origin feat/task-07-diagnostico-associacao
-git worktree add --detach C:\dev\aferi-task07-associacao FETCH_HEAD
+git fetch origin staging
+git cat-file -e '81af92f4d3763e1e89f910e01c296decf83b5778^{commit}'
+git worktree add --detach C:\dev\aferi-task07-associacao 81af92f4d3763e1e89f910e01c296decf83b5778
 cd C:\dev\aferi-task07-associacao
 git rev-parse HEAD
 git status --short
