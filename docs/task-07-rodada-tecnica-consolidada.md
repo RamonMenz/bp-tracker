@@ -546,3 +546,11 @@ APK local de integração localizados por Test-Path, sem validar bytes/versões.
 [Próximo M0a e separação de ambientes](task-07-inspecao-privacidade-localidade.md#preparação-m0-após-atualização-do-so--arquivos-localizados):
 metadados do SO atualizado e hashes base.apk/local/JS, sem captura ou novo build.
 Rodada anterior preservada no ambiente anterior, sem homologação retroativa.
+
+
+M0a recebido pós-update: Android17/API37, patch2026-10-05 e build
+CP2A.260605.016.S731BXXUACZJC; device, bundle86017456…; única entrada APK,
+base instalado/APK local com SHA-25669d5a0b3… iguais. [Identidade e próximo M0b](task-07-inspecao-privacidade-localidade.md#retorno-m0a--apk-local-correspondente-e-referência-atual-do-so).
+Extrator manifesto-1 seleciona permissões/atributos diretos de application sem
+expor árvore/paths, com validação de hash e fixtures/aapt2 público, sem APK real.
+Próximo só leitura local estática; nenhuma nova captura ou build. Gate mantido.

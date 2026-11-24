@@ -787,7 +787,7 @@ ApkIntegracao=true. Isso localiza candidatos, não identifica versão/assinatura
 conteúdo ou correspondência do APK local ao instalado. Nenhum binário foi
 executado por essa consulta; não houve build, instalação ou upload solicitado.
 
-**Próximo M0a, só metadados:** reconfirmar alvo USB e obter Android/API/patch/build
+**Procedimento M0a, retorno recebido abaixo:** reconfirmar alvo USB e obter Android/API/patch/build
 público pós-update, hash do JS conhecido e SHA-256 do base.apk atual/local. Não
 usar fingerprint, serial, Android ID, banco, mídia, dumps ou APK exportado. Após
 comparar, inspecionar manifesto do artefato correspondente com ferramenta já
@@ -861,6 +861,77 @@ Hashes iguais identificam bytes dos arquivos consultados, não a cadeia de build
 todo runtime ou ausência de persistência. Diferentes não autorizam reinstalar
 para obter coincidência. Nenhuma leitura de manifesto ou nova captura pedida
 antes desse retorno de identidade. Habilitação clínica continua bloqueada.
+
+## Retorno M0a — APK local correspondente e referência atual do SO
+
+Registro em 24/11/2026 conforme resumo do autor, sem data/hora da execução
+informadas ou acesso direto ao aparelho. get-state retornou device; sem erro
+ou impedimento percebido. Não houve nova captura solicitada após o update.
+
+| Metadado | Valor recebido | Alcance |
+|---|---|---|
+| Android/API atuais | 17 / 37 | Mantêm os números reportados antes; não identificam sozinhos todo firmware |
+| Patch de segurança | 2026-10-05 | Identificador do patch, não data do ensaio ou da instalação da atualização |
+| Build do SO | CP2A.260605.016.S731BXXUACZJC | Referência atual declarada pelo comando; build/patch anteriores não foram comparados |
+| Bundle | 860174567097a3b5501ecf158c8aef2a32edeb44b112ac2b3f94e68e0ca81388 | Igual às consultas anteriores, sem comprovar toda execução |
+| Entradas APK instaladas | 1 | Uma entrada reportada por pm path na consulta da demo; sem split adicional reportado |
+| SHA-256 base instalado | 69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c | Arquivo atual consultado |
+| SHA-256 APK local | 69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c | Coincide com base instalado; BaseCoincideComLocal=true |
+
+M0a identifica os bytes do APK local como os do base instalado nos momentos
+consultados e permite inspecionar seu manifesto sem exportar o APK. Os hashes
+coincidem também com a identidade histórica conhecida, mas isso não homologa
+o runtime no SO atualizado, todos os serviços, logs/rede ou privacidade. A rodada
+funcional anterior permanece vinculada ao ambiente anterior, sem reteste imposto.
+
+### Próximo M0b — manifesto selecionado com aapt2 local
+
+[Extrator manifesto-1](../tools/task07/AferiManifestMetadata.psm1) e
+[checks](../tools/task07/AferiManifestMetadata.check.ps1) novos, sem dependência
+adicional no app. Atualizar **só a worktree de ferramentas**, após conferir que
+git status --short está vazio, com fetch da branch do PR #75 e switch --detach
+no commit publicado desta entrega. Não alterar TalkBack/Metro ou a cópia de
+integração que contém o APK; sem reset/stash caso exista trabalho local.
+
+Importar o novo módulo e chamar Get-AferiManifestMetadata com o aapt2 existente
+em Android/Sdk/build-tools/36.0.0, APK local de integração e ExpectedSha256 igual
+a 69d5a0b3… completo acima. O extrator:
+
+- reconfere SHA-256 do APK antes da leitura e recusa divergência;
+- registra versão aapt2, só então usa dump xmltree --file AndroidManifest.xml;
+- mantém árvore completa em memória privada, sem arquivo intermediário/log/envio;
+- retorna só pacote esperado, min/target SDK, permissões Android de câmera/rede/
+  áudio/mídia/storage selecionadas (com maxSdk/tipo), e seis atributos diretos de
+  application: allowBackup/usesCleartextTraffic/debuggable/fullBackupContent/
+  dataExtractionRules/networkSecurityConfig;
+- ignora rótulos/componentes e atributos de Activity; ausência é nao-declarado,
+  referência é referencia-presente, formato desconhecido é nao-interpretado;
+- recusa estrutura parcial/pacote divergente/atributo duplicado ou falha nativa
+  com código fixo, sem reproduzir conteúdo bruto ou paths.
+
+Código de chamada após importar, com caminhos existentes já localizados:
+
+```powershell
+$aferiAapt2 = Join-Path $env:LOCALAPPDATA 'Android\Sdk\build-tools\36.0.0\aapt2.exe'
+$aferiApkLocal = 'C:\dev\aferi-task07-integracao\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+Get-AferiManifestMetadata -Aapt2Path $aferiAapt2 -ApkPath $aferiApkLocal -ExpectedSha256 '69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c' | ConvertTo-Json -Depth 8
+```
+
+Retornar só JSON ou código fixo/impedimento. Não imprimir árvore/variáveis privadas,
+manifesto inteiro, APK, certificados, chaves, screenshot ou logs. Não abrir projeto
+no Studio nem fazer build, instalação ou nova captura. Resultado de referência
+não expõe o recurso associado: requer análise posterior; ausência não equivale
+a false nem declaração de permissão a concessão em runtime. INTERNET/cleartext
+no Dev Client não comprovam upload; não removê-los por tentativa.
+
+Verificação independente: aapt2 público oficial Linux 8.10.1-12782657, versão
+2.19-12782657, usado para dump de fixture de manifesto binário sintético sem
+código executável. Nenhum APK do autor foi recebido ou executado. Formatos
+full URI/android: e valores tipados suportados pelo extrator; checks simulados
+cobrem escopo application, whitelist/ausências/maxSdk, desconhecido, pacote/
+estrutura/duplicatas, privacidade de saída, hash alterado e fronteira nativa.
+Também entram no job App do CI. Windows/aapt2 do autor ainda sem execução M0b;
+UID/destinos/SDK/SO integrais e habilitação clínica continuam pendentes.
 
 ### M0 — manifesto efetivo, sem exportar APK
 
@@ -1085,8 +1156,9 @@ funcional; reverse 1/0→0/0→1/0, rádios desligados em O e restaurados em Q;
 16 entradas nos snapshots, uma mudança DataTransport em cada comparação, sem
 conteúdo/causa/envio determinados. Rodada consolidada; M0/APK/UID/destinos e
 privacidade pendentes, habilitação clínica bloqueada. Atualização de SO posterior
-registrada: candidatos Studio/aapt2/APK encontrados, próxima comparação de
-identidade/versões sem captura; ensaios anteriores não homologam o novo SO.
+registrada: M0a identificou Android17/API37/patch2026-10-05/buildCP2A.260605.016.S731BXXUACZJC,
+APK local/base únicos com hash69d5a0b3… e JS86017456… coincidentes. Próximo M0b
+com extrator manifesto-1, sem captura; ensaios anteriores não homologam o novo SO.
 
 Habilitar exige evidência aplicável, sem afirmar garantias universais:
 

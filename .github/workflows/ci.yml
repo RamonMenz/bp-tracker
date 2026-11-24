@@ -47,6 +47,9 @@ jobs:
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
 
+      - name: Manifesto selecionado (PowerShell, aapt2 simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiManifestMetadata.check.ps1
+
   functions:
     name: Cloud Functions (build e testes)
     runs-on: ubuntu-latest
