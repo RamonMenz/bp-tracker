@@ -101,6 +101,13 @@ getprop confirmou modelo SM-S731B. [Evidência, limites e G2a](task-07-ciclo-vid
 próximos casos L06a/L07a (Home/troca de app no preview), ainda sem Capturar/OCR.
 Não comprova contagem nativa, liberação física de RAM/SDK ou demais fases.
 
+Retorno posterior G2a: autor atribuiu resultados iguais a L06a/L07a, ambos em
+ready/preview-1; uso ativo encerrou ao sair, retorno cancelled sem preview,
+revisão/retomada, recarga/reinício ou erro percebido, por aproximadamente 5 s.
+[Registro separado dos casos e limites](task-07-ciclo-vida-samsung.md#retorno-g2a--home-e-troca-de-app-no-preview).
+Passaram no alcance relatado, sem executar variantes de revisão ou OCR.
+Próximo grupo G2b: L08a/L09a, bloqueio/rotação no preview, ainda não executados.
+
 | Frente | Estado / próximo trabalho |
 |---|---|
 | Rede ativa | Nenhuma medição conclusiva; cmd netstats sem implementação; T0/T1/T2 opcional por baixa força de evidência |

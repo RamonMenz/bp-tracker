@@ -125,8 +125,8 @@ tratada como data/hora de execução quando esta não for informada.
 | L03 | Passou no alcance relatado | preview-1/ready, cancelamento → cancelled; preview/uso ativo encerrados, sem revisão/retomada por aproximadamente 5 s | V0 |
 | L04 | NE | Histórico D não executado por OCR rápido; não repetir indefinidamente | V0 |
 | L05 | NE | Exige concessão da mesma solicitação depois do cancelamento | V0 |
-| L06a / L06b | NE / NE | Há relatos históricos Home, sem promoção para esta rodada | V0 |
-| L07a / L07b | NE / NE | Há relatos históricos de troca rápida; contagem nativa não demonstrada | V0 |
+| L06a / L06b | Passou no alcance relatado / NE | Home em ready/preview-1; uso ativo encerrou; retorno cancelled, sem preview/revisão/retomada por aproximadamente 5 s, sem reinício/erro percebido | V0 |
+| L07a / L07b | Passou no alcance relatado / NE | Troca de app em ready/preview-1; mesmos resultados relatados de L06a. Variante em revisão não executada | V0 |
 | L08a / L08b | NE / NE | Há relatos históricos de bloqueio, sem promoção para esta rodada | V0 |
 | L09a / L09b | NE / NE | Histórico H só relayout, sem recriação demonstrada | V0 |
 | L10 | NE | Demo sem rota interna de saída; destino de Voltar a observar | V0 |
@@ -201,10 +201,33 @@ ensaio de permissão/abertura lenta, cleanup falho ou resultado tardio. Aprovaç
 de L03/L11 não é aprovação de L01/L02/L04/L14/L15/L16 nem de privacidade SDK/SO.
 ACK simulado dos testes continua separado desta observação física de UI.
 
-**G2a liberado:** somente L06a (Home no preview) e, se encerrar normalmente,
-L07a (troca de app no preview), sem Capturar/OCR. Ambos continuam NE até retorno.
+Na análise de G1 foi liberado G2a: somente L06a (Home no preview) e, se
+encerrasse normalmente, L07a (troca de app no preview), sem Capturar/OCR.
 Nenhuma repetição de G0/G1 ou nova coleta de hashes é solicitada por rotina;
 se houve alteração/reinstalação/recarga inesperada, reavaliar a identidade antes.
+
+### Retorno G2a — Home e troca de app no preview
+
+O autor informou que executou L06a e L07a com resultados iguais. Registros
+separados abaixo usam essa declaração, não duas transcrições independentes.
+Baseline V0 herdada de G0/G1; nenhum hash/HEAD foi recolhido por caso. Data/hora
+da execução não informadas. Não foram fornecidos códigos AppState do painel.
+
+| Caso | Retorno recebido | Resultado |
+|---|---|---|
+| L06a — Home | ready antes de sair; preview-1; uso ativo encerrou ao sair; cancelled ao voltar; preview encerrado; nenhuma revisão/retomada; aproximadamente 5 s sem novos toques; nenhuma recarga/reinício ou erro percebido | Passou no alcance relatado |
+| L07a — troca de app | Autor atribui os mesmos resultados acima a este caso | Passou no alcance relatado |
+
+O retorno sustenta encerramento observável e ausência de retomada nas duas
+ações/janelas. Não demonstra recriação da Activity, descarte de RAM/SDK,
+contagem de câmeras, cancelamento durante OCR, resultado tardio, ausência de
+persistência/telemetria ou comportamento na revisão (L06b/L07b permanecem NE).
+Nenhum defeito encontrado nesses relatos; sem correção funcional ou nova
+regressão justificada. ACK simulado continua separado da observação física.
+
+**G2b liberado:** apenas L08a (bloqueio no preview) e, se normal, L09a (rotação
+no preview). Nenhum Capturar/OCR. L08a/L09a continuam NE até devolução. Não
+repetir G0/G1/G2a ou hashes por rotina; identidade deve ser revista se mudar.
 
 ### Execução controlada desta preparação
 
@@ -241,7 +264,7 @@ TASK-07/10/18, privacidade, legado conectado e persistência permanecem parciais
 
 **Procedimento G0, já executado no retorno acima:** com Metro parado/câmera
 desligada. Preservado para rastreabilidade; não repetir por rotina. O estado
-atual de condução é G2a (L06a/L07a), descrito ao final desta seção.
+atual de condução é G2b (L08a/L09a), descrito ao final desta seção.
 Na cópia TalkBack existente, sem instalar dependências ou alterar Git:
 
 ```powershell
@@ -322,7 +345,7 @@ obrigatórias. Não executar os demais grupos da tabela por conta desta listagem
 Os grupos seguintes são subdivididos para no máximo dois casos por devolução,
 distinguindo sempre variante/fase observada.
 
-**Grupo atual G2a: L06a + L07a, somente preview.** Manter a mesma demo/Metro,
+**Procedimento G2a, já executado: L06a + L07a, somente preview.** Manter a mesma demo/Metro,
 Fast Refresh desligado e cartão sintético como alvo; não tocar em Capturar.
 
 1. L06a: iniciar por um único gesto e conferir ready/preview-1/preview visível.
@@ -344,6 +367,31 @@ que o evento não ocorreu. Não pedir conteúdo do outro app ou logs completos.
 Não fazer L07a se L06a falhar. Parar diante de câmera presa, concorrência,
 blocked/cleanup-failed/resource-busy inesperado; sem reload/reinstalação/bypass.
 Não executar variantes de revisão (L06b/L07b) nem os demais grupos ainda.
+**Grupo atual G2b: L08a + L09a, somente preview.** Mesma demo/Metro, Fast Refresh
+desligado e cartão sintético; não tocar em Capturar. Não alterar opções de
+desenvolvedor do Android para forçar destruição/recriação da Activity.
+
+1. L08a: iniciar uma vez, conferir ready/preview-1/preview visível. Bloquear
+   a tela pelo botão lateral; desbloquear normalmente e retornar à demo, sem
+   Iniciar. Observar aproximadamente 5 s. Esperado: uso ativo/preview encerrados,
+   cancelled e nenhuma revisão/retomada. Não enviar PIN, biometria ou tela.
+2. L09a, somente se L08a terminou normalmente: iniciar uma vez e esperar ready.
+   Com rotação automática habilitada pela configuração usual, girar uma vez
+   para paisagem e retornar a retrato, sem Capturar. Se só houver relayout,
+   preview continua utilizável/ready, sem captura/revisão automáticas; cancelar
+   ao final e conferir encerramento. Se ocorrer interrupção/background/reinício,
+   esperado é abandono/cancelamento e câmera desligada, sem retomada automática.
+   Se não houver mudança efetiva de orientação/layout, registrar não executado
+   para rotação efetiva. Não atribuir recriação apenas ao giro ou relayout.
+
+Devolver L08a/L09a separados: ready/Nativo inicial, ações efetivas, fase/preview
+no retorno, uso ativo encerrado quando aplicável, revisão/retomada, intervalo,
+erro e recarga/reinício percebidos. Em L09a, distinguir relayout de interrupção
+observada e informar cancelamento final. Códigos AppState visíveis são opcionais;
+sem evidência específica, recriação real permanece não executada/inconclusiva.
+Parar diante de câmera presa, concorrência ou cleanup falho; não fazer o segundo
+caso se o primeiro falhar nem usar reload/reinstalação/bypass.
+
 Ao encerrar a sessão, quando desejar parar,
 cancelar, conferir câmera desligada, Ctrl+C no Metro e restaurar
 `$env:NODE_OPTIONS = $aferiCicloNodeOptionsAnteriores`. Não apagar pastas/dados.
