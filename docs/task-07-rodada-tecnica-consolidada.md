@@ -658,3 +658,10 @@ novo=false. Autor informou demo fechada/sem aplicação no terminal; fase não
 observada, sem inferir câmera/processos. [Atualização do pacote de avaliação](task-07-backup-pos-merge.md#identidade-instalada-reconfirmada-e-atualização-de-avaliação-preparada)
 preparada com guarda de hash/alvo, install -r sem abertura e hash posterior.
 Nenhuma instalação executada pelo Codex; retorno do autor pendente, gate fechado.
+
+
+Atualização recebida: install sucesso, única base instaladaedf860b7… no Samsung,
+anterior=false/novo=true, app fechado, indicador de câmera não percebido e sem
+comportamento inesperado observado. [T0 de abertura com Metro da fonte062e9b1](task-07-backup-pos-merge.md#retorno-da-atualização--novo-apk-instalado-app-fechado)
+preparado sem iniciar câmera, com associacao-1/Fast Refresh/bundle/estado inicial.
+Nova evidência funcional ainda pendente; gate clínico permanece bloqueado.

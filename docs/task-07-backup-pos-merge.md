@@ -608,3 +608,108 @@ e falha de install. Assert do comando fixo install -r e nenhuma instalação ant
 de guardas de hash/modelo aprovados. Saída sem paths privados conferida. Nenhum
 ADB/telefone/instalação real executado pelo Codex. Não é evidência de atualização
 concluída pelo autor; esse retorno permanece pendente.
+
+## Retorno da atualização — novo APK instalado, app fechado
+
+Autor devolveu atualizacao-avaliacao-1: InstalacaoRetornouSucesso=true,
+SM-S731B/com.ramonmenz.afericapturetest, uma base instalada com SHA-256
+edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed,
+CoincideComAnterior=false/CoincideComNovo=true. App permaneceu fechado;
+indicador de câmera não percebido, nenhum diálogo/comportamento inesperado
+observado. Data/hora efetivas não informadas. É confirmação relatada de install
+bem sucedido e identidade posterior, não comprovação de ausência de processos,
+tráfego, backups ou outros eventos internos. Codex não acessou o Samsung.
+
+Fontes e APKs locais anteriores permanecem referência; não foram apagados pelo
+procedimento orientado. Não foi solicitada abertura ou captura durante install.
+Staging consultado em9612c64, PR76 ainda aberto; CI do head documentalfaad6ee
+aprovado em https://github.com/RamonMenz/bp-tracker/actions/runs/45523348320 .
+
+### T0 — abertura controlada, sem câmera
+
+Objetivo é identificar o JS servido por Metro da fonte062e9b1 com o novo APK,
+sem reutilizar por suposição o bundle histórico86017456… ou repetir captura.
+O cache JS do Dev Client é artefato estático de desenvolvimento, distinto de
+mídia/resultados clínicos; consultar seu hash não revela nem homologa conteúdo
+runtime. Nenhum hash novo é previsto/inventado.
+
+Somente Samsung de avaliação conectado ao ADB; se houver outro aparelho ou
+emulador, parar e informar, preservando seu trabalho. Expo CLI ao abrir Android
+configura reverse da porta do Metro nos dispositivos ADB conectados e registra
+cleanup na saída; isso foi conferido no código instalado da CLI. Não usar tunnel,
+limpar cache/dados ou abrir a cópia TalkBack. Metro anterior deve permanecer
+parado. Se8097 estiver ocupada, não aceitar troca automática de porta nem matar
+processo desconhecido: informar impedimento. Manter conexões originais; este
+passo não é ensaio offline ou observação de tráfego de reconhecimento.
+
+Terminal A, em bloco único; conferir HEAD/status antes de iniciar:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task07-backup-build'
+    $aferiMetroHead = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $aferiMetroHead -cne '062e9b188c7af6cf9539b0ba1faed63dd26460e8') {
+        throw 'metro-source-unexpected'
+    }
+    $aferiMetroChanges = @(git status --porcelain)
+    if ($LASTEXITCODE -ne 0 -or $aferiMetroChanges.Count -ne 0) { throw 'metro-source-not-clean-preserve' }
+    $aferiMetroSdk = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+    if (-not (Test-Path -LiteralPath $aferiMetroSdk -PathType Container)) { throw 'metro-sdk-unavailable' }
+    $env:ANDROID_HOME = $aferiMetroSdk
+    $env:EXPO_NO_TELEMETRY = '1'
+    Set-Location -LiteralPath .\demos\android-capture
+    node ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8097
+}
+```
+
+Aguardar servidor pronto; pressionar a **uma única vez** nesse terminal para
+abrir o app instalado. Não é expo run:android; se pedir novo build/instalação,
+Expo Go, login ou tunnel, parar e informar. Não aceitar abrir projeto diferente.
+O URL/QR/nomes/identificadores do terminal não devem ser enviados.
+
+Conferir Fast Refresh pelo menu de desenvolvimento (m no Metro). Se a ação for
+Enable/Ativar Fast Refresh, já está desligado; não ativar. Se for Disable/
+Desativar, desativar. Fechar o menu, fazer uma única recarga manual r no Metro
+com câmera desligada e aguardar carregamento terminar. Reload aqui é preparação
+entre cenários, não retomada automática ou resultado de teste de captura.
+Não pressionar r/a novamente durante ensaio. Não tocar Iniciar câmera Android,
+Capturar e reconhecer ou campos de revisão nesta etapa.
+
+Esperado após carregar: captura-5, Associação: associacao-1 visível, App:active,
+Fase:idle/Nativo:nao-carregado, sem preview/revisão antiga e sem indicador de
+câmera percebido. Nativo não carregado é coerente com binding carregado só por
+gesto Iniciar; não iniciar câmera apenas para fazê-lo virar preview-1. Marca
+associacao-1 é evidência visível adicional de código atual; não prova integral
+da fonte/binário. Divergência/retomada/revisão antiga exige parar e analisar.
+
+Terminal B (novo PowerShell), com Metro A mantido aberto, após carregar/recarregar:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $aferiAdbBundle = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+    try {
+        $aferiBundleRaw = @(& $aferiAdbBundle -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js 2>&1)
+        $aferiBundleCode = $LASTEXITCODE
+    } catch { throw 'bundle-hash-unavailable' }
+    if ($aferiBundleCode -ne 0 -or $aferiBundleRaw.Count -ne 1 -or
+        $aferiBundleRaw[0] -isnot [string] -or $aferiBundleRaw[0] -notmatch '^([0-9a-fA-F]{64})\s') {
+        throw 'bundle-hash-unavailable'
+    }
+    [pscustomobject]@{ Tool = 'bundle-abertura-1'; Sha256Bundle = $Matches[1].ToLowerInvariant() } | ConvertTo-Json
+    git -C 'C:\dev\aferi-task07-backup-build' rev-parse HEAD
+    git -C 'C:\dev\aferi-task07-backup-build' status --short
+}
+```
+
+Devolver JSON/HEAD/status e transcrição dos indicadores acima, Fast Refresh,
+se houve uma recarga manual, tela branca/erro/diálogo/impedimento e se câmera
+permaneceu desligada. Se não observou indicador, registrar não observado sem
+inferir câmera desligada só por app em idle. Não enviar screenshot/logcat,
+dados de rede/conta, árvore JS ou bundle. Não abrir câmera ou repetir instalação
+para resolver ausência do hash/diagnóstico; retornar código fixo e estado observado.
+
+Nova rodada de recursos/arquivos/offline só será definida após T0. Telemetria/ID,
+qualificação por UID/destinos, OEM/cross-platform e critérios clínicos continuam
+pendentes. T0 não conclui TASK-04/06/07/18 nem atesta zero tráfego no Dev Client.
