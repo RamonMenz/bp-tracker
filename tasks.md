@@ -268,3 +268,11 @@ Preview/ready confirmados por esclarecimento; offline/restauração e limites em
 [registro e comparação dirigida](docs/task-09-diagnostico-visor-real.md#retorno-do-visor-desligado--rótulos-presentes).
 Cartões locais comuns/sete segmentos preparados, sem fotos ou valores de usuário;
 comparação física ainda pendente. Sem mudança de motor ou habilitação clínica.
+
+
+TASK-09 — A/B recebido: cartão comum com três campos corretos; cartão sete
+segmentos com rótulos presentes, nenhum dígito ASCII nos tokens utilizáveis e
+três campos ausentes. [Evidência e limites](docs/task-09-diagnostico-visor-real.md#retorno-ab--fonte-comum-correta-sete-segmentos-sem-dígitos-ascii).
+Falha funcional no estímulo segmentado, sem atribuição universal ao motor ou ao
+LCD físico. Próxima investigação limitada a pré-processamento em RAM; nenhuma
+nova coleta ou correção de reconhecimento declarada. Habilitação bloqueada.

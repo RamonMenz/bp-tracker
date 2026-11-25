@@ -200,3 +200,79 @@ inspecionada visualmente. Navegação file foi bloqueada por política do navega
 deste ambiente; abertura do arquivo no Windows do autor ainda não verificada.
 Sintaxe do bloco PowerShell validada com parser7.5.4, sem executar ADB.
 Nenhum ensaio ML Kit/Samsung ou acerto físico novo inferido desses checks.
+
+
+## Retorno A/B — fonte comum correta, sete segmentos sem dígitos ASCII
+
+Fonte da demo permanece a649b6c e APK25990bb4… pelo protocolo/retorno anterior;
+esta preparação retornou BundleConfere=true (hash esperado2191e4f1…) e
+ReverseAtivosDepois=0. Autor declarou redes/ancoragens/VPN conforme o roteiro.
+Ferramentas: associacao-2/captura-5, módulo AferiEvaluationAdb; exibição no PC
+Chrome158.0.8127.88, versão oficial64bits, zoom100%, cartões completos.
+Sem data/hora de execução ou duração informadas. Codex não executou o Samsung.
+
+| Observação relatada | A — fonte comum | B — sete segmentos |
+|---|---|---|
+| Preview/ready/preview-1 | Sim | Sim |
+| OCR linhas | Presentes | Presentes |
+| Dígitos ASCII nos tokens utilizáveis | Presentes | Ausentes |
+| Rótulos SYS/DIA/PUL | Presentes | Presentes |
+| Associação dos três campos | Candidato | Incerto por ilegível ou distante |
+| Correspondência com cartão sintético | Três campos corretos | Três campos ausentes |
+| Câmera encerrada após OCR | Sim | Sim |
+| Cancelamento descartou revisão | Sim | Sim |
+| Erro/retomada/impedimento | Nenhum relatado | Nenhum relatado; sem mudança de posição/luz declarada |
+
+Grafias associação com acento e PUl no relato não são tratadas como saída literal
+nova; síntese das categorias informadas pelo autor. Estímulos usam valores
+inventados do cartão, não dados de saúde. Não foram recebidas novas imagens/OCR
+bruto. Restauração inspector-metro-1 reconheceu APK25990bb4…, reverse configurado,
+outras linhas0/instalaçãofalse; conexões restauradas por declaração do autor.
+
+### Diagnóstico alcançado e limites
+
+Comparação orienta prioridade para captura/reconhecimento de segmentos antes
+de ajustar associação. A mostra caminho câmera→OCR→parser→revisão funcional
+para aquele estímulo. B reprova a leitura do cartão segmentado nessa tentativa:
+com os três rótulos presentes, nenhum dígito ASCII chegou aos tokens utilizáveis.
+Não é correto tentar recuperar números ausentes por faixa, ordem, histórico ou
+confiança, nem chamar ausência de resultado de leitura aprovada.
+
+Há só uma tentativa de cada; não calcular taxa de acerto, latência ou cobertura
+por modelo. Não comprova incapacidade universal do ML Kit em sete segmentos,
+nem explica definitivamente o LCD físico. Forma/largura/gaps dos dígitos e sua
+imagem na câmera variam com o estímulo; não houve inspeção de pixels/texto bruto.
+OCR pode confundir dígitos com letras; o diagnóstico não revela essas letras.
+A bridge filtra linhas sem boundingBox ou com mais de500 caracteres antes do
+contrato; ausência de dígitos no diagnóstico não afirma ausência em toda saída
+interna do SDK. Não há evidência de erro de permissão/cancelamento nesse par.
+Offline e encerramento relatados não homologam telemetria/filas/logs internos.
+
+### Próxima investigação técnica, sem nova coleta agora
+
+Revisão do nativo AferiPhotoView.kt: cópia YUV→NV21 em RAM, ImageProxy fechado,
+câmera encerrada, fromByteBuffer com dimensões e rotação e uma chamada ao ML Kit.
+Saída de linhas/caixas normalizada ao quadro orientado. Não há recorte de display
+ou normalização adicional. Isso descreve a fonte; não mede nitidez, tamanho dos
+dígitos no buffer, foco ou todos os comportamentos do APK/SDK.
+
+Ajuste apenas do parser não cria os dígitos ausentes de B. Próximo experimento
+admissível deve limitar-se a recorte/orientação/normalização em RAM conforme
+spec-fotografia§6.2, mantendo ML Kit embarcado. Não apresentar contraste como
+solução garantida: cartão já é de alto contraste visual, sem medida do quadro.
+Não substituir motor nem introduzir reconhecimento próprio de segmentos ou
+OpenCV como atalho. Não iniciar varredura manual de distâncias/tentativas.
+
+Antes de novo APK/ensaio: implementação concreta com controle original versus
+processado, transformação de coordenadas explícita para não quebrar associação,
+limites de buffer/tamanho preservados e testes de formato/rotação/bordas/cancelamento/
+cleanup/resultado tardio. Todo buffer processado deve ter vida útil controlada
+até completion; sem arquivos, URI, Bitmap.compress, logger ou fallback remoto.
+Uma versão experimental não deve ser ativada no produto automaticamente.
+Não usar conteúdo clínico para ajustar regras. Comparação posterior deve usar
+estes mesmos estímulos e registrar também regressão em A, sem aceitar apenas B.
+
+Este item é requisito de próximo experimento, não implementação já realizada ou
+promessa de acerto. Se não houver abordagem compatível eficaz, registrar a
+limitação e não declarar leitura de medidores reais concluída. Tarefas e gate
+permanecem parciais/bloqueados. Nenhuma repetição A/B ou idle solicitada agora.
