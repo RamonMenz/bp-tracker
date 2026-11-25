@@ -44,8 +44,32 @@ jobs:
       - name: Testes (Jest)
         run: npm test -- --ci
 
+      - name: Diagnóstico Metro (PowerShell, fixtures sem rede)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiMetroConnection.check.ps1
+
+      - name: Inspector de rede da demo (mod real Expo)
+        run: node tools/task07/AferiNetworkInspector.check.cjs
+
+      - name: Regras de backup da demo (mods reais Expo, sem dispositivo)
+        run: node tools/task07/AferiBackupRules.check.cjs
+
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
+
+      - name: Guardas do idle candidato (PowerShell, sem dispositivo)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorIdle.check.ps1
+
+      - name: Atualização restrita de avaliação (PowerShell, ADB simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorUpdate.check.ps1
+
+      - name: Guardas do build de avaliação (PowerShell, sem Gradle)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorBuild.check.ps1
+
+      - name: Comparação de assinaturas (PowerShell, apksigner simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
+
+      - name: Regras empacotadas (PowerShell, aapt2 simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiBackupMetadata.check.ps1
 
       - name: Manifesto selecionado (PowerShell, aapt2 simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiManifestMetadata.check.ps1

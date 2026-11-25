@@ -196,3 +196,59 @@ As tarefas de verificação são parte da implementação, não uma promessa de 
 Se faltar capacidade, aplicar a ordem de corte do TAP: primeiro ampliação de modelo/regras/testes **além do necessário**, depois indicadores adicionais, depois serviço próprio e por último observabilidade complementar. Os testes e ajustes de segurança necessários às novas funções não são complementares e não podem ser cortados. O serviço próprio já não integra a stack local escolhida. TASK-28 é uma reserva limitada, não autorização para implementar todos os complementos.
 
 Após os complementos, se necessário, priorizar fotografia plenamente implementada e comparada e declarar voz parcial. Fotografia, confirmação obrigatória e Relatório Técnico Final com decisão/comparação são irredutíveis. Qualquer inviabilidade adicional, inclusive do PDF, deve ser explicitada e tratada conforme o TAP, sem corte silencioso ou flexibilização da privacidade. Este plano não autoriza prorrogação dos marcos oficiais.
+
+
+Continuidade TASK-04/06/07/18 pós-merge (parcial): #74/#75 mesclados, staging9612c64;
+worktree Windows pos-merge limpa e allowBackup=false na fonte confirmados pelo autor.
+[Etapa de backup/transferência](docs/task-07-backup-pos-merge.md) prepara exclusões
+legadas/cloud/D2D só da demo e teste dos mods reais Expo; não atualiza APK instalado.
+OEM/cross-platform, recursos empacotados, telemetria/ID e UID/destinos pendentes;
+sem nova captura ou conclusão/habilitação. Próximo retorno: versões Node/npm/Java.
+
+Retornos posteriores da etapa de backup (parcial): Windows Node24.22.0/npm11.19.1/
+JVM17.0.21, Gradle9.3.1; build da fonte062e9b1 gerou APKedf860b7….
+Manifesto selecionado confirma allowBackup=false e referências presentes.
+[Extrator backup-1](docs/task-07-backup-pos-merge.md#retorno-do-manifesto-do-novo-apk-e-próximo-extrator)
+prepara conferência IDs/tabela/XML; resultado físico pendente, sem instalação,
+conclusão ou habilitação. Telemetria/ID/UID/destinos/OEM seguem lacunas.
+
+Backup-1 recebido positivo para APKedf860b7…: vínculos manifesto/tabela/XML
+conferidos e nove exclusões em cada seção legada/cloud/D2D. [Limites e assinatura
+local pendente](docs/task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
+Evidência estática apenas; sem instalação ou conclusão/habilitação clínica.
+
+T0 do APKedf860b7… interrompido por EOF no HTTP de desenvolvimento; Metro segue
+rodando conforme autor, sem reconhecimento/captura ensaiados. [Saúde de conexão
+e inspector](docs/task-07-backup-pos-merge.md#t0-interrompido--eof-http-no-carregamento-do-dev-client)
+preparados: metadados v4/v6/reverse e flag de inspector desativada para futuro
+build só da demo. Não altera APK instalado; diagnóstico Windows e privacidade
+continuam pendentes, tarefas parciais/habilitação bloqueada.
+
+T0 pós-ajuste recebido: tela abriu por a, captura-5/associacao-1, active/idle,
+nao-carregado, Fast Refresh desligado, sem preview/revisão/indicador percebido
+ou erro; IPv4/reverse positivos. [Próximo bundle/idle](docs/task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
+sem câmera, com nova baseline de metadados; tarefas parciais/gate bloqueado.
+
+Idle pós-atualização recebido: bundle23e7dd6f…, 16→16 entradas e delta0,
+active/idle/nao-carregado sem interrupções percebidas; r anterior confirmado.
+[Build do candidato sem inspector](docs/task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
+preparado sem instalação/captura, com verificações estáticas agregadas. Conteúdo/
+rede/SDK/OEM e tarefas04/06/07/18 continuam parciais, habilitação bloqueada.
+
+Candidato sem inspector: retorno build-inspector-1 com APK25990bb4… da fonteca786ed
+limpa, flags false/manifesto/backup/assinaturas coerentes, BytecodeInspecionado=false.
+[Atualização restrita preparada](docs/task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados),
+sem abertura/captura/produção; instalação e critérios de privacidade ainda pendentes.
+
+Retomada do candidato: consulta/atualização recebidas, baseEDF→25990bb4… confirmada,
+mesmo com stderr de startup na consulta. [Próxima abertura/idle sem câmera](docs/task-07-backup-pos-merge.md#retomada-e-instalação-do-candidato-confirmadas-pelo-autor)
+na fonteca786ed, sem concluir bytecode/SDK/rede/contas ou TASK-04/06/07/18. Habilitação
+clínica bloqueada, nenhum ensaio clínico ou nova captura solicitado.
+
+
+Candidato25990bb4…: abertura/idle recebidos, bundlef672ea34…, IPv4/reverse
+saudáveis; inventario-1 IDs1/2,16→16/delta0 na janela programada30s, sem câmera
+ou interrupções percebidas. [Diagnóstico parcial consolidado](docs/task-07-backup-pos-merge.md#abertura-e-idle-do-candidato-recebidos--diagnóstico-parcial-consolidado)
+registra evidências e condições: bytecode, UID/destinos, SDK/telemetria/OEM e
+integração clínica ainda pendentes. Não repetir controle nem pedir nova captura
+nesta entrega. TASK-04/06/07/18 parciais; habilitação clínica bloqueada.

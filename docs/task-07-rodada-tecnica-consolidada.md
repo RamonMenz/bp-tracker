@@ -604,3 +604,128 @@ real Expo. APK instalado permanece true, sem build/instalação ou mudança do e
 Elegibilidade não prova backup ocorrido; cleartext/INTERNET não provam upload.
 Ressalvas de transferência OEM, telemetria/ID e UID/destinos mantêm gate fechado.
 Sem nova captura; preservar artefatos e qualificar observação só de metadados.
+
+
+Pós-merge: #74/#75 merged confirmados, staging9612c64; worktree Windows pos-merge
+no commit, limpa e allowBackup=false na fonte conforme autor. APK anterior intacto.
+[Regras explícitas e preparação](task-07-backup-pos-merge.md): plugin só da demo
+para exclusões legadas/cloud/D2D, sem alterar engine/fluxo clínico; requer futuro
+build/manifesto/recursos efetivos. OEM/cross-platform/telemetria/UID/destinos
+continuam pendentes. Próximo retorno só de versões Node/npm/Java; sem captura.
+
+
+Preflight Windows recebido: Node24.22.0/npm11.19.1/Temurin17.0.21+9. Faixa Node
+RN compatível e toolchain17 conferidos, sem comprovar seleção por JAVA_HOME.
+Prebuild real Codex isolado do código062e9b1 passou, manifest/resource refs e
+exclusões conferidos; sem Gradle/APK/telefone. [Roteiro de geração e assembleDebug
+sem instalação](task-07-backup-pos-merge.md#retorno-de-versões-e-verificação-independente-de-prebuild)
+preparado; novo hash e manifesto/recursos empacotados aguardam execução local.
+
+
+Retorno do build Windows: prebuild/build concluídos, Gradle9.3.1 e Launcher
+JVM17.0.21 Adoptium+9; fonte062e9b1, APK existente com
+SHA-256edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed.
+Status relatado limpo antes/depois; Refresh index é progresso do Git.
+[Próximo manifesto selecionado](task-07-backup-pos-merge.md#retorno-do-build-windows--apk-gerado-ainda-não-inspecionado),
+sem atualização da worktree, instalação ou nova captura. Recursos empacotados/
+vinculação/assinatura e privacidade ainda não homologados.
+
+
+Novo manifesto recebido: APKedf860b7…, manifesto-1/aapt2 2.20-13193326,
+allowBackup=false e referências de backup presentes, min24/target36;
+cleartext/debuggable true, CAMERA/INTERNET. [Conferência dos recursos empacotados](task-07-backup-pos-merge.md#retorno-do-manifesto-do-novo-apk-e-próximo-extrator)
+prepara backup-1 para cruzar IDs→tabela→XML e excluir nove domínios nas três
+seções. Checks negativos e integração aapt2 com APK sintético passaram; execução
+Windows ainda pendente. APK/fonte062e9b1 preservados; sem instalação/captura/gate.
+
+
+Backup-1 executado pelo autor no Windows/aapt2 2.20-13193326, ferramentas5e2ca59
+limpas, APKedf860b7…: AllowBackup=false, ReferenciasConferidas=true; três seções
+com nove domínios excluídos e SomenteExclusoesRaiz=true. [Evidência estática e
+próxima comparação de assinaturas locais](task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
+Não homologa SO/OEM/runtime/telemetria/rede. Sem instalação ou captura adicional.
+
+
+Assinatura-1 recebido: ferramentasfd65873 limpas, apksigner0.9, hashes69d5a0b3…/
+edf860b7… esperados; assinaturas verificadas e certificados iguais. [Alcance e
+reconferência instalada só de leitura](task-07-backup-pos-merge.md#retorno-assinatura-1--comparação-dos-apks-locais-aprovada).
+Não houve instalação/abertura/captura solicitada; pacote atualmente instalado
+continua dependente da nova consulta, privacidade/gate seguem pendentes.
+
+
+Identidade instalada recebida: única base69d5a0b3… no SM-S731B, anterior=true/
+novo=false. Autor informou demo fechada/sem aplicação no terminal; fase não
+observada, sem inferir câmera/processos. [Atualização do pacote de avaliação](task-07-backup-pos-merge.md#identidade-instalada-reconfirmada-e-atualização-de-avaliação-preparada)
+preparada com guarda de hash/alvo, install -r sem abertura e hash posterior.
+Nenhuma instalação executada pelo Codex; retorno do autor pendente, gate fechado.
+
+
+Atualização recebida: install sucesso, única base instaladaedf860b7… no Samsung,
+anterior=false/novo=true, app fechado, indicador de câmera não percebido e sem
+comportamento inesperado observado. [T0 de abertura com Metro da fonte062e9b1](task-07-backup-pos-merge.md#retorno-da-atualização--novo-apk-instalado-app-fechado)
+preparado sem iniciar câmera, com associacao-1/Fast Refresh/bundle/estado inicial.
+Nova evidência funcional ainda pendente; gate clínico permanece bloqueado.
+
+
+T0 interrompido por EOF de HTTP127.0.0.1:8097 ao abrir Dev Client; autor confirmou
+Metro ainda rodando. Sem evidência de JS/tela/hash novo ou tentativa de câmera.
+[Diagnóstico somente de metadados e inspector de desenvolvimento](task-07-backup-pos-merge.md#t0-interrompido--eof-http-no-carregamento-do-dev-client):
+metro-link-1 consulta saúde loopback v4/v6 e reverse; hipótese localhost/bind ainda
+não confirmada. Fonte futura desativa EX_DEV_CLIENT_NETWORK_INSPECTOR no prebuild
+só da demo; APKedf860b7… e Metro062e9b1 preservados, sem reinstalação nesta análise.
+Gate clínico/telemetria/rede seguem pendentes.
+
+
+Metro-link-1 recebido: IPv4ConnectFailure/sem resposta, IPv6HTTP200/fonte esperada/
+pronto, reverse disponível sem nenhuma linha; Metro continuou rodando. [Ajuste
+somente da sessão Node/reverse](task-07-backup-pos-merge.md#retorno-metro-link-1--ipv6-pronto-ipv4-indisponível-e-reverse-ausente)
+prepara ipv4first por processo e mapeamento8097 sem conflito; teste de bind no
+host passou, retorno Windows ainda pendente. Não afirma causa universal do EOF
+nem muda APK/engine/redes globais ou habilitação.
+
+
+T0 recebido positivo para abertura por a após ajuste: captura-5/associacao-1,
+active/idle/nao-carregado, Fast Refresh desligado, sem preview/revisão/indicador
+percebido ou erro. IPv4HTTP200/fonte/pronto, reverse1/0/sem conflito; IPv6 não
+responde nessa sessão. [Controle de bundle/idle do novo APK](task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
+preparado sem câmera; r anterior não explicitamente confirmado. Não é inspeção
+integral/zero tráfego ou conclusão; inspector false ainda requer futuro build.
+
+
+Idle novo recebido: espera programada30s sem pausa, active/idle/nao-carregado,
+sem preview/revisão/indicador percebido/interrupção. Bundle23e7dd6f…; inventario-1
+IDs1/2 com16 entradas/categorias1/2/12/1 e delta0. r anterior confirmado, nenhum
+r na janela. [Diagnóstico e build isolado sem inspector](task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
+preparados: fonteca786ed em outra pasta, sem instalação/captura. Idle não homologa
+conteúdo/temporários/rede; APK atualEDF ainda tem configuração anterior.
+
+
+Candidato de inspector recebido: fonteca786ed limpa, APK25990bb4…; flags false
+na geração/invocação, BytecodeInspecionado=false, manifesto/backup/assinaturas
+aprovados no retorno do autor. [Evidência e atualização restrita preparada](task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados)
+fixa EDF→25990bb4… e não abre app; candidato já instalado não é reinstalado.
+Nenhuma instalação do novo candidato recebida ainda, sem nova captura/gate.
+
+
+Nova sessão após PC desligado: autor recebeu inspector-update-adb-unavailable
+sem JSON final. Estado instalado não foi inferido do erro. [Retomada somente
+leitura e correção de stderr nativo](task-07-backup-pos-merge.md#retomada-após-desligar-o-pc--falha-de-adb-não-identifica-o-instalado)
+preparadas: start-server idempotente no PC, Process sem shell/streams separados,
+ReadOnly que não instala e não depende de variáveis/candidato local. Testes com
+executável fictício passaram; validação Windows da retomada segue pendente.
+
+
+Retomada Windows recebida positiva: consulta device/modelo/hashEDF, stderr de
+startup presente sem reprovar; depois instalaçãoEDF→25990bb4… confirmada. [Abertura
+e idle do candidato](task-07-backup-pos-merge.md#retomada-e-instalação-do-candidato-confirmadas-pelo-autor)
+preparados na fonteca786ed/inspector-build, ipv4first/8097 e health -Project inspector.
+PrepareMetro não instala e preserva conflitos; sem câmera. Bytecode/privacidade
+não homologados, estado visual pós-instalação não informado ainda.
+
+
+Candidato25990bb4…: abertura/idle recebidos, bundlef672ea34…, IPv4/reverse
+saudáveis; inventario-1 IDs1/2,16→16/delta0 na janela programada30s, sem câmera
+ou interrupções percebidas. [Diagnóstico parcial consolidado](task-07-backup-pos-merge.md#abertura-e-idle-do-candidato-recebidos--diagnóstico-parcial-consolidado)
+registra evidências e condições: bytecode, UID/destinos, SDK/telemetria/OEM e
+integração clínica ainda pendentes. Não repetir controle nem pedir nova captura
+nesta entrega. TASK-04/06/07/18 parciais; habilitação clínica bloqueada.
