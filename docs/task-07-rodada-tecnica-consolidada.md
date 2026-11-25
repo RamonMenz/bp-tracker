@@ -674,3 +674,11 @@ metro-link-1 consulta saúde loopback v4/v6 e reverse; hipótese localhost/bind 
 não confirmada. Fonte futura desativa EX_DEV_CLIENT_NETWORK_INSPECTOR no prebuild
 só da demo; APKedf860b7… e Metro062e9b1 preservados, sem reinstalação nesta análise.
 Gate clínico/telemetria/rede seguem pendentes.
+
+
+Metro-link-1 recebido: IPv4ConnectFailure/sem resposta, IPv6HTTP200/fonte esperada/
+pronto, reverse disponível sem nenhuma linha; Metro continuou rodando. [Ajuste
+somente da sessão Node/reverse](task-07-backup-pos-merge.md#retorno-metro-link-1--ipv6-pronto-ipv4-indisponível-e-reverse-ausente)
+prepara ipv4first por processo e mapeamento8097 sem conflito; teste de bind no
+host passou, retorno Windows ainda pendente. Não afirma causa universal do EOF
+nem muda APK/engine/redes globais ou habilitação.

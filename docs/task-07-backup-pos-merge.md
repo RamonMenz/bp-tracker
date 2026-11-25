@@ -659,7 +659,7 @@ Terminal A, em bloco único; conferir HEAD/status antes de iniciar:
     $env:ANDROID_HOME = $aferiMetroSdk
     $env:EXPO_NO_TELEMETRY = '1'
     Set-Location -LiteralPath .\demos\android-capture
-    node ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8097
+    node --dns-result-order=ipv4first ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8097
 }
 ```
 
@@ -800,3 +800,87 @@ para IPv4 com status estático/raiz esperada e IPv6 com raiz diferente, sem exib
 header/corpo privado e sem ADB real. Prebuild isolado com o plugin novo gerou
 EX_DEV_CLIENT_NETWORK_INSPECTOR=false. Não é build APK/instrumentação Android,
 execução Windows ou diagnóstico do PC do autor. CI inclui os novos checks.
+
+## Retorno metro-link-1 — IPv6 pronto, IPv4 indisponível e reverse ausente
+
+Autor retornou metro-link-1 com Metro ainda rodando: IPv4 HTTPnull,
+FonteEsperada=false/MetroPronto=false/ConnectFailure; IPv6 HTTP200,
+FonteEsperada=true/MetroPronto=true/none. Reverse Disponivel=true,
+Reverse8097Conhecido=0/OutrasLinhas=0/Conflito8097=false. Data/hora efetivas não
+informadas. É evidência da saúde nas duas rotas e ausência de mapeamento na
+consulta, não prova do estado no instante exato do EOF ou de toda a causa.
+FonteEsperada=false com falha IPv4 não identifica um servidor errado: não houve
+resposta/header nesse caminho. No IPv6, a raiz esperada e status foram reconhecidos.
+
+Corrigir somente sessão de desenvolvimento: Ctrl+C **no Metro A conhecido**,
+aguardar retornar ao PowerShell. Não encerrar Node por nome/PID global, matar
+ADB, desligar firewall, mudar rede do telefone, limpar cache/dados ou reinstalar.
+O cleanup da CLI pode retirar o reverse conhecido ao sair; configurar depois do
+novo Metro pronto. Não manter duas sessões em8097 nem aceitar outra porta.
+
+O comando recomendado de T0 foi atualizado com --dns-result-order=ipv4first,
+flag **do processo Node**, antes do caminho da CLI. Não muda DNS/IPv6 do SO,
+NODE_OPTIONS global, dependências, APK ou engine. Teste no host Node24.19.0 com
+lookup e HTTPserver.bind localhost em porta efêmera retornou IPv4/127.0.0.1;
+não é medição Windows24.22.0 ou garantia sobre a próxima sessão do autor.
+
+Terminal A, após Ctrl+C: executar novamente o bloco T0 da fonte062e9b1,
+agora com a flag ipv4first. Aguardar Metro pronto; ainda não pressionar a.
+Terminal B, mantendo só Samsung de avaliação conectado, verificar conflitos e
+criar somente reverse8097, sem remover outros mapeamentos:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task07-backup-tools'
+    $aferiAdbReverse = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+    try {
+        $aferiReverseAntes = @(& $aferiAdbReverse -d reverse --list 2>&1)
+        $aferiReverseCode = $LASTEXITCODE
+    } catch { throw 'reverse-query-unavailable' }
+    if ($aferiReverseCode -ne 0) { throw 'reverse-query-unavailable' }
+    $aferiReverseLinhas = @($aferiReverseAntes | Where-Object { $_.ToString().Trim().Length -gt 0 })
+    if (@($aferiReverseLinhas | Where-Object { $_ -isnot [string] -or $_ -notmatch '^\S+\s+\S+\s+\S+\s*$' }).Count -ne 0) {
+        throw 'reverse-output-unexpected'
+    }
+    $aferiReverseConflitos = @($aferiReverseLinhas | Where-Object {
+        $_ -match '^\S+\s+tcp:8097\s+' -and $_ -notmatch '^\S+\s+tcp:8097\s+tcp:8097\s*$'
+    })
+    if ($aferiReverseConflitos.Count -ne 0) { throw 'reverse-conflict-preserve' }
+    try {
+        $aferiReverseCriado = @(& $aferiAdbReverse -d reverse tcp:8097 tcp:8097 2>&1)
+        $aferiReverseCreateCode = $LASTEXITCODE
+    } catch { throw 'reverse-create-unavailable' }
+    if ($aferiReverseCreateCode -ne 0) { throw 'reverse-create-unavailable' }
+    & .\tools\task07\Test-AferiMetroConnection.ps1
+}
+```
+
+As ferramentasca786ed já contêm Test-AferiMetroConnection; nenhum checkout/novo
+build é necessário no Windows para esta correção. Esperado IPv4 HTTP200,
+FonteEsperada=true/MetroPronto=true e Reverse8097Conhecido=1 sem conflito.
+IPv6 pode deixar de responder nessa sessão; não é regressão desse percurso.
+Se IPv4 não ficar pronto ou reverse divergir, parar e devolver só JSON/impedimento.
+Não inferir causa resolvida antes da consulta e carregamento real.
+
+**Somente se esses critérios aparecerem**, retornar ao terminal A e pressionar a
+uma vez. Se carregar, conferir Fast Refresh desligado no menu m, fechar menu e
+fazer uma recarga manual r, sem câmera; observar captura-5/associacao-1/active/
+idle/nao-carregado, preview/revisão ausentes e indicador de câmera percebido ou
+não observado. Devolver JSON de saúde e resumo desses indicadores; não pedir
+hash novo do bundle se a tela ainda não carregou. Se persistir erro, não repetir
+abertura: informar apenas tipo/mensagem curta sanitizada, sem URL completa ou log.
+
+A nova flag de desativação do inspector continua exclusivamente fonte futura;
+APKedf860b7…/Metro062e9b1 preservados. Reverse é canal do Metro, não rede de
+reconhecimento; sua presença não prova tráfego clínico ou processamento remoto.
+T0/telemetria/UID/destinos/OEM e habilitação continuam pendentes até evidência.
+
+
+Reparo de reverse conferido no host com sete cenários simulados: vazio, mapeamento
+conhecido, outro mapeamento preservado, conflito8097, formato inválido, consulta
+indisponível e falha na criação. Nenhum reverse-remove/ADB real executado.
+Se o Dev Client carregar sozinho ao restabelecer Metro/reverse, não pressionar a
+novamente; registrar carregamento de desenvolvimento e conferir os mesmos
+indicadores. Isso não deve ser rotulado como retomada de captura sem observação
+de câmera/tentativa, pois não há tentativa clínica iniciada nessa preparação.
