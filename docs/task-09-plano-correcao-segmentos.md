@@ -196,3 +196,13 @@ de verificação do futuro artefato preparado; nenhuma instalação solicitada.
 Lacunas físicas da Etapa 1 e demais gates continuam abertos; não concluir tarefas
 ou declarar correção de segmentos. Próxima etapa é materializar/verificar artefato,
 não repetir captura somente para ampliar instrumentação.
+
+## Continuidade — verificação da Etapa 3
+
+[Matriz de evidências e procedimento Windows](task-09-etapa-3-verificacao.md):
+testes ampliados de pixels/strides/limites/ownership e resultados tardios aprovados,
+sem alterar a variante roi-1. Etapa3 parcial: fonte de build45f7376 fixada e
+ferramentas próprias eb92ec0, mas sem novo APK físico/inspeção de artefato.
+Preparação, build, inspeção, atualização e abertura são fases distintas;
+identidade do APK ainda desconhecida impede liberar guard de atualização.
+Nenhuma captura, instalação, merge, deploy ou habilitação clínica executada.

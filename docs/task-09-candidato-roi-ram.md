@@ -187,3 +187,13 @@ instalar; preservar pasta/artefato e devolver código de etapa/mensagem curta
 sanitizada. Sem logs completos, certificados, payloads, screenshots clínicos ou
 mídia. APK259/fontea649/bundle2191 continuam referências históricas, não resultados
 do novo candidato. Próxima ação do autor nesta entrega: revisão do PR, sem telefone.
+
+## Continuidade — Etapa 3
+
+[Revisão, matriz e comandos Windows separados por fase](task-09-etapa-3-verificacao.md).
+Cobertura ampliada sem alterar o código do candidato: 832 testes/71 suítes e
+quatro checks Java puros aprovados. Ferramentas fixadas em eb92ec0 preparam e
+compilam a fonte45f7376 em worktree nova; inspeção exige hashes explícitos.
+Etapa3 parcial enquanto faltam build Android e inspeção do novo artefato.
+Próxima ação agora é somente preparação/build do roteiro, telefone desconectado;
+não instalar, abrir ou capturar. Referências históricas acima preservadas.
