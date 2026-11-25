@@ -558,7 +558,7 @@ as correções e o veredito no mesmo PR #80; nenhuma ação no dispositivo agora
 ## Continuidade após revisão — candidato ROI da Etapa 2
 
 Por solicitação posterior do autor, [implementado roi-1](task-09-candidato-roi-ram.md)
-na branch `feat/task-09-roi-ram`, fonte funcional150bc64. Usa ViewPort/transformações
+na branch `feat/task-09-roi-ram`, fonte funcional730b721. Usa ViewPort/transformações
 CameraX para guia/ROI e NV21 orientado/redimensionado em RAM, duas passagens
 sequenciais e caixas no quadro upright de origem. Preserva bridge-2 e o parser;
 sem luminância, motor alternativo ou habilitação clínica. Dimensões reais,

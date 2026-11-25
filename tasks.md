@@ -304,7 +304,7 @@ seguem sem nova evidência; Etapa 2 não iniciada, sem captura isolada solicitad
 TASK-04/06/07/09/18 permanecem parciais e habilitação clínica bloqueada.
 
 TASK-09 — [candidato ROI da Etapa 2](docs/task-09-candidato-roi-ram.md), branch
-`feat/task-09-roi-ram`, código150bc64 sobre27212a4, sem exigir merge#80. Variante
+`feat/task-09-roi-ram`, código730b721 sobre27212a4, sem exigir merge#80. Variante
 única em RAM com guia CameraX/ViewPort, orientação/escala limitadas e retorno de
 caixas à origem; comparação original/processado sequencial, separada e sem writer.
 828 testes/71 suítes, lint/TypeScript e checks Java aprovados; checagem Kotlin

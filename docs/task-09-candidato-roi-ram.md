@@ -1,7 +1,7 @@
 # TASK-09 — candidato ROI em RAM, Etapa 2
 
 Implementação experimental `roi-1`, não correção comprovada. Código funcional
-fixado em **150bc6419feec9c78b6b0c634cca13a2c66007a0**, branch
+fixado em **730b7219640c70da083076dcdadd9e3a7919c7a7**, branch
 `feat/task-09-roi-ram`, derivada de `27212a4` do PR #80 ainda aberto/draft.
 Staging consultado em `a106a39`; nenhum merge intermediário exigido/executado.
 Checkout anterior e referências históricas preservados. Não há APK novo,
@@ -39,6 +39,9 @@ ou mídia do autor incorporada ao código/fixtures.
 
 1. Em comparação, Preview e ImageAnalysis são vinculados no mesmo
    `UseCaseGroup`, com o `ViewPort` do PreviewView e target rotation congelada.
+   Tamanho/rotação são congelados antes de solicitar o provider assíncrono e
+   reconferidos em seu callback; layout durante a espera não é comparado com
+   dimensões ainda não inicializadas nem redefine silenciosamente a geometria.
    Dimensões e rotação são as efetivamente recebidas no ImageProxy.
 2. `PreviewView.outputTransform` fornece `Tp`, viewport normalizado → preview.
    `ImageProxyTransformFactory` com `usingCropRect=false` e
@@ -143,6 +146,8 @@ heap dumps clínicos. Dados sensíveis continuam exclusivamente transitórios.
   passou por checagem Kotlin contra classes reais CameraX/ML Kit, **com interfaces
   Expo substituídas por doubles mínimos**. Jars/ferramentas somente em /tmp, sem
   alterar dependências do app. Não é build Expo/Android completo, dex ou APK.
+  A proteção da abertura assíncrona foi revista por código e checagem de API;
+  teste Android de layout durante abertura do provider permanece pendente.
 - CI amplia o job Java para os mesmos testes puros. Resultado remoto do head deve
   ser conferido no PR, sem transferir o CI verde de 27212a4 para esta entrega.
 

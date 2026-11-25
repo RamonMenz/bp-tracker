@@ -182,7 +182,7 @@ nesta revisão; conclusão das TASK-04/06/07/09/18 e habilitação seguem bloque
 
 ## Continuidade — candidato da Etapa 2 implementado
 
-[Candidato ROI em RAM](task-09-candidato-roi-ram.md), código `150bc6419feec9c78b6b0c634cca13a2c66007a0`,
+[Candidato ROI em RAM](task-09-candidato-roi-ram.md), código `730b7219640c70da083076dcdadd9e3a7919c7a7`,
 branch `feat/task-09-roi-ram` sobre 27212a4; #80 ainda aberto, sem exigir merge.
 Uma variante fixa de ROI/orientação/escala NV21, ViewPort compartilhado e guia
 projetada do ROI efetivo; caixas retornam ao upright-frame original. Comparação
