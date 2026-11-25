@@ -9,16 +9,25 @@ public final class OcrLinePolicy {
   public static final int MAX_TEXT_LENGTH = 500;
   private int considered = 0;
   private boolean sdkLines, sdkDigits, bridgeLines, bridgeDigits;
+  private boolean sdkTextDigits, sdkBlockDigits;
   private boolean noBox, longText, lineLimit;
   private boolean digitsNoBox, digitsLongText, digitsLineLimit;
 
-  /** Mantém take(500) ANTES dos filtros, inclusive para linhas descartadas. */
-  public boolean accept(String text, boolean hasBox) {
-    boolean digits = false;
+  private static boolean hasAsciiDigit(String text) {
     for (int i = 0; i < text.length(); i++) {
       char c = text.charAt(i);
-      if (c >= '0' && c <= '9') { digits = true; break; }
+      if (c >= '0' && c <= '9') return true;
     }
+    return false;
+  }
+
+  // Apenas presença: não cria tokens a partir de Text ou TextBlock.
+  public void observeSdkText(String text) { sdkTextDigits |= hasAsciiDigit(text); }
+  public void observeBlockText(String text) { sdkBlockDigits |= hasAsciiDigit(text); }
+
+  /** Mantém take(500) ANTES dos filtros, inclusive para linhas descartadas. */
+  public boolean accept(String text, boolean hasBox) {
+    boolean digits = hasAsciiDigit(text);
     sdkLines = true;
     sdkDigits |= digits;
     if (considered == MAX_LINES) {
@@ -36,9 +45,12 @@ public final class OcrLinePolicy {
 
   public Map<String, Object> diagnostic() {
     Map<String, Object> result = new LinkedHashMap<>();
-    result.put("revision", "bridge-1");
+    result.put("revision", "bridge-2");
     result.put("sdkLinesPresent", sdkLines);
-    result.put("sdkAsciiDigitPresent", sdkDigits);
+    result.put("sdkAsciiDigitPresent", sdkTextDigits || sdkBlockDigits || sdkDigits);
+    result.put("sdkTextAsciiDigitPresent", sdkTextDigits);
+    result.put("sdkBlockAsciiDigitPresent", sdkBlockDigits);
+    result.put("sdkLineAsciiDigitPresent", sdkDigits);
     result.put("bridgeLinesPresent", bridgeLines);
     result.put("bridgeAsciiDigitPresent", bridgeDigits);
     result.put("droppedWithoutBox", noBox);

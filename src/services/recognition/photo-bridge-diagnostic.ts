@@ -1,6 +1,9 @@
 const FLAGS = [
   ['sdkLinesPresent', 'sdk:linhas'],
   ['sdkAsciiDigitPresent', 'sdk:digitos-ascii'],
+  ['sdkTextAsciiDigitPresent', 'sdk:digitos-em-texto'],
+  ['sdkBlockAsciiDigitPresent', 'sdk:digitos-em-blocos'],
+  ['sdkLineAsciiDigitPresent', 'sdk:digitos-em-linhas'],
   ['bridgeLinesPresent', 'bridge:linhas'],
   ['bridgeAsciiDigitPresent', 'bridge:digitos-ascii'],
   ['droppedWithoutBox', 'descarte:sem-caixa'],
@@ -17,6 +20,14 @@ function record(value: unknown): Record<string, unknown> | null {
 }
 function dimension(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value > 0 && value <= 100000;
+}
+function consistent(data: Record<string, unknown>): boolean {
+  const rejected = ['WithoutBox', 'LongText', 'LineLimit'];
+  return data.sdkAsciiDigitPresent === (data.sdkTextAsciiDigitPresent || data.sdkBlockAsciiDigitPresent || data.sdkLineAsciiDigitPresent)
+    && data.sdkLinesPresent === (data.bridgeLinesPresent || rejected.some(reason => data[`dropped${reason}`]))
+    && (!data.bridgeAsciiDigitPresent || Boolean(data.bridgeLinesPresent))
+    && data.sdkLineAsciiDigitPresent === (data.bridgeAsciiDigitPresent || rejected.some(reason => data[`asciiDigitDropped${reason}`]))
+    && rejected.every(reason => !data[`asciiDigitDropped${reason}`] || Boolean(data[`dropped${reason}`]));
 }
 function describeGeometry(value: unknown): readonly string[] {
   const frame = record(value);
@@ -45,11 +56,11 @@ function describeGeometry(value: unknown): readonly string[] {
 /** Só na revisão da demo; APK antigo/malformado nunca equivale a SDK sem dígitos. */
 export function describePhotoBridge(value: unknown): readonly string[] {
   const data = record(value);
-  if (!data || data.revision !== 'bridge-1' || !FLAGS.every(([key]) => typeof data[key] === 'boolean')) {
+  if (!data || data.revision !== 'bridge-2' || !FLAGS.every(([key]) => typeof data[key] === 'boolean') || !consistent(data)) {
     return ['bridge:diagnostico-indisponivel'];
   }
   return [
-    'bridge:revisao=bridge-1',
+    'bridge:revisao=bridge-2',
     ...FLAGS.map(([key, label]) => `${label}=${data[key] ? 'presente' : 'ausente'}`),
     ...describeGeometry(data.frame),
   ];

@@ -111,20 +111,23 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
           val height = frame.height
           val rotation = frame.imageInfo.rotationDegrees
           val capturedAtMs = System.currentTimeMillis()
-          // Metadados do quadro realmente recebido, antes de unbind. Preview e
-          // análise são use cases independentes, sem ViewPort/transformação comum.
-          val previewSize = surface?.resolutionInfo?.resolution
-          val crop = frame.cropRect
-          val frameGeometry = mapOf("width" to width, "height" to height,
-            "rotation" to rotation, "cropMatchesBuffer" to (crop.left == 0 && crop.top == 0 && crop.right == width && crop.bottom == height),
-            "previewViewWidth" to preview.width, "previewViewHeight" to preview.height,
-            "previewBufferWidth" to previewSize?.width, "previewBufferHeight" to previewSize?.height)
+          var frameGeometry: Map<String, Any?>? = null
           // Somente metadados tecnicos; nunca bytes, pixels ou texto reconhecido.
           val diagnostic = mutableMapOf<String, Any?>("revision" to "frame-1",
             "width" to width, "height" to height, "format" to frame.format,
             "rotation" to rotation, "maxPixels" to FrameBytes.MAX_FRAME_PIXELS)
           ownedBytes = null
           try {
+            // Diagnóstico opcional dentro do try/finally que fecha o ImageProxy.
+            // Uma falha de metadados não muda a cópia/reconhecimento nem expõe erro.
+            frameGeometry = try {
+              val previewSize = surface?.resolutionInfo?.resolution
+              val crop = frame.cropRect
+              mapOf("width" to width, "height" to height,
+                "rotation" to rotation, "cropMatchesBuffer" to (crop.left == 0 && crop.top == 0 && crop.right == width && crop.bottom == height),
+                "previewViewWidth" to preview.width, "previewViewHeight" to preview.height,
+                "previewBufferWidth" to previewSize?.width, "previewBufferHeight" to previewSize?.height)
+            } catch (_: Exception) { null } // Projeção JS informa geometria indisponível.
             val p = frame.planes
             diagnostic["planeCount"] = p.size
             diagnostic["planes"] = p.take(3).map { plane ->
@@ -162,9 +165,11 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
                   val w = if (rotation % 180 == 0) width else height
                   val h = if (rotation % 180 == 0) height else width
                   val policy = OcrLinePolicy()
+                  policy.observeSdkText(text.text)
                   // Percorrer as linhas também além do limite só projeta presença.
                   // Nenhuma linha rejeitada é exportada ou guardada pelo diagnóstico.
-                  val tokens = text.textBlocks.asSequence().flatMap { it.lines.asSequence() }.mapNotNull { line ->
+                  val tokens = text.textBlocks.asSequence().onEach { policy.observeBlockText(it.text) }
+                    .flatMap { it.lines.asSequence() }.mapNotNull { line ->
                     val content = line.text
                     val box = line.boundingBox
                     if (!policy.accept(content, box != null) || box == null) return@mapNotNull null

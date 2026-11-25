@@ -286,10 +286,19 @@ justificadas, com parada se ineficazes; motor/privacidade preservados. Plano nã
 implementado, sem nova coleta ou habilitação; tarefas continuam parciais.
 
 
-TASK-09 — etapa 1 do plano implementada em `fix/task-09-diagnostico-bridge`,
+TASK-09 — instrumentação inicial da etapa 1 em `fix/task-09-diagnostico-bridge`,
 base staginga106a39 após #78/#79: [bridge-1/associacao-3 e contrato de coordenadas](docs/task-09-diagnostico-visor-real.md#etapa-1-do-plano--caminho-conferido-e-diagnóstico-da-bridge-preparado)
 distinguem sinais nas linhas do SDK e após filtros, sem conteúdo no diagnóstico.
 Limites/parser preservados; preview→análise ainda sem transformação estabelecida.
 Lint/TypeScript raiz/demo, 773 testes/68 suítes e checks Java puros aprovados;
 sem compilação Kotlin/APK, pré-processamento ou ensaio físico novo. Etapas 2–6
 pendentes; sem nova captura solicitada, TASK-04/06/07/09/18 parciais/gate bloqueado.
+
+TASK-09 — [revisão da Etapa 1: parcial](docs/task-09-diagnostico-visor-real.md#revisão-da-etapa-1--veredito-parcial).
+`bridge-2` distingue Text/TextBlock/Line e tokens; metadados opcionais protegidos
+pelo fechamento do quadro; diagnóstico/revisão antigos no reinício de efeitos
+reproduzidos e corrigidos. Matriz de filtros, prioridades e contrato requerido
+da primeira variante completos. Lint/TypeScript, 788 testes/68 suítes e checks
+Java puros aprovados. Dimensões/saída SDK/caixas no Samsung e build Kotlin/APK
+seguem sem nova evidência; Etapa 2 não iniciada, sem captura isolada solicitada.
+TASK-04/06/07/09/18 permanecem parciais e habilitação clínica bloqueada.

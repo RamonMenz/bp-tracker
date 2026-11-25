@@ -279,6 +279,10 @@ permanecem parciais/bloqueados. Nenhuma repetição A/B ou idle solicitada agora
 
 ## Etapa 1 do plano — caminho conferido e diagnóstico da bridge preparado
 
+Registro da primeira entrega, commit `6d2fb88`. A revisão abaixo corrige suas
+lacunas e distingue implementação de conclusão; os resultados desta entrega
+permanecem históricos.
+
 Base desta implementação: `origin/staging` consultado em
 `a106a39d10d17b6e5cb16a48fd10328a4dede24e`, com PRs #78 e #79 confirmados
 como merged e nenhum PR aberto na consulta inicial. O plano `26a1c973` já está
@@ -390,3 +394,163 @@ candidato concreto, build nativo/CI, identidade/manifesto/backup/inspector e
 assinatura; os scripts fixados em APK259/fonteca786ed não são atualizadores
 genéricos para esse candidato. Protocolo físico será específico do novo artefato,
 com retorno sanitizado e condições de parada conforme o plano.
+
+## Revisão da Etapa 1 — veredito parcial
+
+Revisão solicitada antes de qualquer Etapa 2. Estado inicial reconferido:
+branch `fix/task-09-diagnostico-bridge`, HEAD `6d2fb88fda61564b45c9b42c392594a30362a180`,
+checkout limpo, remoto da branch igual; staging permanece `a106a39`.
+PRs #78/#79 merged; PR #80 aberto/draft, único aberto na consulta. O plano
+está incorporado em staging. Nenhum trabalho preexistente foi descartado.
+Referências confrontadas: CLAUDE.md, constitution.md, spec-fotografia §§3/6,
+Etapa 1 do plano, diagnóstico histórico, diffs e código efetivo.
+
+**Veredito: Etapa 1 parcial.** A entrega anterior preparou código e documentação,
+mas isso não comprovou a execução do novo caminho nativo nem as dimensões,
+orientação/caixas e saída do SDK no Samsung. Nesta revisão foram completadas as
+lacunas de código identificadas e o diagnóstico priorizado. As dependências
+físicas abaixo continuam abertas; nenhuma causa da falha B foi estabelecida.
+
+### Matriz de requisitos e evidências
+
+| Requisito | Estado | Evidência e limite |
+|---|---|---|
+| CameraX → NV21 → InputImage → ML Kit → bridge → OcrObservation → interpretação | Atendido na inspeção | `AferiPhotoView`, `FrameBytes`, `android-photo-session`, `parseOcr` e `interpretPhoto` examinados. Buffer completo, rotação por metadado, uma chamada ao SDK, contrato e filtros abaixo. Não é execução física. |
+| Dimensões/resolução efetivas e coordenadas | Parcial | Preferência/filtro e origem de `frame.width/height`, `rotationDegrees`, crop e resolução do preview conferidos. Contrato upright-frame explícito. Valores efetivamente selecionados e orientação das caixas no novo APK ainda não observados no Samsung. |
+| Correspondência preview → análise | Parcial | Ausência de ViewPort/matriz compartilhados demonstrada na fonte; FILL_CENTER pode cortar preview. Hipótese e requisitos de transformação definidos abaixo. Nenhuma correspondência foi medida ou implementada. |
+| SDK antes dos filtros versus tokens exportados | Atendido no código/testes puros; parcial no dispositivo | `bridge-2` examina presença de ASCII em `Text.text`, `TextBlock.text` e `Line.text`, além da saída filtrada. SDK real não executado nesta revisão; B histórico continua sem esses sinais. |
+| Instrumentação restrita e sanitizada | Atendido no código e fixtures | Autolinking da demo e ausência de composição nas rotas clínicas conferidos. Treze booleanos fixos, dimensões técnicas limitadas e revisão conhecida; sem texto/valor/caixa OCR/pixel/ID/exceção no relatório. Sem I/O/logger/writer novos; SDK/SO internos não homologados. |
+| Descarte, geração e revisão atual | Atendido nos testes JS; parcial no nativo | Cancelar, background, recapturar, confirmar, desmontagem/OCR tardio e cleanup recusado cobertos por mocks. Regressão de efeitos reiniciados reproduzida e corrigida. Não demonstra execução real do lifecycle/SDK. |
+| Ownership NV21/lease/completion | Parcial | Referência `ownedBytes` e lease mantidas durante `processing`, inclusive cancelado; liberação no completion, sem troca de conta/rotas clínicas adicionadas. Inspeção e testes puros/portas não comprovam lifetime interno ou RAM do SDK. |
+| Testes de projeção, filtros, vazio e sentinelas | Atendido no alcance puro/simulado | Testes Java e Jest listados abaixo; não confundidos com build Android ou Samsung. |
+| Diagnóstico priorizado e requisitos da primeira variante | Atendido documentalmente | Fatos, A/B, hipóteses, desconhecidos e contrato de ida/volta abaixo. Nenhum pré-processamento implementado. |
+| Determinar onde B perdeu os dígitos | Bloqueado por evidência indisponível | O retorno histórico só observa tokens filtrados. Código novo não reconstrói aquele callback/quadro. Incorporar diagnóstico ao candidato; não solicitar captura só para instrumentação. |
+
+### Filtros e recusas no caminho completo
+
+1. CameraX seleciona dimensões pares positivas até `1920000` pixels; sem gesto,
+   frames são fechados. `FrameBytes` recusa dimensões, strides ou índices fora
+   dos planos; não lê arquivo, não aplica crop e não escolhe números.
+2. O SDK pode devolver resultado vazio, letras ou números errados. Seu callback
+   público não expõe todas as decisões internas do motor. O antigo `bridge-1`
+   só inspecionava linhas; não cobria informação eventualmente presente apenas
+   em Text/TextBlock. `bridge-2` cobre separadamente esses três níveis sem criar
+   tokens a partir dos níveis superiores. Os treze sinais continuam booleanos.
+3. A bridge considera as primeiras 500 linhas antes dos filtros, depois exige
+   boundingBox e texto de até 500 unidades UTF-16. Linhas rejeitadas consomem o
+   limite; razão primária mantém essa ordem. Presença de ASCII descartado não
+   comprova que fosse número clínico útil. Política preservada por teste
+   diferencial contra a expressão anterior, inclusive linhas após o limite.
+4. Clamps das caixas podem produzir área zero; texto/dígitos permanecem no
+   token, mas a associação espacial pode falhar. Clamps não provam que a caixa
+   original era correta, nem que orientação/campo visível correspondem ao preview.
+5. `parseOcr` rejeita a observação inteira se espaço, timestamp, limites de
+   tokens/texto, confiança ou coordenadas forem inválidos. O coordenador informa
+   falha sanitizada; não há salvamento parcial silencioso. Extras diagnósticos
+   não fazem parte de OcrObservation. Diagnóstico inválido vira indisponível e
+   não altera candidatos de um contrato OCR válido.
+6. `interpretPhoto` remove acessórios identificados e separadores, exige
+   gramática numérica/rótulos e proximidade não ambígua; caixas sem área não
+   suportam associação espacial. kPa/múltiplos rótulos/números não identificados
+   ficam incertos. Esses critérios não mudaram. `inspectPhotoText` verifica ASCII
+   nos tokens antes de remover acessórios; portanto filtros de interpretação
+   não explicam a ausência de ASCII nesse indicador de B.
+7. Cancelamento, timeout, geração antiga, desmontagem ou cleanup não confirmado
+   descartam o resultado inteiro. Não são filtros para selecionar uma leitura
+   aparentemente boa e não autorizam nova tentativa automática.
+
+### Problemas encontrados e correções dentro da Etapa 1
+
+- **Abrangência de SDK insuficiente:** categorias de `bridge-1` não distinguiam
+  Text/TextBlock de Line. `bridge-2` acrescenta três sinais por nível e calcula
+  a presença agregada; não altera tokens, limites ou interpretação. Revisão
+  antiga é identificável no binding, mas a nova projeção a trata como diagnóstico
+  indisponível. Contradições entre booleanos também são recusadas.
+- **Metadados fora da proteção de fechamento:** novos getters de crop/preview
+  eram lidos antes do try/finally da cópia. Agora estão dentro dele, com falha
+  opcional convertida em geometria indisponível. Nenhuma mensagem de exceção é
+  exposta; falha desse diagnóstico não muda a cópia/recognition. A proteção foi
+  conferida por código; não houve teste de exceção real CameraX/Kotlin compilado.
+- **Diagnóstico/revisão antigos após reinício de efeitos:** teste reproduziu
+  permanência em estado React após invalidar a sessão. A demo agora descarta
+  ambos na criação da sessão substituta e conserva a barreira de retirement.
+  O teste falhou antes da correção e passou depois. Não se alterou o controller
+  compartilhado do produto nem sua persistência.
+- **Conclusão e prioridades insuficientemente delimitadas:** esta matriz e o
+  diagnóstico abaixo substituem qualquer leitura de “implementada” como
+  comprovação de conclusão física ou correção dos segmentos.
+
+### Diagnóstico priorizado
+
+| Prioridade | Fatos e evidência | Hipótese e consequência |
+|---|---|---|
+| 1 — localizar a perda antes da interpretação | A/B: uma tentativa de cada, A com três campos corretos; B com rótulos, sem ASCII nos tokens e três campos ausentes. A política pode remover linhas numéricas, provado apenas com strings sintéticas. | Captura/SDK/filtragem seguem alternativas abertas. Se Text/Block têm ASCII e Line não, existe lacuna de representação; se Line tem e tokens não, examinar o filtro indicado. Não completar campos por faixa/ordem ou relaxar limites sem evidência. |
+| 2 — legibilidade e geometria do quadro entregue | Fonte entrega NV21 completo, sem ROI/escala. Preferência de resolução não é resolução medida. Não existe transformação comum com preview. Rótulos do BSPII ficam na carcaça. | Concentrar região útil, orientar e redimensionar de forma limitada é hipótese testável. Não atribuir a falha a contraste: B tem alto contraste visual e não há medida dos pixels recebidos. |
+| 3 — associação somente depois de haver números | Parser não remove ASCII do indicador usado em B e não foi modificado. Geometria zero/ambígua pode impedir associação quando houver números. | Preservar contrato de caixas e acessórios; só investigar associação como causa de campos ausentes se os números chegaram. Não tomar confiança/faixa como identidade de campo. |
+
+Não observados nesta revisão: pixels/nitidez/foco do quadro, dimensões reais
+selecionadas no Samsung, sinais antes dos filtros de B, orientação das caixas
+ML Kit nas quatro rotações, comportamento compilado dos novos getters/callbacks,
+latência/alocações e eventos internos SDK/SO/rede. Sem prova de que a bridge
+descartou números úteis, não há correção de filtragem clínica justificada agora.
+O A/B não comprova incapacidade universal do ML Kit nem causa no LCD real.
+
+### Requisitos concretos para iniciar a primeira variante depois desta revisão
+
+- Usar esta frente de código identificada, reconferir staging/PRs e preservar
+  fontes/APKs/bundle anteriores; não exigir merge intermediário. Nenhum parâmetro
+  deve ser ajustado usando mídia clínica ou captura para reiniciar contexto.
+- Construir transformação preview→análise com campo visível compartilhado ou
+  matrizes CameraX documentadas, dimensões/rotação/cortes reais; invalidar a guia
+  se transformação/dimensões estiverem indisponíveis ou mudarem. Não inferir
+  equivalência por aspecto ou aplicar retângulo arbitrário no sensor.
+- A região deve conter LCD, números **e rótulos externos SIS/DIA/PULSO** na
+  carcaça à direita. Não recortar apenas o LCD. Acessórios não viram pressão por
+  ordem/faixa. Para NV21, alinhar bordas/dimensões ao croma e registrar o ROI
+  efetivo após arredondamento, preservando esses elementos.
+- Definir uma só combinação fixa de ROI/orientação/escala limitada. Aplicar a
+  rotação uma vez; bytes já upright exigem rotação zero na nova InputImage.
+  Restaurar as caixas ao quadro upright original. Se ROI upright tem origem
+  `(L,T)`, dimensões originais orientadas `(W,H)` e escala `(sx,sy)`, caixa do
+  processado em pixels `(x,y,w,h)` volta a
+  `((L+x/sx)/W, (T+y/sy)/H, w/(sx*W), h/(sy*H))`.
+  Usar offsets/escalas efetivos; validar ida/volta e bordas nas quatro rotações,
+  inclusive o percurso preview→ROI, antes de confiar na guia. Esta fórmula é
+  requisito de projeto, não transformador ou prova CameraX já implementados.
+- Manter MAX_FRAME_PIXELS, validar dimensões/strides/overflow e definir teto
+  explícito de buffers próprios intermediários. Referências/lease continuam até
+  completion de cada chamada SDK; limite próprio não mede memória interna do SDK.
+  Planejar comparação sequencial, separada, sem mesclar campos ou retry silencioso.
+- Levar `bridge-2` ao candidato da Etapa 4. Diagnóstico indisponível impede
+  atribuição de causa; perda relevante indicada pela bridge exige revisar seu
+  contrato antes de escolher outra variante. Luminância continua segunda variante
+  condicional. Build Android/artefato/CI e protocolo sanitizado são requisitos
+  antes de instalar/avaliar, conforme Etapa 3; mocks/Java não os substituem.
+
+As lacunas físicas não exigem rodada isolada nem impedem preparar um candidato
+experimental com essas condições; impedem declarar a causa resolvida ou validar
+a geometria no dispositivo. **Etapa 2 não foi iniciada nesta revisão.** Nenhuma
+captura, build Windows, instalação, merge ou deploy foi solicitado/executado.
+
+### Verificação desta revisão e limites
+
+Passaram lint, TypeScript raiz/demo Android, 91 testes focados e **788 testes
+em 68 suítes** na suíte completa. A suíte foi repetida porque houve correções
+funcionais e CLAUDE.md exige lint/typecheck/Jest antes de commit. Avisos de act
+nas suítes de edição/tema continuam sem falha; não foram alteradas nesta revisão.
+Checks Java de política/limites/equivalência/isolamento e FrameBytes passaram
+com ECJ 3.38.0, modo Java 17, runtime OpenJDK 21. Testes são strings/buffers
+sintéticos; o total de asserts em loops não é número de amostras físicas.
+
+Testes novos cobrem Text/Block sem Line, saída vazia versus indisponível,
+contradições, revisão antiga, sentinelas, diagnóstico inválido sem mudar
+candidatos, desmontagem com OCR pendente e revisão/diagnóstico após reinício de
+efeitos. Os cenários de ciclo de vida usam mocks; não comprovam lease física,
+zeragem da RAM, comportamento de OEM/SDK ou ausência universal de persistência.
+Não há compilação Kotlin/APK, nova execução ML Kit ou evidência física adicional.
+CI histórico de `6d2fb88` passou nos quatro jobs; não transferir esse resultado
+automaticamente ao novo commit de revisão. Resultado próprio é registrado no PR.
+
+TASK-04/06/07/09/18 continuam parciais e habilitação clínica bloqueada. Nenhuma
+falha de sete segmentos foi declarada corrigida. Próxima ação do autor: revisar
+as correções e o veredito no mesmo PR #80; nenhuma ação no dispositivo agora.

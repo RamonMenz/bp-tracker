@@ -1,7 +1,8 @@
 import { describePhotoBridge } from './photo-bridge-diagnostic';
 
 const sample = () => ({
-  revision: 'bridge-1', sdkLinesPresent: true, sdkAsciiDigitPresent: true,
+  revision: 'bridge-2', sdkLinesPresent: true, sdkAsciiDigitPresent: true,
+  sdkTextAsciiDigitPresent: true, sdkBlockAsciiDigitPresent: true, sdkLineAsciiDigitPresent: true,
   bridgeLinesPresent: true, bridgeAsciiDigitPresent: false,
   droppedWithoutBox: true, droppedLongText: false, droppedLineLimit: false,
   asciiDigitDroppedWithoutBox: true, asciiDigitDroppedLongText: false, asciiDigitDroppedLineLimit: false,
@@ -9,9 +10,40 @@ const sample = () => ({
     previewViewWidth: 360, previewViewHeight: 300, previewBufferWidth: 1920, previewBufferHeight: 1080 },
 });
 
+test('dígitos em Text ou TextBlock sem linhas não significam SDK sem dígitos', () => {
+  const report = describePhotoBridge({ ...sample(), revision: 'bridge-2',
+    sdkLinesPresent: false, sdkTextAsciiDigitPresent: true, sdkBlockAsciiDigitPresent: true,
+    sdkLineAsciiDigitPresent: false, bridgeLinesPresent: false,
+    droppedWithoutBox: false, asciiDigitDroppedWithoutBox: false });
+  expect(report).toContain('sdk:digitos-ascii=presente');
+  expect(report).toContain('sdk:digitos-em-texto=presente');
+  expect(report).toContain('sdk:digitos-em-blocos=presente');
+  expect(report).toContain('sdk:digitos-em-linhas=ausente');
+  expect(report).toContain('bridge:digitos-ascii=ausente');
+});
+
+test('saída vazia é distinguida de diagnóstico indisponível', () => {
+  const data = sample();
+  const empty = Object.fromEntries(Object.entries(data).map(([key, value]) => [key, typeof value === 'boolean' ? false : value]));
+  const report = describePhotoBridge(empty);
+  expect(report).toContain('sdk:linhas=ausente');
+  expect(report).toContain('sdk:digitos-ascii=ausente');
+  expect(report).toContain('bridge:linhas=ausente');
+  expect(report).not.toContain('bridge:diagnostico-indisponivel');
+});
+
+test.each([
+  { sdkAsciiDigitPresent: false }, { sdkLinesPresent: false },
+  { bridgeAsciiDigitPresent: true, bridgeLinesPresent: false },
+  { droppedWithoutBox: false }, { sdkLineAsciiDigitPresent: false },
+])('sinais contraditórios não são publicados como diagnóstico válido: %s', inconsistent => {
+  expect(describePhotoBridge({ ...sample(), ...inconsistent })).toEqual(['bridge:diagnostico-indisponivel']);
+});
+
 test('distingue linhas do SDK, tokens exportados e motivo de descarte sem inferir acerto', () => {
   expect(describePhotoBridge(sample())).toEqual([
-    'bridge:revisao=bridge-1', 'sdk:linhas=presente', 'sdk:digitos-ascii=presente',
+    'bridge:revisao=bridge-2', 'sdk:linhas=presente', 'sdk:digitos-ascii=presente',
+    'sdk:digitos-em-texto=presente', 'sdk:digitos-em-blocos=presente', 'sdk:digitos-em-linhas=presente',
     'bridge:linhas=presente', 'bridge:digitos-ascii=ausente',
     'descarte:sem-caixa=presente', 'descarte:linha-longa=ausente', 'descarte:limite-linhas=ausente',
     'digitos-descartados:sem-caixa=presente', 'digitos-descartados:linha-longa=ausente',
@@ -47,6 +79,7 @@ test('somente booleanos e dimensões técnicas passam: texto/caixas/valores/conf
 });
 
 test.each([null, [], 'SENTINELA', {}, { ...sample(), revision: 'SENTINELA' },
+  { ...sample(), revision: 'bridge-1' }, { ...sample(), sdkTextAsciiDigitPresent: 'SENTINELA' },
   { ...sample(), sdkAsciiDigitPresent: 'SENTINELA' }, { ...sample(), bridgeLinesPresent: 1 },
   { ...sample(), asciiDigitDroppedLineLimit: null },
 ])('diagnóstico ausente/antigo/malformado é indisponível, nunca ausência de dígitos', value => {

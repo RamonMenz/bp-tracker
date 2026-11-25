@@ -11,7 +11,7 @@ export interface CameraPreviewProps extends ViewProps {
   onStatus: (event: NativeSyntheticEvent<{ status: string; attemptId: number }>) => void;
 }
 export interface AndroidPhotoBinding {
-  nativeRevision?: 'bridge-1' | 'preview-1' | 'frame-1' | 'anterior';
+  nativeRevision?: 'bridge-2' | 'bridge-1' | 'preview-1' | 'frame-1' | 'anterior';
   requestPermission(): Promise<boolean>;
   Camera: ComponentType<CameraPreviewProps>;
 }
@@ -19,7 +19,8 @@ export interface AndroidPhotoBinding {
 export function loadAndroidPhotoBinding(onPermissionRoute?: (route: 'already-granted' | 'request-required') => void): AndroidPhotoBinding {
   const native = requireOptionalNativeModule<{ captureRevision?: unknown; requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
   if (!native) throw new PhotoCaptureError('unsupported');
-  return { nativeRevision: native.captureRevision === 'bridge-1' || native.captureRevision === 'preview-1' || native.captureRevision === 'frame-1'
+  return { nativeRevision: native.captureRevision === 'bridge-2' || native.captureRevision === 'bridge-1'
+    || native.captureRevision === 'preview-1' || native.captureRevision === 'frame-1'
     ? native.captureRevision : 'anterior',
     requestPermission: async () => {
       // Consultar nao abre Activity/dialogo nem inicia camera. Reutilizar o aceite

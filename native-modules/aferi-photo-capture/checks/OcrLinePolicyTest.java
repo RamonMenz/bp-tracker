@@ -15,8 +15,26 @@ public final class OcrLinePolicyTest {
   public static void main(String[] args) {
     OcrLinePolicy empty = new OcrLinePolicy();
     for (Object value : empty.diagnostic().values()) {
-      check("bridge-1".equals(value) || Boolean.FALSE.equals(value));
+      check("bridge-2".equals(value) || Boolean.FALSE.equals(value));
     }
+    OcrLinePolicy textOnly = new OcrLinePolicy();
+    textOnly.observeSdkText("SENTINELA-CLINICA 173/97");
+    check(flag(textOnly, "sdkTextAsciiDigitPresent"));
+    check(flag(textOnly, "sdkAsciiDigitPresent"));
+    check(!flag(textOnly, "sdkLinesPresent"));
+    check(!flag(textOnly, "bridgeAsciiDigitPresent"));
+    OcrLinePolicy blockOnly = new OcrLinePolicy();
+    blockOnly.observeSdkText("");
+    blockOnly.observeBlockText("SENTINELA-CLINICA 173/97");
+    check(flag(blockOnly, "sdkBlockAsciiDigitPresent"));
+    check(flag(blockOnly, "sdkAsciiDigitPresent"));
+    check(!flag(blockOnly, "sdkTextAsciiDigitPresent"));
+    check(!flag(blockOnly, "sdkLineAsciiDigitPresent"));
+    check(!flag(blockOnly, "bridgeLinesPresent"));
+    OcrLinePolicy whitespace = new OcrLinePolicy();
+    whitespace.observeSdkText("  "); whitespace.observeBlockText("  ");
+    check(whitespace.accept("  ", true));
+    check(!flag(whitespace, "sdkAsciiDigitPresent"));
     OcrLinePolicy valid = new OcrLinePolicy();
     check(valid.accept("SYS 120 DIA 80 PUL 72", true));
     check(flag(valid, "sdkAsciiDigitPresent"));
@@ -65,9 +83,19 @@ public final class OcrLinePolicyTest {
     check(!flag(rejectedFirst, "bridgeLinesPresent"));
     check(flag(rejectedFirst, "asciiDigitDroppedLineLimit"));
 
-    for (OcrLinePolicy policy : new OcrLinePolicy[] {empty, valid, missingBox, length, limited, rejectedFirst}) {
-      check(policy.diagnostic().size() == 11);
-      for (Object value : policy.diagnostic().values()) check(value instanceof Boolean || "bridge-1".equals(value));
+    // Comparação com take(500).filter(box).filter(length) do código anterior.
+    OcrLinePolicy equivalent = new OcrLinePolicy();
+    for (int i = 0; i < 1001; i++) {
+      String content = i % 3 == 0 ? "x".repeat(501) : "SYS 120";
+      boolean hasBox = i % 5 != 0;
+      check(equivalent.accept(content, hasBox) == (i < 500 && hasBox && content.length() <= 500));
+    }
+    // Nova tentativa não reutiliza flags da anterior.
+    check(!flag(new OcrLinePolicy(), "sdkAsciiDigitPresent"));
+    for (OcrLinePolicy policy : new OcrLinePolicy[] {
+        empty, valid, missingBox, length, limited, rejectedFirst, textOnly, blockOnly, whitespace, equivalent}) {
+      check(policy.diagnostic().size() == 14);
+      for (Object value : policy.diagnostic().values()) check(value instanceof Boolean || "bridge-2".equals(value));
       check(!policy.diagnostic().toString().contains("SENTINELA"));
       check(!policy.diagnostic().toString().contains("173"));
       check(!policy.diagnostic().toString().contains("97"));
