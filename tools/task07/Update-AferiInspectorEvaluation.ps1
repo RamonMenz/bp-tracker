@@ -1,50 +1,16 @@
 # Fixed evaluation package/candidate only. No opening, clear, uninstall or permission bypass.
 [CmdletBinding()]
-param([switch] $ReadOnly)
+param([switch] $ReadOnly, [switch] $PrepareMetro)
 $ErrorActionPreference = 'Stop'
+if ($ReadOnly -and $PrepareMetro) { throw 'inspector-mode-conflict' }
 $script:AferiInspectorAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
 $candidatePath = 'C:\dev\aferi-task07-inspector-build\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
 $candidateHash = '25990bb47cc706f60babf1fc75a215fcc5f5266b0c85332f01a3b58bf2086e1c'
 $baselineHash = 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed'
+Import-Module (Join-Path $PSScriptRoot 'AferiEvaluationAdb.psm1') -ErrorAction Stop
 function Invoke-AferiInspectorAdb {
     param([string[]] $Arguments, [switch] $Server)
-    if ($Server -and ($Arguments.Count -ne 1 -or $Arguments[0] -cne 'start-server')) { throw 'inspector-adb-server-command-unexpected' }
-    if (-not (Test-Path -LiteralPath $script:AferiInspectorAdb -PathType Leaf)) { throw 'inspector-adb-executable-unavailable' }
-    $parts = @()
-    if (-not $Server) { $parts += '-d' }
-    $parts += $Arguments
-    $quoted = @($parts | ForEach-Object {
-        if ($_ -match '["\x00-\x1f]') { throw 'inspector-adb-argument-unexpected' }
-        '"' + $_ + '"'
-    })
-    $process = [Diagnostics.Process]::new()
-    $process.StartInfo.FileName = $script:AferiInspectorAdb
-    $process.StartInfo.Arguments = $quoted -join ' '
-    $process.StartInfo.UseShellExecute = $false
-    $process.StartInfo.CreateNoWindow = $true
-    $process.StartInfo.RedirectStandardOutput = $true
-    $process.StartInfo.RedirectStandardError = $true
-    try {
-        [void]$process.Start()
-        $stdout = $process.StandardOutput.ReadToEndAsync()
-        $stderr = $process.StandardError.ReadToEndAsync()
-        # Do not kill an installation automatically; its result must be recovered by read-only inspection.
-        if ($Arguments[0] -ceq 'install') { $process.WaitForExit() }
-        elseif (-not $process.WaitForExit(30000)) {
-            try { $process.Kill() } catch { throw 'inspector-adb-client-stop-unavailable' }
-            throw 'inspector-adb-query-timeout'
-        }
-        if (-not $stdout.Wait(5000) -or -not $stderr.Wait(5000)) { throw 'inspector-adb-output-unavailable' }
-        [pscustomobject]@{
-            Lines = @($stdout.GetAwaiter().GetResult() -split "`r?`n" | Where-Object { $_.Length -gt 0 })
-            Errors = @($stderr.GetAwaiter().GetResult() -split "`r?`n" | Where-Object { $_.Length -gt 0 })
-            Code = $process.ExitCode
-        }
-    } catch {
-        if (@('inspector-adb-client-stop-unavailable','inspector-adb-query-timeout','inspector-adb-output-unavailable') -ccontains $_.Exception.Message) { throw }
-        throw 'inspector-update-adb-unavailable'
-    }
-    finally { $process.Dispose() }
+    Invoke-AferiEvaluationAdbProcess -AdbPath $script:AferiInspectorAdb -Arguments $Arguments -Server:$Server
 }
 function Get-AferiInspectorDeviceState($Result) {
     if ($Result.Code -eq 0 -and $Result.Lines.Count -eq 1 -and $Result.Lines[0].Trim() -ceq 'device') { return 'device' }
@@ -68,7 +34,7 @@ function Read-AferiInspectorInstalledHash {
         $hashResult.Lines[0] -notmatch '^([0-9a-fA-F]{64})\s') { throw 'inspector-update-installed-hash-unavailable' }
     return $Matches[1].ToLowerInvariant()
 }
-if (-not $ReadOnly) {
+if (-not $ReadOnly -and -not $PrepareMetro) {
     try { $localHash = (Get-FileHash -LiteralPath $candidatePath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant() }
     catch { throw 'inspector-update-local-hash-unavailable' }
     if ($localHash -cne $candidateHash) { throw 'inspector-update-candidate-changed' }
@@ -91,6 +57,22 @@ if ($ReadOnly) {
     [pscustomobject]@{ Tool = 'inspector-session-1'; Modo = 'consulta'; PacoteAlvo = 'com.ramonmenz.afericapturetest'; EstadoAdb = 'device'
         AvisosServidorStderr = ($server.Errors.Count -gt 0); ModeloConfere = $true; Sha256Instalado = $before
         CoincideComAnterior = ($before -ceq $baselineHash); CoincideComCandidato = ($before -ceq $candidateHash)
+        InstalacaoExecutada = $false } | ConvertTo-Json
+    return
+}
+if ($PrepareMetro) {
+    if ($before -cne $candidateHash) { throw 'inspector-metro-candidate-unexpected' }
+    $reverse = Invoke-AferiInspectorAdb @('reverse','--list')
+    if ($reverse.Code -ne 0) { throw 'inspector-metro-reverse-unavailable' }
+    $lines = @($reverse.Lines | Where-Object { $_.Trim().Length -gt 0 })
+    if (@($lines | Where-Object { $_ -notmatch '^\S+\s+\S+\s+\S+\s*$' }).Count -ne 0) { throw 'inspector-metro-reverse-format-unexpected' }
+    $conflicts = @($lines | Where-Object { $_ -match '^\S+\s+tcp:8097\s+' -and $_ -notmatch '^\S+\s+tcp:8097\s+tcp:8097\s*$' })
+    if ($conflicts.Count -gt 0) { throw 'inspector-metro-reverse-conflict-preserve' }
+    $known = @($lines | Where-Object { $_ -match '^\S+\s+tcp:8097\s+tcp:8097\s*$' })
+    $set = Invoke-AferiInspectorAdb @('reverse','tcp:8097','tcp:8097')
+    if ($set.Code -ne 0) { throw 'inspector-metro-reverse-set-unavailable' }
+    [pscustomobject]@{ Tool = 'inspector-metro-1'; Modo = 'preparar-metro'; Pacote = 'com.ramonmenz.afericapturetest'
+        Sha256Instalado = $before; Reverse8097Configurado = $true; OutrasLinhasAntes = $lines.Count - $known.Count
         InstalacaoExecutada = $false } | ConvertTo-Json
     return
 }

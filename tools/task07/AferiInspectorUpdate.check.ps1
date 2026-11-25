@@ -11,6 +11,7 @@ try{ & $path -ReadOnlyBogus | Out-Null }
 catch{$badParameterRejected=$_.FullyQualifiedErrorId -match 'NamedParameterNotFound'}
 if(-not $badParameterRejected){throw 'inspector-update-unknown-parameter-accepted'}
 
+$moduleFixturePath=Join-Path $PSScriptRoot 'AferiEvaluationAdb.psm1'
 $body=[IO.File]::ReadAllText($path)
 $definition=$ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Invoke-AferiInspectorAdb'},$true)
 $mock = @'
@@ -22,10 +23,11 @@ function Invoke-AferiInspectorAdb {
 }
 '@
 $body=$body.Replace($definition.Extent.Text,$mock)
+$body=$body.Replace("Import-Module (Join-Path `$PSScriptRoot 'AferiEvaluationAdb.psm1')", 'Import-Module $moduleFixturePath')
 $logic=[ScriptBlock]::Create($body)
 $baseline='edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed'
 $candidate='25990bb47cc706f60babf1fc75a215fcc5f5266b0c85332f01a3b58bf2086e1c'
-$fixture=@{Mode='normal';Installs=0;Calls=0}
+$fixture=@{Mode='normal';Installs=0;Calls=0;ReverseMode='empty';ReverseSets=0}
 function Get-FileHash {
     param($LiteralPath,$Algorithm,$ErrorAction)
     if($LiteralPath -cne 'C:\dev\aferi-task07-inspector-build\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk' -or $Algorithm -cne 'SHA256'){throw 'fixture-wrong-file'}
@@ -55,6 +57,20 @@ $fixtureAdb={
             $fixture.Installs++
             if($fixture.Mode -eq 'install-failed'){$global:LASTEXITCODE=1;'PRIVATE';return}
             'Performing Streamed Install';'Success';return
+        }
+        '-d reverse --list' {
+            switch($fixture.ReverseMode){
+                'other' {'PRIVATE tcp:8080 tcp:8080'}
+                'conflict' {'PRIVATE tcp:8097 tcp:1234'}
+                'bad-format' {'PRIVATE invalid'}
+                'query-failed' {$global:LASTEXITCODE=1;'PRIVATE'}
+            }
+            return
+        }
+        '-d reverse tcp:8097 tcp:8097' {
+            $fixture.ReverseSets++
+            if($fixture.ReverseMode -eq 'set-failed'){$global:LASTEXITCODE=1;'PRIVATE'}else{'8097'}
+            return
         }
         default {throw 'fixture-unexpected-command'}
     }
@@ -89,6 +105,27 @@ foreach($entry in @(@('offline','error: device offline'),@('no-usb','error: no d
     $r=Get-AferiInspectorDeviceState ([pscustomobject]@{Code=1;Lines=@();Errors=@($entry[1])})
     if($r -cne $entry[0]){throw 'fixture-state-category'}
 }
+$fixture.Mode='already';$fixture.Calls=0;$fixture.Installs=0
+$rejected=$false
+try{&$logic -ReadOnly -PrepareMetro|Out-Null}catch{$rejected=$_.ToString() -match 'inspector-mode-conflict'}
+if(-not $rejected -or $fixture.Calls -ne 0){throw 'fixture-conflicting-modes-executed'}
+foreach($mode in @('empty','other','conflict','bad-format','query-failed','set-failed')){
+    $fixture.Mode='already';$fixture.ReverseMode=$mode;$fixture.ReverseSets=0;$fixture.Installs=0
+    $valid=$mode -in @('empty','other')
+    try{
+        $raw=&$logic -PrepareMetro
+        if(-not $valid -or $raw -match 'PRIVATE'){throw 'fixture-reverse-unexpected-output'}
+        $r=$raw|ConvertFrom-Json
+        if(-not $r.Reverse8097Configurado -or $r.InstalacaoExecutada -or $fixture.Installs -ne 0 -or $fixture.ReverseSets -ne 1){throw 'fixture-reverse-unsafe'}
+    }catch{
+        if($valid -or $_.ToString() -match 'fixture-|PRIVATE'){throw}
+        if($mode -ne 'set-failed' -and $fixture.ReverseSets -ne 0){throw 'fixture-reverse-conflict-overwritten'}
+    }
+}
+$fixture.Mode='normal';$fixture.ReverseSets=0;$fixture.Installs=0
+$rejected=$false
+try{&$logic -PrepareMetro|Out-Null}catch{$rejected=$_.ToString() -match 'inspector-metro-candidate-unexpected'}
+if(-not $rejected -or $fixture.ReverseSets -ne 0 -or $fixture.Installs -ne 0){throw 'fixture-reverse-wrong-candidate'}
 'Inspector update: update guards, no-op, read-only recovery and private state categories passed; no ADB/device executed.'
 
 # Exercise real Process stdout/stderr separation with a dummy executable on Linux CI.
@@ -118,6 +155,7 @@ else:
         [IO.File]::WriteAllText($fakePath,$python)
         & chmod +x $fakePath
         if($LASTEXITCODE -ne 0){throw 'native-fixture-permissions'}
+        Import-Module (Join-Path $PSScriptRoot 'AferiEvaluationAdb.psm1') -Force -ErrorAction Stop
         Invoke-Expression $definition.Extent.Text
         $script:AferiInspectorAdb=$fakePath
         $r=Invoke-AferiInspectorAdb -Arguments @('start-server') -Server

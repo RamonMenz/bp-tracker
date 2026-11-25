@@ -1239,3 +1239,120 @@ script (CmdletBinding), com regressão de erro de digitação do switch ReadOnly
 A guarda de Get-Command da entrega continua necessária para recusar uma cópia
 antiga sem esse parâmetro. Só o modo explicitamente escolhido deve ser executado;
 consulta e atualização têm JSONs distintos e não devem ser confundidos.
+
+## Retomada e instalação do candidato confirmadas pelo autor
+
+Consulta inspector-session-1 recebida: Modo=consulta, pacote alvo de avaliação,
+EstadoAdb=device, AvisosServidorStderr=true, ModeloConfere=true, hash instalado
+EDF, CoincideComAnterior=true/CoincideComCandidato=false e InstalacaoExecutada=false.
+A consulta funcionou mesmo com stderr de startup, sem expor seu conteúdo. Isso
+corrobora a robustez do transporte corrigido, sem identificar sozinho a causa
+exata da exceção anterior. Não pedir reprodução do erro ou mensagens brutas.
+
+Depois, retorno inspector-update-1: SM-S731B/pacote esperado,
+InstalacaoExecutada=true/InstalacaoRetornouSucesso=true,
+CandidatoJaEstavaInstalado=false, antes
+edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed,
+depois **25990bb47cc706f60babf1fc75a215fcc5f5266b0c85332f01a3b58bf2086e1c**,
+CoincideComCandidato=true. Data/hora efetivas não informadas. A identidade instalada
+foi reconfirmada após a troca; não extrapolar para ausência universal de classes,
+logs/telemetria ou preservação de todo estado SDK/SO. Bytecode continua não
+inspecionado. Estado visual/indicador de câmera após essa atualização não foi
+informado neste retorno; não inferir app fechado só pelo script não chamar start.
+
+### Abertura do candidato — fonte inspector-build, sem câmera
+
+Não reinstalar/recompilar nem usar backup-build062e9b1 como Metro desta rodada.
+As fontes/APKs anteriores e o bundle23e7dd6f… continuam referência daquela rodada.
+Candidato instalado é25990bb4… da fonteca786ed. Se a demo já estiver aberta,
+fechar sem iniciar câmera; cancelar apenas uma tentativa que já esteja ativa.
+Somente Samsung conectado ao ADB; sem outros aparelhos/emuladores na abertura
+pela CLI. Não interromper processos desconhecidos ou aceitar porta alternativa.
+
+Terminal A, um PowerShell novo; manter aberto depois de iniciar:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task07-inspector-build'
+    $aferiInspectorHead = (git rev-parse HEAD).Trim()
+    if ($LASTEXITCODE -ne 0 -or $aferiInspectorHead -cne 'ca786ed743bac6132216e554e47a41b5e7372813') {
+        throw 'inspector-metro-source-unexpected'
+    }
+    $aferiInspectorChanges = @(git status --porcelain)
+    if ($LASTEXITCODE -ne 0 -or $aferiInspectorChanges.Count -ne 0) { throw 'inspector-metro-source-not-clean-preserve' }
+    $env:ANDROID_HOME = Join-Path $env:LOCALAPPDATA 'Android\Sdk'
+    $env:EXPO_NO_TELEMETRY = '1'
+    Set-Location -LiteralPath .\demos\android-capture
+    node --dns-result-order=ipv4first ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8097
+}
+```
+
+Aguardar Metro pronto, ainda sem a. Terminal B, usando ferramentas atualizadas
+no commit publicado desta entrega: novo modo -PrepareMetro é separado de
+-ReadOnly e de atualização. Não aceita os dois switches juntos; não faz install,
+não exige APK local e recusa candidato instalado diferente de25990bb4…. Reutiliza
+Process/stdout/stderr separados, consulta reverse e só configura8097 se não houver
+conflito; deixa outros mapeamentos intactos e retorna metadados sem serial/path.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task07-backup-tools'
+    & .\tools\task07\Update-AferiInspectorEvaluation.ps1 -PrepareMetro
+    & .\tools\task07\Test-AferiMetroConnection.ps1 -Project inspector
+}
+```
+
+Esperado preparo sem instalação, reverse8097 configurado e health com
+Projeto=inspector, IPv4HTTP200/FonteEsperada=true/MetroPronto=true,
+Reverse8097Conhecido=1/Conflito8097=false. IPv6 pode falhar. Se não corresponder,
+parar e devolver JSON/código, sem abrir app/câmera, recriar SDK ou refazer APK.
+Não copiar código antigo de reverse com captura stderr no pipeline sob Stop.
+
+Somente com esses critérios: no terminal A pressionar a uma vez. Se carregar
+sozinho antes, não pressionar novamente e registrar o fato. Esperados captura-5,
+associacao-1, active/idle/nao-carregado, sem preview/revisão antiga/indicador de
+câmera percebido. Conferir Fast Refresh desligado no menu m, fechar menu e fazer
+uma recarga manual r entre cenários, aguardando terminar. Não iniciar câmera,
+reconhecer, editar revisão ou confirmar valores nesta etapa. Divergência/erro
+interrompe; sem logs completos, screenshots ou URLs com query.
+
+### Bundle e idle do candidato, somente se a abertura corresponder
+
+Depois de carregar/recarregar, no terminal B, com Metro A aberto e app idle;
+mesma API já disponível, sem apagar snapshots ou importar com Force:
+
+```powershell
+& .\tools\task07\Collect-AferiInspectorIdle.ps1
+```
+
+Devolver health e JSON compacto do idle, além de origem da abertura, indicadores
+antes/depois, Fast Refresh, r manual concluído, espera programada30s/pausas e
+interrupções. Não tocar app/a/r/m/configurações durante a espera; se bloquear,
+background/recarregar/erro, registrar sem repetir automaticamente. Não exigir
+16 arquivos/delta0 nem hash diferente/igual a23e7dd6f…: consultar e analisar os
+valores reais. Igualdade do JS pode ocorrer em caminhos com código de negócio
+igual; diferença também não prova todo código em RAM. Não comparar IDs antigos
+ou atribuir conteúdo/causa/envio aos deltas por categoria.
+
+Esse controle novo se justifica pela troca do artefato nativo/configuração e
+sessão do Metro. Não representa confirmação de privacidade universal nem de
+bytecode; não libera uso clínico ou conclui tarefas. Tráfego UID/destinos, SDK/ID,
+OEM/transferência/contas e demais critérios continuam pendentes antes de captura
+clínica. Nenhuma nova captura física é solicitada nesta abertura/idle.
+
+
+O controle final foi reunido em Collect-AferiInspectorIdle.ps1: primeiro faz a
+consulta ReadOnly e exige pacote/modelo/candidato corretos; depois lê hash do
+bundle, coleta par30s e retorna JSON compacto, sem arquivo de relatório ou
+Force no módulo de inventário. Não inicia app/câmera ou modifica reverse.
+Transporte Process sem shell foi extraído sem alteração de contrato para
+AferiEvaluationAdb.psm1 e reutilizado por atualização/preparo e hash do bundle;
+assim o novo coletor não depende de redirecionamento stderr no pipeline.
+Coletor de arquivos existente permanece com seus guards/escopo anteriores.
+
+Regressões do atualizador/preparo cobrem conflitos de modo, outros mapeamentos,
+formato/consulta/criação inválidos e candidato errado sem install/reverse-set.
+Native dummy-process validou a extração do transporte; guardas de sessão do novo
+idle testadas sem consulta/espera real. Nova abertura/idle Windows ainda pendentes.

@@ -239,3 +239,8 @@ Candidato sem inspector: retorno build-inspector-1 com APK25990bb4… da fonteca
 limpa, flags false/manifesto/backup/assinaturas coerentes, BytecodeInspecionado=false.
 [Atualização restrita preparada](docs/task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados),
 sem abertura/captura/produção; instalação e critérios de privacidade ainda pendentes.
+
+Retomada do candidato: consulta/atualização recebidas, baseEDF→25990bb4… confirmada,
+mesmo com stderr de startup na consulta. [Próxima abertura/idle sem câmera](docs/task-07-backup-pos-merge.md#retomada-e-instalação-do-candidato-confirmadas-pelo-autor)
+na fonteca786ed, sem concluir bytecode/SDK/rede/contas ou TASK-04/06/07/18. Habilitação
+clínica bloqueada, nenhum ensaio clínico ou nova captura solicitado.

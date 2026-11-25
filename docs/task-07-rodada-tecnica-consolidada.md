@@ -713,3 +713,11 @@ leitura e correção de stderr nativo](task-07-backup-pos-merge.md#retomada-apó
 preparadas: start-server idempotente no PC, Process sem shell/streams separados,
 ReadOnly que não instala e não depende de variáveis/candidato local. Testes com
 executável fictício passaram; validação Windows da retomada segue pendente.
+
+
+Retomada Windows recebida positiva: consulta device/modelo/hashEDF, stderr de
+startup presente sem reprovar; depois instalaçãoEDF→25990bb4… confirmada. [Abertura
+e idle do candidato](task-07-backup-pos-merge.md#retomada-e-instalação-do-candidato-confirmadas-pelo-autor)
+preparados na fonteca786ed/inspector-build, ipv4first/8097 e health -Project inspector.
+PrepareMetro não instala e preserva conflitos; sem câmera. Bytecode/privacidade
+não homologados, estado visual pós-instalação não informado ainda.
