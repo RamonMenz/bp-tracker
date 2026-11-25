@@ -252,3 +252,11 @@ ou interrupções percebidas. [Diagnóstico parcial consolidado](docs/task-07-ba
 registra evidências e condições: bytecode, UID/destinos, SDK/telemetria/OEM e
 integração clínica ainda pendentes. Não repetir controle nem pedir nova captura
 nesta entrega. TASK-04/06/07/18 parciais; habilitação clínica bloqueada.
+
+
+TASK-09 — diagnóstico dirigido do visor real: autor relatou falha sem campos no
+G-Tech BSPII/Home e forneceu referência visual; OCR daquela tentativa não foi
+recuperado. [Inspeção de layout e associacao-2](docs/task-09-diagnostico-visor-real.md)
+acrescenta somente presença de dígitos ASCII/rótulos, sem expor conteúdo ou alterar
+reconhecimento. Fotos/valores não incorporados. Ensaio físico novo pendente;
+TASK-04/06/07/09/18 parciais e habilitação clínica bloqueada.

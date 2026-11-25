@@ -10,10 +10,10 @@ function describe(texts: string[]) {
 }
 
 test('distingue ausência de linhas utilizáveis de números sem associação, sem publicar números', () => {
-  expect(describe([])).toEqual(['ocr:sem-linhas-utilizaveis', 'associacao:SYS=ausente',
+  expect(describe([]).slice(0, 4)).toEqual(['ocr:sem-linhas-utilizaveis', 'associacao:SYS=ausente',
     'associacao:DIA=ausente', 'associacao:PUL=ausente']);
   expect(describe(['   '])).toEqual(describe([]));
-  expect(describe(['120', '80', '72'])).toEqual(['ocr:linhas-presentes',
+  expect(describe(['120', '80', '72']).slice(0, 4)).toEqual(['ocr:linhas-presentes',
     'associacao:SYS=incerto-numero-sem-rotulo', 'associacao:DIA=incerto-numero-sem-rotulo', 'associacao:PUL=incerto-numero-sem-rotulo']);
 });
 
@@ -42,4 +42,33 @@ test('motivo desconhecido não passa pela projeção nem se contém texto sensí
   const report = describePhotoInterpretation(observation, { ...candidates, fields: { ...candidates.fields, systolic: forged } });
   expect(report[1]).toBe('associacao:SYS=indefinido');
   expect(report.join(' ')).not.toMatch(/SENTINELA|120|80/);
+});
+
+
+test('distingue marca sem dígitos, acessórios numéricos e rótulos sem valores', () => {
+  expect(describe(['G-TECH'])).toEqual(expect.arrayContaining([
+    'ocr:linhas-presentes', 'ocr:sem-digitos-ascii', 'rotulo:SYS=ausente', 'rotulo:DIA=ausente', 'rotulo:PUL=ausente',
+  ]));
+  expect(describe(['12:30', 'M 99'])).toContain('ocr:digitos-ascii-presentes');
+  expect(describe(['SIS mmHg', 'DIA mmHg', 'PULSO /min'])).toEqual(expect.arrayContaining([
+    'ocr:sem-digitos-ascii', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+    'associacao:SYS=incerto-ilegivel-ou-distante',
+  ]));
+});
+
+test('rótulos diagnósticos usam os mesmos limites léxicos do parser, sem substring', () => {
+  expect(describe(['SISTEMA', 'DIARIO', 'IMPULSO'])).toEqual(expect.arrayContaining([
+    'rotulo:SYS=ausente', 'rotulo:DIA=ausente', 'rotulo:PUL=ausente',
+  ]));
+  expect(describe(['sístólica', 'diastólica', 'pulso'])).toEqual(expect.arrayContaining([
+    'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+  ]));
+});
+
+test('reconhecer rótulos e dígitos não declara associação geométrica ou acerto', () => {
+  const report = describe(['SIS', '120', 'DIA', '80', 'PULSO', '72']);
+  expect(report).toContain('ocr:digitos-ascii-presentes');
+  expect(report).toContain('rotulo:SYS=presente');
+  expect(report).toContain('associacao:SYS=incerto-ilegivel-ou-distante');
+  expect(report.join(' ')).not.toMatch(/120|80|72/);
 });
