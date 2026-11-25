@@ -705,3 +705,11 @@ na geração/invocação, BytecodeInspecionado=false, manifesto/backup/assinatur
 aprovados no retorno do autor. [Evidência e atualização restrita preparada](task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados)
 fixa EDF→25990bb4… e não abre app; candidato já instalado não é reinstalado.
 Nenhuma instalação do novo candidato recebida ainda, sem nova captura/gate.
+
+
+Nova sessão após PC desligado: autor recebeu inspector-update-adb-unavailable
+sem JSON final. Estado instalado não foi inferido do erro. [Retomada somente
+leitura e correção de stderr nativo](task-07-backup-pos-merge.md#retomada-após-desligar-o-pc--falha-de-adb-não-identifica-o-instalado)
+preparadas: start-server idempotente no PC, Process sem shell/streams separados,
+ReadOnly que não instala e não depende de variáveis/candidato local. Testes com
+executável fictício passaram; validação Windows da retomada segue pendente.

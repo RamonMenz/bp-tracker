@@ -1141,3 +1141,101 @@ fonte, sem imprimir caminho/corpo. Checks do atualizador entram no CI.
 Execução Windows da atualização e nova abertura ainda dependem do autor.
 Telemetria/ID, UID/destinos, bytecode/OEM/cross-platform e critérios clínicos
 continuam pendentes; nenhuma das TASK-04/06/07/18 concluída.
+
+## Retomada após desligar o PC — falha de ADB não identifica o instalado
+
+Autor relatou novo dia/PC desligado e terminais sem variáveis anteriores.
+Worktree de ferramentas foi atualizada a4999d87 limpa conforme guarda do bloco;
+script lançou inspector-update-adb-unavailable no helper nativo. Não houve JSON
+final. A mensagem genérica pode vir de qualquer chamada ADB; não permite afirmar
+que instalou, que não instalou, que perdeu dados ou que falhou o APK. Não assumir
+reinício/atualização do telefone ou novo firmware só porque o PC foi desligado.
+Não refazer build, limpar dados, reinstalar SDK ou repetir install para resolver.
+
+**Fragilidade encontrada e corrigida:** o helper anterior usava redirecionamento
+2>&1 sob ErrorActionPreference=Stop. No PowerShell5.1, stderr nativo pode virar
+exceção, inclusive mensagens normais ao iniciar daemon. Isso é compatível com a
+falha após boot, não causa confirmada no PC do autor. Agora Diagnostics.Process
+sem shell captura stdout/stderr separadamente e usa ExitCode real; stderr fica
+privado, não misturado a linhas esperadas de get-state/modelo/hash. Ausência do
+executável tem código próprio. Consultas têm espera limitada; não matar uma
+instalação automaticamente por timeout. Nunca chama kill-server ou reset de ADB.
+
+Servidor ADB é iniciado explicitamente no PC com start-server, sem depender de
+estado/variáveis de outro terminal. Comandos de telefone mantêm -d. Mensagens
+privadas de startup/erro não saem no JSON. Parâmetro -Server interno só permite
+start-server, sem alvo global arbitrário. Falhas com ExitCode não zero continuam
+reprovadas; não tratar toda mensagem stderr como prova de erro nem ignorar code.
+
+### Consulta -ReadOnly antes de continuar
+
+Novo switch -ReadOnly inicia o servidor no PC e faz só consultas no telefone.
+Não exige acesso ao arquivo candidato e não entra no ramo install. Retorna
+inspector-session-1/Modo=consulta/PacoteAlvo fixo e categorias device/unauthorized/
+offline/no-usb/multiple-usb/adb-error. Se não há dispositivo disponível, hash e
+modelo ficam null (não false/zero); não consulta outro aparelho por fallback.
+Com device e modelo esperado, lê só o hash da única base do pacote de avaliação.
+InstalacaoExecutada=false diz respeito a **essa consulta**, não ao script falho
+anterior. AvisosServidorStderr registra só presença de stderr atual no startup;
+false não exclui que tenha ocorrido na chamada anterior que falhou.
+
+Conectar somente Samsung de avaliação por USB, desbloqueado; autorizar apenas o
+próprio PC se aparecer pedido de depuração. Não iniciar Metro/app/câmera. Atualizar
+só worktree backup-tools limpa ao commit publicado da correção; APKs e fontes
+continuam preservados. O bloco da entrega confere que o script tem ReadOnly em
+sua interface antes de executá-lo, evitando que uma cópia antiga sem esse switch
+ignore o argumento e entre na atualização por engano.
+
+```powershell
+$aferiConsultaScript = Get-Command .\tools\task07\Update-AferiInspectorEvaluation.ps1 -ErrorAction Stop
+if ($null -eq $aferiConsultaScript.Parameters -or -not $aferiConsultaScript.Parameters.ContainsKey('ReadOnly')) {
+    throw 'readonly-interface-unavailable'
+}
+& $aferiConsultaScript.Path -ReadOnly
+```
+
+Devolver só JSON ou código de impedimento. Não mostrar Errors/Lines/stdout/stderr,
+serial, caminho instalado ou logcat. Se unauthorized/offline/no-usb etc., parar
+sem instalar e analisar essa categoria; não trocar driver, permissões, redes ou
+matar processos por tentativa. O script não abre a demo nem grava relatório.
+Start-server pode criar/usar arquivos internos do ADB no PC; não é captura de
+mídia ou escrita clínica do produto, nem prova universal de comportamento do SO.
+
+Se a consulta retornar device/ModeloConfere=true e CoincideComAnterior=true,
+a instalação pode prosseguir **separadamente** com o mesmo script sem -ReadOnly,
+que repete as guardas de identidade e só aceita EDF→25990bb4…. Se
+CoincideComCandidato=true, não reinstalar: candidato já identificado. Se nenhum
+hash coincide, preservar e analisar. Não misturar a saída de consulta com retorno
+de instalação ou declarar sucesso antes da verificação posterior.
+
+Verificações: regressões anteriores do atualizador preservadas; consultas simuladas
+para EDF/candidato/base desconhecida/não autorizado e ausência de candidato local
+não executam install. Categorias de falha foram conferidas sem emitir mensagens
+privadas. Processo executável fictício no Linux reproduziu startup em stderr,
+stdout device e falha por autorização, além de argumento com espaços: streams,
+ExitCode e quoting preservados sob preferência Stop. Não é reprodução real do
+PowerShell5.1/ADB/Windows do autor. A execução de retomada ainda depende do retorno.
+Habilitação clínica, bytecode, telemetria/ID/UID/destinos/OEM continuam pendentes.
+
+
+Retomada não exige reabrir o app nem novo build. A sessão anterior de inventário
+ficava em RAM do PowerShell e não deve ter IDs reutilizados após desligar o PC;
+as devoluções/documentos já recebidos continuam evidência histórica. ADB/reverse/
+Metro/variáveis anteriores não são presumidos ativos. Não executar health Metro
+nem iniciar servidor JS até recuperar identidade/estado USB.
+
+Depois da consulta, os próximos comandos são condicionais à evidência local:
+se device/ModeloConfere=true/CoincideComAnterior=true, pode executar o atualizador
+sem ReadOnly, mantendo a demo fechada (cancelar uma tentativa já ativa antes de
+fechá-la, sem iniciar outra). Se CoincideComCandidato=true, pular instalação e
+retornar esse JSON. Em qualquer outra condição/erro, parar. O comando sem switch
+repete as guardas, não depende dos valores de variáveis do terminal anterior e
+não abre a aplicação. Devolver JSON de consulta e, se executado, o de atualização;
+não interpretar InstalacaoExecutada=false da consulta como resultado do dia anterior.
+
+
+A interface agora rejeita nomes de parâmetros desconhecidos antes de executar o
+script (CmdletBinding), com regressão de erro de digitação do switch ReadOnly.
+A guarda de Get-Command da entrega continua necessária para recusar uma cópia
+antiga sem esse parâmetro. Só o modo explicitamente escolhido deve ser executado;
+consulta e atualização têm JSONs distintos e não devem ser confundidos.
