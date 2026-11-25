@@ -682,3 +682,11 @@ somente da sessão Node/reverse](task-07-backup-pos-merge.md#retorno-metro-link-
 prepara ipv4first por processo e mapeamento8097 sem conflito; teste de bind no
 host passou, retorno Windows ainda pendente. Não afirma causa universal do EOF
 nem muda APK/engine/redes globais ou habilitação.
+
+
+T0 recebido positivo para abertura por a após ajuste: captura-5/associacao-1,
+active/idle/nao-carregado, Fast Refresh desligado, sem preview/revisão/indicador
+percebido ou erro. IPv4HTTP200/fonte/pronto, reverse1/0/sem conflito; IPv6 não
+responde nessa sessão. [Controle de bundle/idle do novo APK](task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
+preparado sem câmera; r anterior não explicitamente confirmado. Não é inspeção
+integral/zero tráfego ou conclusão; inspector false ainda requer futuro build.

@@ -884,3 +884,89 @@ Se o Dev Client carregar sozinho ao restabelecer Metro/reverse, não pressionar 
 novamente; registrar carregamento de desenvolvimento e conferir os mesmos
 indicadores. Isso não deve ser rotulado como retomada de captura sem observação
 de câmera/tentativa, pois não há tentativa clínica iniciada nessa preparação.
+
+## T0 recebido — abertura funcionou após ajuste de conectividade
+
+Autor retornou tela carregada por gesto a; captura-5, associacao-1 visível,
+App:active/Fase:idle/Nativo:nao-carregado; Fast Refresh desligado, sem preview ou
+revisão antiga, indicador de câmera não percebido e nenhum erro/impedimento
+percebido. Recarga manual r não foi confirmada explicitamente nesse retorno;
+registrar como não informada, sem exigir repetição para preencher o histórico.
+Data/hora efetivas da execução não informadas.
+
+Metro-link-1: IPv4 HTTP200/FonteEsperada=true/MetroPronto=true/none;
+IPv6 HTTPnull/FonteEsperada=false/MetroPronto=false/ConnectFailure;
+reverse disponível, conhecido8097=1/outras linhas=0/conflito=false.
+É evidência de conectividade corrigida e tela inicial nessa rodada, após ajustes
+conjuntos de resolução/bind e reverse; não isola contribuição causal de cada
+mudança nem garante todos os endpoints/SDK/SO. IPv6 indisponível é compatível
+com essa sessão IPv4, não desativação global de IPv6 ou falha do OCR.
+Não houve câmera/reconhecimento/revisão clínica ensaiados neste retorno.
+
+Nativo não carregado é esperado: o binding só é solicitado pelo gesto Iniciar.
+Não pedir ativação para transformar o indicador em preview-1. O hash do bundle
+novo ainda está pendente; não reutilizar86017456… como se tivesse sido consultado
+após a atualização. Staging continua9612c64/PR76 aberto conforme última consulta;
+CI3e64b82 aprovado em https://github.com/RamonMenz/bp-tracker/actions/runs/45527049550 .
+
+### Próximo controle — bundle e idle no APK atualizado
+
+Manter Metro A aberto, Fast Refresh desligado, redes/reverse como estão, app
+active/idle e câmera sem uso. Não pressionar a/r/m nem entrar em configurações
+durante a janela. Nenhum novo build, instalação, limpeza de dados/cache ou
+captura. Se bloquear tela/ocorrer background, popup, recarga ou outra interrupção,
+registrar o que aconteceu e não repetir automaticamente. Não alterar timeout
+ou outras opções globais no meio da medição.
+
+No terminal B, consultar hash do cache JS estático; importar coletor sem Force
+para preservar snapshots residentes; usar novos handles sem compará-los com IDs
+da rodada anterior. Um snapshot, espera programada30s, segundo snapshot e
+comparação só desse par. Janela total inclui comandos e não tem duração exata
+30s comprovada. Nenhum número de arquivos ou delta é previsto/obrigatório.
+Não repetir para obter delta zero.
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task07-backup-tools'
+    $aferiAdbIdleNovo = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+    try {
+        $aferiBundleIdleRaw = @(& $aferiAdbIdleNovo -d shell run-as com.ramonmenz.afericapturetest sha256sum files/DevLauncherApp-BridgelessReactNativeDevBundle.js 2>&1)
+        $aferiBundleIdleCode = $LASTEXITCODE
+    } catch { throw 'bundle-hash-unavailable' }
+    if ($aferiBundleIdleCode -ne 0 -or $aferiBundleIdleRaw.Count -ne 1 -or
+        $aferiBundleIdleRaw[0] -isnot [string] -or
+        $aferiBundleIdleRaw[0] -notmatch '^([0-9a-fA-F]{64})\s') {
+        throw 'bundle-hash-unavailable'
+    }
+    $aferiBundleIdleHash = $Matches[1].ToLowerInvariant()
+    Import-Module .\tools\task07\AferiPrivacyMetadata.psm1 -ErrorAction Stop
+    $aferiNovoIdle0 = New-AferiInventory -AdbPath $aferiAdbIdleNovo
+    Start-Sleep -Seconds 30
+    $aferiNovoIdle1 = New-AferiInventory -AdbPath $aferiAdbIdleNovo
+    $aferiNovoIdleDelta = Compare-AferiInventory -Before $aferiNovoIdle0.Id -After $aferiNovoIdle1.Id
+    [pscustomobject]@{
+        Cenario = 'idle-pos-atualizacao'
+        Bundle = [pscustomobject]@{ Tool = 'bundle-abertura-1'; Sha256Bundle = $aferiBundleIdleHash }
+        Antes = $aferiNovoIdle0
+        Depois = $aferiNovoIdle1
+        Comparacao = $aferiNovoIdleDelta
+    } | ConvertTo-Json -Depth 6
+}
+```
+
+Devolver apenas JSON final ou código fixo/impedimento e: espera programada
+concluída/pausas extras; App/Fase/Nativo no fim; preview/revisão/indicador de câmera;
+recarga/background/bloqueio/erro; se na abertura anterior houve r (sim/não/não
+lembro, sem fazê-lo agora). Não enviar caminhos/nomes privados, imagens, OCR,
+logcat completo ou arquivos de transporte. Dados internos ficam só em memória
+do módulo e relatórios mostram categorias/contagens; sem novo relatório em disco.
+
+Esse par informa mudanças de tamanho/mtime/presença dos arquivos regulares
+visíveis no sandbox, não seu conteúdo, temporários entre snapshots, logs ou rede.
+Identidade de entradas entre categorias/cenários não deve ser inferida. Alteração
+DataTransport ou outra categoria não prova fila/envio/valores clínicos; ausência
+de delta não prova privacidade universal. Telemetria/ID, ferramenta UID/destino,
+OEM/cross-platform e futura aplicação da flag de inspector false seguem pendentes.
+APKedf860b7…/fonte062e9b1 continuam com configuração de inspector anterior;
+esta medição não substitui validação do próximo artefato ou libera uso clínico.

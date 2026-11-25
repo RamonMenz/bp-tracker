@@ -223,3 +223,8 @@ e inspector](docs/task-07-backup-pos-merge.md#t0-interrompido--eof-http-no-carre
 preparados: metadados v4/v6/reverse e flag de inspector desativada para futuro
 build só da demo. Não altera APK instalado; diagnóstico Windows e privacidade
 continuam pendentes, tarefas parciais/habilitação bloqueada.
+
+T0 pós-ajuste recebido: tela abriu por a, captura-5/associacao-1, active/idle,
+nao-carregado, Fast Refresh desligado, sem preview/revisão/indicador percebido
+ou erro; IPv4/reverse positivos. [Próximo bundle/idle](docs/task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
+sem câmera, com nova baseline de metadados; tarefas parciais/gate bloqueado.
