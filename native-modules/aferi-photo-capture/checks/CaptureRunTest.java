@@ -38,6 +38,15 @@ public final class CaptureRunTest {
     CaptureRun success = run(); success.beginOriginal(); success.completeOriginal(); success.beginTransform();
     success.completeTransform(new byte[success.plan.outputBytes()]); success.beginProcessed(); success.completeProcessed();
     check(success.isDone() && !success.isCancelled() && success.retainedPixelBytes() == 0);
+    fails(success::completeProcessed); // Completion duplicado não restaura buffers.
+    CaptureRun invalidOutput = run(); invalidOutput.beginOriginal(); invalidOutput.completeOriginal(); invalidOutput.beginTransform();
+    fails(invalidOutput::beginProcessed);
+    fails(() -> invalidOutput.completeTransform(new byte[6]));
+    check(!invalidOutput.isDone() && invalidOutput.retainedPixelBytes() == 72);
+    invalidOutput.completeTransform(null); // Worker encerrado, saída inválida: liberação explícita.
+    check(invalidOutput.isDone() && invalidOutput.retainedPixelBytes() == 0);
+    CaptureRun early = run(); early.cancel(); early.cancel();
+    check(early.isDone() && early.retainedPixelBytes() == 0); fails(early::beginOriginal);
     System.out.println("CaptureRun: sequential completions, cancellation at every boundary and ownership guards passed (simulated SDK completions)");
   }
 }
