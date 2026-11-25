@@ -397,3 +397,97 @@ erro nativo, formato inválido, múltiplos signatários, alteração do arquivo 
 análise e metacaracteres de batch. O check integra o CI. Não há apksigner real
 executado no host nem resultado de assinatura dos APKs do autor nesta entrega;
 versão/disponibilidade/verificação reais dependem do retorno Windows.
+
+## Retorno assinatura-1 — comparação dos APKs locais aprovada
+
+Autor executou na worktree backup-tools limpa em
+fd658734c79adf7659bcf2f9adeba0872e6b8170. Tool assinatura-1, apksigner0.9;
+SHA anterior69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c,
+novoedf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed;
+AssinaturasVerificadas=true e CertificadosIguais=true. Data/hora efetivas não
+informadas. Sem certificado/nome/chave brutos, APK ou logs completos recebidos.
+
+Confirma a verificação criptográfica reportada dos dois artefatos locais e a
+igualdade do digest de certificado analisado. Resolve essa condição de assinatura;
+não prova identidade atual do instalado, aceitação de atualização pelo Android,
+preservação universal de estado ou privacidade. CI do commitfd65873 aprovado:
+https://github.com/RamonMenz/bp-tracker/actions/runs/45519293204 .
+
+### Próximo passo — identidade instalada, somente leitura
+
+Conectar Samsung por USB e aceitar depuração se necessário; não pressionar a,
+iniciar outra demo/Metro, instalar APK, limpar dados ou abrir captura. Se a demo
+já estiver aberta, manter idle/cancelled e câmera desligada; se estiver fechada,
+não precisa abri-la para consultar. Devolver o estado conhecido da demo/câmera
+junto do JSON, sem screenshot. Não entrar em configurações durante tentativa.
+
+Bloco usa -d, exige modelo SM-S731B e um único base.apk do pacote de avaliação.
+Caminho de pm path fica privado, com whitelist de caracteres e sem travessia;
+run-as/sha256sum lê só esse APK instalado, sem pull, root/chmod ou dados runtime.
+Não é inventário dos arquivos clínicos. Estado diferente, mais de um aparelho,
+splits, pacote ausente, permissão/erro ou formato desconhecido interrompem com
+código fixo. Modelo igual não é identidade única do aparelho; o autor deve manter
+somente o Samsung de avaliação conectado. Não consultar serial/identificadores.
+
+```powershell
+$aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+try { $aferiEstado = @(& $aferiAdb -d get-state 2>&1); $aferiEstadoCode = $LASTEXITCODE }
+catch { throw 'device-state-unavailable' }
+if ($aferiEstadoCode -ne 0 -or $aferiEstado.Count -ne 1 -or $aferiEstado[0].ToString().Trim() -cne 'device') {
+    throw 'device-state-unexpected'
+}
+try { $aferiModelo = @(& $aferiAdb -d shell getprop ro.product.model 2>&1); $aferiModeloCode = $LASTEXITCODE }
+catch { throw 'device-model-unavailable' }
+if ($aferiModeloCode -ne 0 -or $aferiModelo.Count -ne 1 -or $aferiModelo[0].ToString().Trim() -cne 'SM-S731B') {
+    throw 'device-model-unexpected'
+}
+try { $aferiInstPaths = @(& $aferiAdb -d shell pm path com.ramonmenz.afericapturetest 2>&1); $aferiPathsCode = $LASTEXITCODE }
+catch { throw 'installed-path-unavailable' }
+if ($aferiPathsCode -ne 0 -or $aferiInstPaths.Count -ne 1 -or
+    $aferiInstPaths[0] -isnot [string] -or
+    $aferiInstPaths[0].Trim() -notmatch '^package:(/data/app/[A-Za-z0-9_./=+~\-]+/base\.apk)$') {
+    throw 'installed-apk-set-unexpected'
+}
+$aferiInstBase = $Matches[1]
+if ($aferiInstBase -match '/\.\./') { throw 'installed-path-unexpected' }
+try {
+    $aferiInstHashRaw = @(& $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum $aferiInstBase 2>&1)
+    $aferiInstHashCode = $LASTEXITCODE
+} catch { throw 'installed-hash-unavailable' }
+if ($aferiInstHashCode -ne 0 -or $aferiInstHashRaw.Count -ne 1 -or
+    $aferiInstHashRaw[0] -isnot [string] -or
+    $aferiInstHashRaw[0] -notmatch '^([0-9a-fA-F]{64})\s') {
+    throw 'installed-hash-unavailable'
+}
+$aferiInstHash = $Matches[1].ToLowerInvariant()
+[pscustomobject]@{
+    Tool = 'identidade-instalada-1'
+    Modelo = 'SM-S731B'
+    Pacote = 'com.ramonmenz.afericapturetest'
+    EntradasApkInstaladas = 1
+    Sha256BaseInstalado = $aferiInstHash
+    CoincideComAnterior = ($aferiInstHash -ceq '69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c')
+    CoincideComNovo = ($aferiInstHash -ceq 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed')
+} | ConvertTo-Json
+```
+
+Esperado ainda CoincideComAnterior=true/CoincideComNovo=false, mas não presumir:
+nenhum hash instalado atual foi recebido neste passo. Se diferente, parar e
+investigar sem reinstalar para obter igualdade. Devolver só JSON/código fixo e
+estado conhecido da demo/câmera; nunca variáveis intermediárias ou caminho instalado.
+Telefone não é alterado por esse bloco. A consulta não congela processos nem
+atesta arquivo/estado/versão depois de sua execução.
+
+Após a reconferência, preparar atualização de avaliação separada da abertura e
+de novos ensaios, preservando os dois APKs locais e fontes já fixadas. Não usar
+uninstall, pm clear, downgrade, troca de assinatura ou permissões de bypass.
+Eventual install -r será orientado separadamente após conferir as identidades;
+não foi executado nesta etapa. Não implica deploy ou habilitação clínica; observação segura de
+UID/destinos, telemetria/ID e demais critérios continuam pendentes.
+
+
+Consulta de identidade verificada no host com nove fixtures PowerShell:
+anterior/novo/outro hash, modelo diferente, splits, travessia, injeção no path,
+erro nativo e hash malformado. Alvo USB/pacote/comandos fixos e ausência de paths
+na saída conferidos. Sem ADB/dispositivo real; o retorno do Samsung continua
+pendente, não inferido pelos testes.

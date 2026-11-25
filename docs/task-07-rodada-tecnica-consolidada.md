@@ -644,3 +644,10 @@ limpas, APKedf860b7…: AllowBackup=false, ReferenciasConferidas=true; três se�
 com nove domínios excluídos e SomenteExclusoesRaiz=true. [Evidência estática e
 próxima comparação de assinaturas locais](task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
 Não homologa SO/OEM/runtime/telemetria/rede. Sem instalação ou captura adicional.
+
+
+Assinatura-1 recebido: ferramentasfd65873 limpas, apksigner0.9, hashes69d5a0b3…/
+edf860b7… esperados; assinaturas verificadas e certificados iguais. [Alcance e
+reconferência instalada só de leitura](task-07-backup-pos-merge.md#retorno-assinatura-1--comparação-dos-apks-locais-aprovada).
+Não houve instalação/abertura/captura solicitada; pacote atualmente instalado
+continua dependente da nova consulta, privacidade/gate seguem pendentes.
