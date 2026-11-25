@@ -119,18 +119,20 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
       status("permission-denied"); return
     }
+    // Congelar antes da solicitação assíncrona: onLayout pode ocorrer enquanto o provider ainda abre.
+    boundViewWidth = preview.width; boundViewHeight = preview.height
+    boundRotation = preview.display?.rotation ?: 0
     PhotoLease.owner = this
     active = true
     val epoch = ++generation
     val future = ProcessCameraProvider.getInstance(context)
     future.addListener({
       if (!active || generation != epoch || disposed) return@addListener
+      if (boundComparison && !sameViewGeometry()) { fail("geometry-unavailable"); return@addListener }
       try {
         val owner = appContext.currentActivity as? LifecycleOwner
         if (owner == null) { fail("camera-failed"); return@addListener }
         provider = future.get()
-        boundViewWidth = preview.width; boundViewHeight = preview.height
-        boundRotation = preview.display?.rotation ?: 0
         val previewBuilder = Preview.Builder()
         if (boundComparison) previewBuilder.setTargetRotation(boundRotation)
         surface = previewBuilder.build().also { it.setSurfaceProvider(preview.surfaceProvider) }
