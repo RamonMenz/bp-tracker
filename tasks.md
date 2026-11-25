@@ -260,3 +260,19 @@ recuperado. [Inspeção de layout e associacao-2](docs/task-09-diagnostico-visor
 acrescenta somente presença de dígitos ASCII/rótulos, sem expor conteúdo ou alterar
 reconhecimento. Fotos/valores não incorporados. Ensaio físico novo pendente;
 TASK-04/06/07/09/18 parciais e habilitação clínica bloqueada.
+
+
+TASK-09 — visor desligado recebido: rótulos SYS/DIA/PUL presentes no diagnóstico,
+campos incertos coerentes com LCD apagado, sem identificar causa da falha anterior.
+Preview/ready confirmados por esclarecimento; offline/restauração e limites em
+[registro e comparação dirigida](docs/task-09-diagnostico-visor-real.md#retorno-do-visor-desligado--rótulos-presentes).
+Cartões locais comuns/sete segmentos preparados, sem fotos ou valores de usuário;
+comparação física ainda pendente. Sem mudança de motor ou habilitação clínica.
+
+
+TASK-09 — A/B recebido: cartão comum com três campos corretos; cartão sete
+segmentos com rótulos presentes, nenhum dígito ASCII nos tokens utilizáveis e
+três campos ausentes. [Evidência e limites](docs/task-09-diagnostico-visor-real.md#retorno-ab--fonte-comum-correta-sete-segmentos-sem-dígitos-ascii).
+Falha funcional no estímulo segmentado, sem atribuição universal ao motor ou ao
+LCD físico. Próxima investigação limitada a pré-processamento em RAM; nenhuma
+nova coleta ou correção de reconhecimento declarada. Habilitação bloqueada.
