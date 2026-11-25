@@ -213,3 +213,49 @@ Parar depois do build. Manifesto mesclado, recursos XML empacotados e assinatura
 precisam de análise local selecionada antes de atualizar o app. Não rodar Metro
 desta nova cópia nem pressionar a para instalar/abrir. APK anterior não foi
 substituído e não há nova evidência funcional de captura/privacidade.
+
+## Retorno do build Windows — APK gerado, ainda não inspecionado
+
+Autor devolveu prebuild e build concluídos, sem aviso/impedimento percebido.
+Data/hora efetivas da execução não informadas. Gradle9.3.1; Launcher JVM17.0.21
+(Eclipse Adoptium17.0.21+9), portanto a seleção efetiva reportada pelo wrapper
+corresponde à versão17 previamente consultada. Fonte:
+062e9b188c7af6cf9539b0ba1faed63dd26460e8. ApkExiste=true; SHA-256:
+**edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed**.
+
+Status vazio no bloco1. No bloco3, somente Refresh index:100%(448/448),done.,
+sem linhas de alterações depois: progresso de atualização do índice, não uma
+alteração listada. Status relatado limpo em ambos os pontos. O número448 não é
+inventário de arquivos clínicos nem prova de conteúdo do APK.
+
+Esse retorno comprova geração relatada de um artefato com identidade nova; não
+comprova manifesto/recursos finais, assinatura, instalação, captura ou privacidade.
+O Codex não recebeu/executou o APK. Ainda não instalar, iniciar Metro desta cópia,
+pressionar a, limpar dados ou repetir capturas. O APK anterior continua referência;
+nenhuma consulta atual ao instalado foi solicitada para este passo.
+
+### Próximo retorno: manifesto selecionado do novo APK
+
+Usar o extrator manifesto-1 que já existe no commit062e9b1, sem atualizar a
+worktree de build ou reinstalar dependências. Aapt2 SDK36 já localizado; o módulo
+confere o hash esperado antes da leitura e devolve somente metadados selecionados.
+Não envolve ADB nem requer telefone conectado:
+
+```powershell
+Set-Location -LiteralPath 'C:\dev\aferi-task07-backup-build'
+Import-Module .\tools\task07\AferiManifestMetadata.psm1 -Force -ErrorAction Stop
+$aferiAapt2Build = Join-Path $env:LOCALAPPDATA 'Android\Sdk\build-tools\36.0.0\aapt2.exe'
+$aferiApkNovo = Join-Path (Get-Location).Path 'demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+Get-AferiManifestMetadata -Aapt2Path $aferiAapt2Build -ApkPath $aferiApkNovo -ExpectedSha256 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed' | ConvertTo-Json -Depth 8
+```
+
+Devolver só JSON ou código fixo/impedimento. Esperado pacote de avaliação,
+allowBackup=false, fullBackupContent/dataExtractionRules referencia-presente;
+debuggable/cleartext podem continuar true no Dev Client. Qualquer divergência
+requer análise, sem alterar/recompilar por tentativa. Não imprimir árvore inteira.
+
+A presença da referência não prova que a regra aponta para o recurso esperado
+ou que o XML contém todas as exclusões; análise local selecionada dos recursos
+empacotados e sua vinculação é o passo seguinte, antes de instalação. Não pedir
+que o autor envie XML binário/árvore bruta/APK ou use dump completo como atalho.
+Telemetria/ID/UID/destinos/OEM/cross-platform e gate permanecem pendentes.

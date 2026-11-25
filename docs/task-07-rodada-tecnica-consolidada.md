@@ -620,3 +620,12 @@ Prebuild real Codex isolado do código062e9b1 passou, manifest/resource refs e
 exclusões conferidos; sem Gradle/APK/telefone. [Roteiro de geração e assembleDebug
 sem instalação](task-07-backup-pos-merge.md#retorno-de-versões-e-verificação-independente-de-prebuild)
 preparado; novo hash e manifesto/recursos empacotados aguardam execução local.
+
+
+Retorno do build Windows: prebuild/build concluídos, Gradle9.3.1 e Launcher
+JVM17.0.21 Adoptium+9; fonte062e9b1, APK existente com
+SHA-256edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed.
+Status relatado limpo antes/depois; Refresh index é progresso do Git.
+[Próximo manifesto selecionado](task-07-backup-pos-merge.md#retorno-do-build-windows--apk-gerado-ainda-não-inspecionado),
+sem atualização da worktree, instalação ou nova captura. Recursos empacotados/
+vinculação/assinatura e privacidade ainda não homologados.
