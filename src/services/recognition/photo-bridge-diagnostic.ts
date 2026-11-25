@@ -49,7 +49,8 @@ function describeGeometry(value: unknown): readonly string[] {
     `quadro:buffer=${frame.width}x${frame.height}; orientado=${uprightWidth}x${uprightHeight}; rot=${frame.rotation}`,
     frame.cropMatchesBuffer ? 'quadro:crop-camera=buffer-completo' : 'quadro:crop-camera=parcial-ignorado',
     `preview:view=${frame.previewViewWidth}x${frame.previewViewHeight}; buffer=${previewBuffer}; escala=fill-center`,
-    'preview:transformacao-para-analise=nao-estabelecida',
+    frame.mapping === 'shared-viewport-roi' ? 'preview:transformacao-para-analise=calculada-camerax-viewport'
+      : 'preview:transformacao-para-analise=nao-estabelecida',
   ];
 }
 

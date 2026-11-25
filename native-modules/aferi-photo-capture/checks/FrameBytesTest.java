@@ -5,15 +5,17 @@ import java.util.Arrays;
 
 public final class FrameBytesTest {
   private static int dimensionChecks = 0;
+  private static int bufferChecks = 0;
   private static void dimensions(int width, int height, boolean accepted) {
     if (FrameBytes.acceptsDimensions(width, height) != accepted) throw new AssertionError("frame-dimension-policy");
     dimensionChecks++;
   }
   private static void equal(byte[] actual, byte[] expected) {
     if (!Arrays.equals(actual, expected)) throw new AssertionError("synthetic-frame-mismatch");
+    bufferChecks++;
   }
   private static void fails(Runnable action) {
-    try { action.run(); } catch (IllegalArgumentException expected) { return; }
+    try { action.run(); } catch (IllegalArgumentException expected) { bufferChecks++; return; }
     throw new AssertionError("invalid-frame-accepted");
   }
   public static void main(String[] args) {
@@ -30,11 +32,18 @@ public final class FrameBytesTest {
     ByteBuffer interleavedV = ByteBuffer.wrap(new byte[] {21,0,22,0});
     equal(FrameBytes.nv21(4,2,padded,6,1,interleavedU,4,2,interleavedV,4,2), expected);
     if (padded.position() != 1 || interleavedU.position() != 1) throw new AssertionError("buffer-position-mutated");
+    bufferChecks++;
     fails(() -> FrameBytes.nv21(3,2,y,4,1,u,2,1,v,2,1));
     fails(() -> FrameBytes.nv21(4000,3000,y,4,1,u,2,1,v,2,1));
     fails(() -> FrameBytes.nv21(4,2,y,100,1,u,2,1,v,2,1));
     fails(() -> FrameBytes.nv21(4,2,y,4,0,u,2,1,v,2,1));
     equal(FrameBytes.nv21(4,2,y.asReadOnlyBuffer(),4,1,u,2,1,v,2,1), expected);
+    fails(() -> FrameBytes.nv21(4,2,y,1,1,u,2,1,v,2,1));
+    fails(() -> FrameBytes.nv21(4,2,y,Integer.MAX_VALUE,1,u,2,1,v,2,1));
+    fails(() -> FrameBytes.nv21(4,2,y,4,Integer.MAX_VALUE,u,2,1,v,2,1));
+    fails(() -> FrameBytes.nv21(4,2,null,4,1,u,2,1,v,2,1));
+    ByteBuffer offsetShort = y.duplicate(); offsetShort.position(1);
+    fails(() -> FrameBytes.nv21(4,2,offsetShort,4,1,u,2,1,v,2,1));
     dimensions(1280, 960, true);
     dimensions(1440, 1080, true);
     dimensions(1600, 1200, true);
@@ -46,6 +55,6 @@ public final class FrameBytesTest {
     dimensions(-2, 960, false);
     dimensions(1279, 960, false);
     dimensions(2147483646, 2147483646, false);
-    System.out.println("FrameBytes: 8 buffer checks and " + dimensionChecks + " dimension checks passed (synthetic; no camera/ML Kit proof)");
+    System.out.println("FrameBytes: " + bufferChecks + " buffer checks and " + dimensionChecks + " dimension checks passed (synthetic; no camera/ML Kit proof)");
   }
 }

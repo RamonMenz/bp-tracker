@@ -69,6 +69,15 @@ test('cropRect parcial e resolução de preview indisponível não são tratados
   ]));
 });
 
+test('projeção CameraX é uma categoria conhecida, sem serializar matriz ou campo extra', () => {
+  const raw = sample();
+  const report = describePhotoBridge({ ...raw, frame: { ...raw.frame, mapping: 'shared-viewport-roi', matrix: 'SENTINELA' } });
+  expect(report).toContain('preview:transformacao-para-analise=calculada-camerax-viewport');
+  expect(report.join(' ')).not.toContain('SENTINELA');
+  expect(describePhotoBridge({ ...raw, frame: { ...raw.frame, mapping: 'SENTINELA' } }))
+    .toContain('preview:transformacao-para-analise=nao-estabelecida');
+});
+
 test('somente booleanos e dimensões técnicas passam: texto/caixas/valores/confiança/hora não passam', () => {
   const sensitive = { text: 'SENTINELA-CLINICA 173/97', tokens: ['SENTINELA'], systolic: 173,
     capturedAtMs: 1793001600000, confidence: 0.873, box: { x: 0.123, y: 0.456 } };
