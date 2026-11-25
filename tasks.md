@@ -276,3 +276,11 @@ três campos ausentes. [Evidência e limites](docs/task-09-diagnostico-visor-rea
 Falha funcional no estímulo segmentado, sem atribuição universal ao motor ou ao
 LCD físico. Próxima investigação limitada a pré-processamento em RAM; nenhuma
 nova coleta ou correção de reconhecimento declarada. Habilitação bloqueada.
+
+
+TASK-09 — [plano de correção da leitura segmentada](docs/task-09-plano-correcao-segmentos.md)
+preparado após merge#78, base4962742: conferir bridge/captura, candidato limitado
+em RAM com rótulos e transformação de coordenadas, testes/novo APK, comparação
+controlada e avaliação separada de generalização/LCD. Até duas variantes
+justificadas, com parada se ineficazes; motor/privacidade preservados. Plano não
+implementado, sem nova coleta ou habilitação; tarefas continuam parciais.
