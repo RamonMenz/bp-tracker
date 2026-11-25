@@ -211,3 +211,8 @@ Manifesto selecionado confirma allowBackup=false e referências presentes.
 [Extrator backup-1](docs/task-07-backup-pos-merge.md#retorno-do-manifesto-do-novo-apk-e-próximo-extrator)
 prepara conferência IDs/tabela/XML; resultado físico pendente, sem instalação,
 conclusão ou habilitação. Telemetria/ID/UID/destinos/OEM seguem lacunas.
+
+Backup-1 recebido positivo para APKedf860b7…: vínculos manifesto/tabela/XML
+conferidos e nove exclusões em cada seção legada/cloud/D2D. [Limites e assinatura
+local pendente](docs/task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
+Evidência estática apenas; sem instalação ou conclusão/habilitação clínica.

@@ -50,6 +50,9 @@ jobs:
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
 
+      - name: Comparação de assinaturas (PowerShell, apksigner simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
+
       - name: Regras empacotadas (PowerShell, aapt2 simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiBackupMetadata.check.ps1
 

@@ -328,3 +328,72 @@ não garante obediência universal do SO/OEM/serviços de migração e não reso
 cross-platform/telemetria/ID/UID/destinos. Assinatura e plano de preservação antes
 da atualização ainda devem ser conferidos. Nenhuma instalação/captura nova
 solicitada nesta etapa, nenhuma das quatro tarefas concluída ou habilitação.
+
+## Retorno backup-1 — referências e exclusões empacotadas conferidas
+
+Autor executou a ferramenta na worktree backup-tools limpa em
+5e2ca59c5db827bccebc58d2ea71f5f83aa8b77a. Data/hora efetivas não informadas.
+Tool backup-1, aapt2 Windows2.20-13193326, APK
+edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed,
+pacote de avaliação, AllowBackup=false, ReferenciasConferidas=true.
+full-backup-content/cloud-backup/device-transfer: cada seção devolveu
+DominiosExcluidos=9 e SomenteExclusoesRaiz=true.
+
+Isso fecha o cruzamento estático dos IDs diretos de application com tabela e
+recursos padrão esperados, além da estrutura/exclusões desses XML no artefato.
+Não é inspeção de transferência/backup real, prova universal de obediência por
+OEM/SO, ausência de outras migrações, telemetria ou privacidade integral. Não
+houve nova captura/instalação solicitada. CI do extrator no commit5e2ca59 aprovado:
+https://github.com/RamonMenz/bp-tracker/actions/runs/45518120354 .
+
+### Próximo passo — assinaturas dos dois APKs locais, sem instalar
+
+Comparar artefatos locais preservados, não extrair APK do telefone. O anterior
+69d5a0b3… foi vinculado ao instalado em M0a; essa é evidência histórica. Antes de
+uma futura atualização será preciso reconfirmar o instalado, pois a comparação
+local sozinha não prova seu estado atual. O novo é edf860b7… da fonte062e9b1.
+
+Usar apksigner.bat existente no SDK36, apenas version/verify --print-certs.
+Saída completa, inclusive nomes de certificado e hashes de chave, permanece em
+variáveis privadas; reportar só versão/identidades dos arquivos/verificação e
+igualdade dos certificados. Não imprimir $raw, $certificates, $aferiAnterior ou
+$aferiNovo. Não acessar keystore, senha, chave privada ou gerar certificado.
+O script confere hashes antes/depois de cada análise e recusa alteração,
+assinatura inválida, quantidade/formato de signatário inesperados ou indisponibilidade.
+Caminhos com metacaracteres de batch são recusados; não contornar a restrição.
+Não confundir assinatura válida com privacidade ou integridade do comportamento.
+
+Atualizar somente a worktree de ferramentas limpa ao commit publicado com
+[Compare-AferiApkSignatures.ps1](../tools/task07/Compare-AferiApkSignatures.ps1),
+sem mover HEAD da pasta de build. Se houver alterações locais, parar e preservar.
+O script mantém as variáveis em seu escopo; não executá-lo com dot-sourcing.
+Se qualquer throw aparecer, parar. Devolver só JSON final ou código fixo/impedimento. Não requer
+telefone conectado, novo build, atualização de ferramentas ou mudança de HEAD.
+
+```powershell
+& .\tools\task07\Compare-AferiApkSignatures.ps1
+```
+
+Esperado AssinaturasVerificadas=true. CertificadosIguais ainda é desconhecido;
+não pressupor true nem trocar a assinatura para forçar atualização. Se false,
+não desinstalar/limpar dados, não reassinar e não usar flags de bypass. Analisar
+opções de avaliação separada que preservem o pacote e a evidência existentes.
+
+Mesmo se true, a atualização pode ter outros impedimentos; esta etapa não a
+executa nem atesta compatibilidade integral. Reconfirmar alvo/hash instalado,
+identidade do novo APK e estado/câmera antes de orientar eventual adb install -r.
+Não iniciar backup/restauração para preservar evidência e não copiar dados
+privados do pacote. O arquivo local anterior e documentos já são referência de
+binário; não prometer restauração universal dos dados caso seja preciso voltar.
+
+Qualificação da ferramenta UID/destino continua pendente. Não repetir capturas
+nem alegar zero tráfego para compensar essa lacuna. Habilitação clínica e as
+TASK-04/06/07/18 permanecem bloqueada/parciais nos alcances já registrados.
+
+
+Verificação do protocolo de assinatura no host: sintaxe e helper testados com
+apksigner simulado, hashes de fixture, resposta contendo nome/chave privados,
+erro nativo, formato inválido, múltiplos signatários, alteração do arquivo durante
+análise e metacaracteres de batch. O check integra o CI. Não há apksigner real
+executado no host nem resultado de assinatura dos APKs do autor nesta entrega;
+versão/disponibilidade/verificação reais dependem do retorno Windows.

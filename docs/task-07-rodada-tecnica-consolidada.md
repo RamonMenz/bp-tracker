@@ -637,3 +637,10 @@ cleartext/debuggable true, CAMERA/INTERNET. [Conferência dos recursos empacotad
 prepara backup-1 para cruzar IDs→tabela→XML e excluir nove domínios nas três
 seções. Checks negativos e integração aapt2 com APK sintético passaram; execução
 Windows ainda pendente. APK/fonte062e9b1 preservados; sem instalação/captura/gate.
+
+
+Backup-1 executado pelo autor no Windows/aapt2 2.20-13193326, ferramentas5e2ca59
+limpas, APKedf860b7…: AllowBackup=false, ReferenciasConferidas=true; três seções
+com nove domínios excluídos e SomenteExclusoesRaiz=true. [Evidência estática e
+próxima comparação de assinaturas locais](task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
+Não homologa SO/OEM/runtime/telemetria/rede. Sem instalação ou captura adicional.
