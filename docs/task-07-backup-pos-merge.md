@@ -713,3 +713,90 @@ para resolver ausência do hash/diagnóstico; retornar código fixo e estado obs
 Nova rodada de recursos/arquivos/offline só será definida após T0. Telemetria/ID,
 qualificação por UID/destinos, OEM/cross-platform e critérios clínicos continuam
 pendentes. T0 não conclui TASK-04/06/07/18 nem atesta zero tráfego no Dev Client.
+
+## T0 interrompido — EOF HTTP no carregamento do Dev Client
+
+Autor relatou, ao pressionar a após iniciar Metro, IOException unexpected end of
+stream em http://127.0.0.1:8097 e EOFException ao ler headers. Caminho/query da
+URL foram omitidos; não arquivar stack/log inteiro. Terminal A continuou com
+Metro rodando, confirmado pelo autor. Sem retorno de tela/JS carregado, Fast
+Refresh ou hash novo nesta tentativa. Não concluir T0, inferência/OCR ou captura.
+Data/hora efetivas não informadas. Novo APK instalado continua identificado pelo
+retorno anterior, sem reinstalação solicitada para corrigir conexão.
+
+No código instalado da CLI, Metro recebe host localhost, mas UrlCreator converte
+localhost em127.0.0.1 na URL anunciada. Resolução/bind IPv6 versus IPv4 é hipótese
+concreta, não causa confirmada. Outras possibilidades incluem reverse, resposta
+interrompida e erro de preparação/bundle. Preservar o Metro em execução: não
+pressionar a/r de novo, não reinstalar/limpar cache/dados, não trocar para tunnel,
+abrir firewall global ou desativar proteção por tentativa.
+
+### Diagnóstico metro-link-1 — loopback e reverse, só metadados
+
+[Test-AferiMetroConnection.ps1](../tools/task07/Test-AferiMetroConnection.ps1)
+consulta exclusivamente /status em127.0.0.1:8097 e [::1]:8097, timeout3s por etapa,
+sem proxy e sem seguir redirects. Retorna família, HTTPstatus, igualdade booleana
+do header de raiz ao projeto esperado, flag do status estático e categoria de
+falha. Caminho do header fica privado; só lê até64 caracteres da resposta quando
+a raiz corresponde à demo, reconhecendo o texto estático packager-status:running.
+Não consulta URL completa do erro, corpo do bundle, headers clínicos ou outro
+servidor de propósito; se a raiz não corresponde, não lê seu corpo.
+
+Também executa só adb -d reverse --list, retendo identificadores privados e
+retornando disponibilidade/contagens/conflito8097. Não altera reverse, redes,
+permissões, app ou servidor. Indisponibilidade gera contagens null, não zero
+tráfego. Não mede UID/destinos/bytes de reconhecimento e não qualifica inspector
+que registre payloads. Manter app na tela de erro ou fechado; sem câmera.
+
+Atualizar somente worktree backup-tools limpa ao commit publicado desta etapa;
+fonte backup-build062e9b1, Metro A e APKedf860b7… permanecem preservados. Executar
+no terminal B, com Metro A ainda rodando:
+
+```powershell
+& .\tools\task07\Test-AferiMetroConnection.ps1
+```
+
+Devolver só JSON e se Metro segue rodando. Sem logs completos, URL/query,
+screenshot, serial, IP de LAN ou nomes de rede. Se a pasta de ferramentas tiver
+alterações, parar e preservar. Não reiniciar para obter resultado diferente antes
+da leitura; nenhuma abertura/captura extra necessária.
+
+Interpretação depende do retorno: IPv6 pronto/IPv4 indisponível sustenta hipótese
+de bind/resolução; nenhuma resposta pede verificar servidor/porta/preparação;
+ambos prontos com reverse ausente/divergente pede analisar encaminhamento;
+ambos prontos e reverse conhecido não excluem falha no manifesto/bundle ou SDK.
+Nenhuma dessas condições prova falha no OCR ou tráfego de reconhecimento remoto.
+Correção de DNS/servidor, se justificada, será entre cenários e sem troca de motor.
+
+### Superfície adicional de privacidade — inspector do Dev Client
+
+Stack citado contém ExpoNetworkInspectOkHttpNetworkInterceptor/AppInterceptor.
+São interceptadores de desenvolvimento; sua presença não demonstra que causaram
+o EOF ou enviaram conteúdo. No código local expo-modules-core, o interceptor
+pode examinar corpo de resposta e encaminhar evento CDP após chain.proceed;
+há Log.e de falha do evento. Nesse erro chain.proceed não entregou headers;
+não inferir corpo clínico coletado ou upload a partir da stack.
+
+O projeto Android gerado do código062e9b1 define
+EX_DEV_CLIENT_NETWORK_INSPECTOR=true. DevLauncherPlugin lê essa propriedade e,
+quando ausente/true, registra instrumentação de OkHttp nos variants de debug.
+[Plugin só da demo](../demos/android-capture/plugins/with-disabled-network-inspector.js)
+agora força a propriedade false no prebuild, sem nova dependência, reflexão,
+remoção de engine ou alteração no produto clínico. Preserva outras propriedades
+e recusa outro pacote. Flag falsa pula a instrumentação desse plugin no código
+revisado; não promete eliminar outros coletores/logs/transportes do SDK/SO.
+
+**Correção para build futuro:** APKedf860b7… instalado e fonte de seu Metro062e9b1
+continuam inalterados. Não fazer rebuild/instalação nesta investigação do EOF.
+A flag requer novo prebuild/build e validação de artefato antes de alegar aplicada
+a outro APK; o modo atual permanece restrito a dados sintéticos/diagnóstico.
+Não abrir inspector/DevTools para capturar requisições como teste de privacidade.
+Telemetria ML Kit/ID persistente e ferramentas UID/destino continuam sem resolução.
+
+Verificações: check do mod real Expo cobre defaults/duplicatas/idempotência e
+preservação de propriedades; novo check PowerShell cobre saída privada do resumo
+reverse. Integração real de saúde HTTP em fixture local loopback do host passou
+para IPv4 com status estático/raiz esperada e IPv6 com raiz diferente, sem exibir
+header/corpo privado e sem ADB real. Prebuild isolado com o plugin novo gerou
+EX_DEV_CLIENT_NETWORK_INSPECTOR=false. Não é build APK/instrumentação Android,
+execução Windows ou diagnóstico do PC do autor. CI inclui os novos checks.

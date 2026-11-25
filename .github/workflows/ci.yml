@@ -44,6 +44,12 @@ jobs:
       - name: Testes (Jest)
         run: npm test -- --ci
 
+      - name: Diagnóstico Metro (PowerShell, fixtures sem rede)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiMetroConnection.check.ps1
+
+      - name: Inspector de rede da demo (mod real Expo)
+        run: node tools/task07/AferiNetworkInspector.check.cjs
+
       - name: Regras de backup da demo (mods reais Expo, sem dispositivo)
         run: node tools/task07/AferiBackupRules.check.cjs
 

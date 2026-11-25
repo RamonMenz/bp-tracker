@@ -665,3 +665,12 @@ anterior=false/novo=true, app fechado, indicador de câmera não percebido e sem
 comportamento inesperado observado. [T0 de abertura com Metro da fonte062e9b1](task-07-backup-pos-merge.md#retorno-da-atualização--novo-apk-instalado-app-fechado)
 preparado sem iniciar câmera, com associacao-1/Fast Refresh/bundle/estado inicial.
 Nova evidência funcional ainda pendente; gate clínico permanece bloqueado.
+
+
+T0 interrompido por EOF de HTTP127.0.0.1:8097 ao abrir Dev Client; autor confirmou
+Metro ainda rodando. Sem evidência de JS/tela/hash novo ou tentativa de câmera.
+[Diagnóstico somente de metadados e inspector de desenvolvimento](task-07-backup-pos-merge.md#t0-interrompido--eof-http-no-carregamento-do-dev-client):
+metro-link-1 consulta saúde loopback v4/v6 e reverse; hipótese localhost/bind ainda
+não confirmada. Fonte futura desativa EX_DEV_CLIENT_NETWORK_INSPECTOR no prebuild
+só da demo; APKedf860b7… e Metro062e9b1 preservados, sem reinstalação nesta análise.
+Gate clínico/telemetria/rede seguem pendentes.

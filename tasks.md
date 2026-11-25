@@ -216,3 +216,10 @@ Backup-1 recebido positivo para APKedf860b7…: vínculos manifesto/tabela/XML
 conferidos e nove exclusões em cada seção legada/cloud/D2D. [Limites e assinatura
 local pendente](docs/task-07-backup-pos-merge.md#retorno-backup-1--referências-e-exclusões-empacotadas-conferidas).
 Evidência estática apenas; sem instalação ou conclusão/habilitação clínica.
+
+T0 do APKedf860b7… interrompido por EOF no HTTP de desenvolvimento; Metro segue
+rodando conforme autor, sem reconhecimento/captura ensaiados. [Saúde de conexão
+e inspector](docs/task-07-backup-pos-merge.md#t0-interrompido--eof-http-no-carregamento-do-dev-client)
+preparados: metadados v4/v6/reverse e flag de inspector desativada para futuro
+build só da demo. Não altera APK instalado; diagnóstico Windows e privacidade
+continuam pendentes, tarefas parciais/habilitação bloqueada.
