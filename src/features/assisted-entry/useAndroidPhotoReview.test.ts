@@ -71,7 +71,8 @@ test.each(['cancel', 'background', 'recapture', 'confirm'] as const)('diagnósti
   const t = await setup(); await ready(t);
   await act(async () => { t.result.current.capture(); await flush(); });
   expect(t.result.current.interpretationDiagnostic).toEqual(['ocr:linhas-presentes',
-    'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato']);
+    'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
+    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
   await act(async () => {
     if (action === 'cancel') t.result.current.review.cancel();
     if (action === 'background') listeners.forEach(listener => listener('background'));

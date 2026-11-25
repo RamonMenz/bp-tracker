@@ -29,6 +29,23 @@ function lex(text: string): string[] {
   // não viram 12, 120 ou 80 por remoção de caracteres.
   return text.match(/[A-Z]+|[+-]?\d+(?:[.,:/-]\d+)*|[^\s]/g) ?? [];
 }
+/** Sinais locais sem valores/caixas; dígitos podem pertencer a acessórios. */
+export function inspectPhotoText(observation: OcrObservation): {
+  hasAsciiDigit: boolean;
+  labels: Readonly<Record<ClinicalField, boolean>>;
+} {
+  const labels: Record<ClinicalField, boolean> = { systolic: false, diastolic: false, pulse: false };
+  let hasAsciiDigit = false;
+  for (const token of observation.tokens) {
+    hasAsciiDigit ||= /[0-9]/.test(token.text);
+    for (const part of lex(withoutAccessories(normalize(token.text)))) {
+      const field = LABELS[part];
+      if (field) labels[field] = true;
+    }
+  }
+  return { hasAsciiDigit, labels };
+}
+
 function valueOf(parts: string[], basis: 'label' | 'layout'): Candidate {
   const meaningful = parts.filter(part => ![':', '=', '/', '(', ')'].includes(part));
   if (meaningful.length > 1 && meaningful.every(part => /^\d+$/.test(part))) return uncertain('ambiguous-label');
