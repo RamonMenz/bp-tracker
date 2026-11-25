@@ -244,3 +244,11 @@ Retomada do candidato: consulta/atualização recebidas, baseEDF→25990bb4… c
 mesmo com stderr de startup na consulta. [Próxima abertura/idle sem câmera](docs/task-07-backup-pos-merge.md#retomada-e-instalação-do-candidato-confirmadas-pelo-autor)
 na fonteca786ed, sem concluir bytecode/SDK/rede/contas ou TASK-04/06/07/18. Habilitação
 clínica bloqueada, nenhum ensaio clínico ou nova captura solicitado.
+
+
+Candidato25990bb4…: abertura/idle recebidos, bundlef672ea34…, IPv4/reverse
+saudáveis; inventario-1 IDs1/2,16→16/delta0 na janela programada30s, sem câmera
+ou interrupções percebidas. [Diagnóstico parcial consolidado](docs/task-07-backup-pos-merge.md#abertura-e-idle-do-candidato-recebidos--diagnóstico-parcial-consolidado)
+registra evidências e condições: bytecode, UID/destinos, SDK/telemetria/OEM e
+integração clínica ainda pendentes. Não repetir controle nem pedir nova captura
+nesta entrega. TASK-04/06/07/18 parciais; habilitação clínica bloqueada.

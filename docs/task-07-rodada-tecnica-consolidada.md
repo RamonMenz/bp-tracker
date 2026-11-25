@@ -721,3 +721,11 @@ e idle do candidato](task-07-backup-pos-merge.md#retomada-e-instalação-do-cand
 preparados na fonteca786ed/inspector-build, ipv4first/8097 e health -Project inspector.
 PrepareMetro não instala e preserva conflitos; sem câmera. Bytecode/privacidade
 não homologados, estado visual pós-instalação não informado ainda.
+
+
+Candidato25990bb4…: abertura/idle recebidos, bundlef672ea34…, IPv4/reverse
+saudáveis; inventario-1 IDs1/2,16→16/delta0 na janela programada30s, sem câmera
+ou interrupções percebidas. [Diagnóstico parcial consolidado](task-07-backup-pos-merge.md#abertura-e-idle-do-candidato-recebidos--diagnóstico-parcial-consolidado)
+registra evidências e condições: bytecode, UID/destinos, SDK/telemetria/OEM e
+integração clínica ainda pendentes. Não repetir controle nem pedir nova captura
+nesta entrega. TASK-04/06/07/18 parciais; habilitação clínica bloqueada.

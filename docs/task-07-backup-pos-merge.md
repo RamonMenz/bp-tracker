@@ -1356,3 +1356,71 @@ Regressões do atualizador/preparo cobrem conflitos de modo, outros mapeamentos,
 formato/consulta/criação inválidos e candidato errado sem install/reverse-set.
 Native dummy-process validou a extração do transporte; guardas de sessão do novo
 idle testadas sem consulta/espera real. Nova abertura/idle Windows ainda pendentes.
+
+
+## Abertura e idle do candidato recebidos — diagnóstico parcial consolidado
+
+Retorno do autor, sem data/hora de execução informadas. Ferramentas da rodada:
+inspector-metro-1, metro-link-1 (Projeto=inspector), inspector-idle-1 e
+inventario-1; protocolo publicado em 13c9de69b5b37bf895ffeb68dccdc6199f1ab213.
+Não houve execução física pelo Codex. Este registro atualiza as pendências de
+abertura/idle das seções anteriores; preserva os resultados históricos.
+
+### Evidência desta janela, sem captura
+
+- APK instalado: `25990bb47cc706f60babf1fc75a215fcc5f5266b0c85332f01a3b58bf2086e1c`.
+  Preparação confirmou esse hash, reverse8097 configurado, nenhuma outra linha
+  anterior e nenhuma instalação executada pelo preparo.
+- Saúde: IPv4 HTTP200, fonte esperada/pronto=true; IPv6 ConnectFailure, sem
+  resposta HTTP. Reverse disponível, mapeamento conhecido=1, outras linhas=0,
+  conflito=false. A falha IPv6 não impediu o caminho IPv4 observado.
+- Bundle estático do Dev Client:
+  `f672ea344eb087a73742e2ac2cd7882d3dd9288e5b92f22f8804e3fa8c9e1136`.
+  Identifica este arquivo consultado; não é hash do APK nem prova de todo código
+  carregado em RAM. Não comparar como conteúdo clínico com bundles anteriores.
+- Par de inventário desta sessão: IDs1/2, 16→16 arquivos regulares; categorias
+  1 bundle-dev-client-nome, 2 datatransport-nome, 12 outro-nao-classificado,
+  1 preferencia-mlkit-nome nos dois lados. ChangedEntries=0; Changes vazio.
+- Autor abriu por a; captura-5/associacao-1, active/idle/nao-carregado ao final.
+  Fast Refresh desligado e recarga r concluída antes do controle. Espera
+  programada de30s concluída, sem pausa adicional; não percebeu bloqueio,
+  background, recarga, diálogo ou erro durante a janela. Sem preview/revisão
+  antiga ou indicador de câmera percebido.
+
+Resultado: abertura e estabilidade do idle confirmadas no alcance relatado.
+Não repetir esse controle para obter novamente delta0. Nativo=nao-carregado é
+estado do binding exibido, não demonstra ausência de inicialização de todo SDK.
+Não houve captura nesta rodada; não transferir os ensaios sintéticos do APK69
+para o APK259 como homologação de reconhecimento/cancelamento do novo binário.
+
+### Diagnóstico e condições de habilitação
+
+| Área | Evidência disponível | Lacuna / condição antes de habilitar |
+|---|---|---|
+| Caminho próprio de captura | Revisão anterior de CameraX/buffers/ML Kit embarcado/interpretação/revisão; cenários sintéticos históricos documentados | Manter RAM, descarte, liberação de recursos e confirmação explícita; completar critérios no artefato candidato, sem inferir resultados de outra versão |
+| Backup do candidato | allowBackup=false; referências XML conferidas; nove exclusões nas três seções; APK/hash/assinaturas/instalação vinculados | Configuração estática não comprova comportamento universal de backup/transferência OEM ou modalidades não exercitadas |
+| Inspector de desenvolvimento | Fonte limpa ca786ed; propriedade e argumento Gradle false; caminho do plugin revisado | BytecodeInspecionado=false. Inspeção direcionada do binário ainda necessária para confirmar o efeito compilado; não afirmar ausência universal de interceptação/logs |
+| Arquivos em idle |16 entradas estáveis em tamanho/mtime no par observado | Escopo é arquivos regulares acessíveis no diretório consultado por run-as; não lê conteúdo, não cobre transientes entre amostras, todos os domínios, logs ou todo comportamento SDK/SO |
+| Inferência local | Captura sintética histórica funcionou com rádios/reverse desligados após carregamento | Evidência funcional local daquela rodada não exclui telemetria, envio posterior ou comportamento de outra versão |
+| Rede | Metro identificado por fonte/status/loopback8097 e reverse conhecido | Falta observação qualificada por UID/destino, incluindo reconexão; saúde do Metro não mede uploads, bytes ou destinos do reconhecimento |
+| SDK e resultados | Nenhum payload clínico foi solicitado ou publicado; alterações do caminho possível restringem backup/inspector | DataTransport por nome não revela conteúdo/causa/envio. Persistência de identificadores/envelopes e comportamento de telemetria SDK continuam sem comprovação suficiente |
+| Integração clínica | Demo isolada; motor e caminho legado preservados nesta correção | Confirmar ausência de escrita/fila antes de confirmação, isolamento entre contas e demais critérios de integração aplicáveis; esta demo não os homologa |
+
+TASK-04/06/07/18 permanecem parciais e habilitação clínica bloqueada. Os resultados
+positivos não autorizam mídia intermediária, envio remoto, troca de motor,
+produção ou publicação de corpus. A presença de INTERNET/cleartext/debuggable
+é compatível com este Dev Client; não demonstra que reconhecimento use rede,
+nem serve de política de distribuição clínica.
+
+Próximo trabalho técnico: inspeção estática dirigida do efeito da flag no APK e
+qualificação de ferramenta que exponha somente metadados de UID/destino, sem
+capturar conteúdo. Nenhuma ferramenta de rede desse tipo foi demonstrada nesta
+rodada. Não solicitar Network Inspector com corpos, logcat completo, heap dump,
+imagens ou pacotes contendo payload. Não repetir capturas apenas para procurar
+inventário sem deltas. Abrir configurações/rede pode cancelar por background;
+preservar esse comportamento em qualquer futuro protocolo.
+
+Próxima ação do autor nesta entrega: revisar PR#76 e preservar worktrees/APKs e
+este retorno. Não precisa fazer nova captura, build, instalação ou repetir idle.
+Qualquer ensaio posterior precisa definir ferramenta/versão, cenário, alcance e
+retorno sanitizado antes de começar; pendências não são ensaios já executados.
