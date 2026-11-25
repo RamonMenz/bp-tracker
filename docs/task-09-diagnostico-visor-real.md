@@ -74,3 +74,129 @@ dígitos, acessórios numéricos, rótulos sem valores, limites léxicos, ausên
 conteúdo sensível na saída e distinção entre presença lexical/associação.
 Regressões confirmam descarte do diagnóstico e rejeição de resultados tardios.
 Nenhum ML Kit real, APK novo ou ensaio físico executado pelo Codex.
+
+
+## Retorno do visor desligado — rótulos presentes
+
+Autor confirmou fonte Windows a649b6c181f6a04e5b9677f286bb22b19ffa024b
+limpa, preparo inspector-metro-1 e APK25990bb4… sem instalação. Tela captura-5 /
+associacao-2, active/idle/nao-carregado, Fast Refresh desligado, sem câmera ou
+revisão antiga percebidas. Preparação offline retornou bundle
+`2191e4f100e72f97a3a899d033e48f42b6d5190987eb4efdd59d643bb3c748ee`
+e ReverseAtivosDepois=0; redes/ancoragens/VPN conforme roteiro por declaração.
+
+Uma captura do medidor desligado: linhas presentes; três campos incertos por
+ilegível ou distante; dígitos ASCII presentes; três rótulos presentes. Autor
+avisou possibilidade de erro de digitação; escreveu associação com acento e
+PUl com último caractere minúsculo. Esta síntese interpreta as categorias
+relatadas, sem tratar essas grafias como saída literal do software.
+
+Esclarecimento sem repetição: cancelled/nao-carregado foi antes de Iniciar;
+autor depois viu preview e ready antes de Capturar. Câmera encerrou após OCR,
+cancelamento encerrou revisão, sem retomada/recarga/erro percebidos. Reverse
+restaurado pelo preparo, mesmo APK, instalação=false; redes restauradas depois
+desse JSON, conforme esclarecido. Essa ordem não contradiz a janela offline
+relatada. Sem tráfego por UID/destino medido; isolamento não comprova ausência
+de fila/telemetria/transientes SDK ou comportamento universal.
+
+Conclusão limitada: os três rótulos chegaram à detecção lexical nesta tentativa.
+Não falta suporte aos nomes SIS/DIA/PULSO. Falta de números do LCD desligado é
+coerente com campos incertos; dígitos detectados podem ser inscrições acessórias.
+Não afirmar que todos vieram delas ou que há falha de geometria. Isso não
+reconstitui nem explica sozinho a tentativa anterior com visor ligado.
+
+## Comparação dirigida preparada — fonte comum versus sete segmentos
+
+[Cartões HTML locais](../tools/task09/cartoes-ocr.html), dois estímulos estáticos
+independentes de fotos de usuário. Valores inventados 120/80/72, mesmos rótulos,
+mesmo retângulo e organização; variam formato/largura dos dígitos. Não é controle
+pixel a pixel nem réplica calibrada do LCD. Nenhuma origem, cor ou geometria foi
+extraída de fotografia. Sem JS, recursos externos, captura, gravação ou envio;
+CSP bloqueia recursos/rede e formulários. Só permite estilo inline para desenho
+geométrico de segmentos. Não inclui arquivos de fonte ou motor adicional.
+
+Escopo: duas capturas distintas A/B, sem novas medições, edição ou confirmação.
+Comparação física depende do Samsung; não foi executada pelo Codex. Resultado
+positivo não homologa LCD/reflexo/sete segmentos de outros displays; falha não
+atribui causa exclusivamente ao motor ou aos segmentos. Testar os dois no mesmo
+bundle/câmera/aparelho evita comparar diretamente com a rodada antiga do cartão.
+Não repetir tentativas para selecionar apenas sucessos.
+
+### Procedimento Windows, depois de obter o arquivo estático
+
+Preservar Metro da fonte a649b6c e APK25990bb4…; não usar a pasta dos cartões
+como novo projeto Expo. Abrir o HTML por arquivo local no PC, selecionar A e
+manter cartão inteiro visível, sem rolagem/cortes, cabeçalho fora do enquadramento.
+Somente o Samsung ligado ao ADB. Não carregar foto do usuário no navegador.
+
+No telefone, anotar estados originais; desligar Wi-Fi, dados e Bluetooth;
+conferir ancoragens/VPN desligadas e ausência de outras rotas/adaptador Ethernet.
+Retornar por Recentes: background pode cancelar e deve continuar cancelando.
+Se houver rota desconhecida ou erro de preparação, parar sem capturar.
+
+No Terminal B, na fonte Windows a649b6c, usar o bloco abaixo. Só remove o reverse
+conhecido e confere o bundle desta rodada; saídas brutas ficam privadas:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    Set-Location -LiteralPath 'C:\dev\aferi-task09-rotulos'
+    Import-Module .\tools\task07\AferiEvaluationAdb.psm1 -ErrorAction Stop
+    $aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+    $aferiBundle = Invoke-AferiEvaluationAdbProcess -AdbPath $aferiAdb -Arguments @(
+        'shell', 'run-as', 'com.ramonmenz.afericapturetest', 'sha256sum',
+        'files/DevLauncherApp-BridgelessReactNativeDevBundle.js'
+    )
+    if ($aferiBundle.Code -ne 0 -or $aferiBundle.Lines.Count -ne 1 -or
+        $aferiBundle.Lines[0] -notmatch '^2191e4f100e72f97a3a899d033e48f42b6d5190987eb4efdd59d643bb3c748ee\s+files/DevLauncherApp-BridgelessReactNativeDevBundle\.js$') {
+        throw 'bundle-unexpected-preserve'
+    }
+    $aferiAntes = Invoke-AferiEvaluationAdbProcess -AdbPath $aferiAdb -Arguments @('reverse', '--list')
+    if ($aferiAntes.Code -ne 0 -or $aferiAntes.Lines.Count -ne 1 -or
+        $aferiAntes.Lines[0] -notmatch '^\S+\s+tcp:8097\s+tcp:8097\s*$') {
+        throw 'reverse-unexpected-preserve'
+    }
+    $aferiRemocao = Invoke-AferiEvaluationAdbProcess -AdbPath $aferiAdb -Arguments @('reverse', '--remove', 'tcp:8097')
+    if ($aferiRemocao.Code -ne 0) { throw 'reverse-remove-failed' }
+    $aferiDepois = Invoke-AferiEvaluationAdbProcess -AdbPath $aferiAdb -Arguments @('reverse', '--list')
+    if ($aferiDepois.Code -ne 0 -or $aferiDepois.Lines.Count -ne 0) { throw 'reverse-offline-not-confirmed' }
+    [pscustomobject]@{ BundleConfere = $true; ReverseAtivosDepois = 0 } | ConvertTo-Json
+}
+```
+
+Com preparo aprovado: uma captura A, aproximadamente frontal, sem zoom digital,
+preview/ready observados; enquadrar apenas o retângulo incluindo seus rótulos.
+Transcrever os oito indicadores; comparar campos com os valores inventados:
+corretos/incorretos/ausentes por campo, sem corrigir ou confirmar. Cancelar e
+conferir câmera/revisão encerradas. Trocar no PC para B, sem tocar rede/Metro
+ou recarregar app; preservar distância/enquadramento/luz/tamanho do cartão.
+Somente se A encerrou normalmente, fazer uma captura B pelos mesmos passos.
+Se A der erro, travar ou não liberar câmera, parar e não executar B.
+
+Se os cartões não couberem completos no monitor, ajustar antes do ensaio e
+anotar zoom do navegador; manter o mesmo ajuste para A/B. Não fazer varredura de
+brilho/foco/distâncias ou tentativas extras nesta coleta. Anotar aproximações
+ou mudanças inevitáveis; não inventar medidas.
+
+Após cancelar, restaurar só reverse8097 via Update-AferiInspectorEvaluation.ps1
+-PrepareMetro (na pasta rotulos), restaurar estados originais das conexões e
+registrar ordem/resultado. Em falha de remoção não repetir automaticamente;
+consultar/preparar restauração pelo script, sem reinstalar. Não deixar o usuário
+sem orientação de recuperação se a captura interromper.
+
+Retorno: JSON do preparo/restauração; versão/zoom do navegador; redes conforme;
+para A e B separados, preview/ready, oito indicadores, correspondência dos três
+campos (somente correto/incorreto/ausente), encerramento, cancelamento e erros.
+Sem screenshot, fotos, OCR bruto, payloads, logcat ou heap dump. Sem espera idle
+adicional. Privacidade e habilitação clínica permanecem bloqueadas.
+
+### Verificações da preparação dos cartões
+
+Lint, TypeScript raiz, 745 testes/67 suítes e diff sem erros de whitespace
+aprovados. Chromium154.0.8037.57, viewport1280x900: HTML fornecido via setContent,
+um cartão visível por seleção, retângulos600x452 sem corte/sobreposição entre
+valores/rótulos e nenhuma requisição observada; renderização sete segmentos
+inspecionada visualmente. Navegação file foi bloqueada por política do navegador
+deste ambiente; abertura do arquivo no Windows do autor ainda não verificada.
+Sintaxe do bloco PowerShell validada com parser7.5.4, sem executar ADB.
+Nenhum ensaio ML Kit/Samsung ou acerto físico novo inferido desses checks.
