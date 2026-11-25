@@ -651,3 +651,10 @@ edf860b7… esperados; assinaturas verificadas e certificados iguais. [Alcance e
 reconferência instalada só de leitura](task-07-backup-pos-merge.md#retorno-assinatura-1--comparação-dos-apks-locais-aprovada).
 Não houve instalação/abertura/captura solicitada; pacote atualmente instalado
 continua dependente da nova consulta, privacidade/gate seguem pendentes.
+
+
+Identidade instalada recebida: única base69d5a0b3… no SM-S731B, anterior=true/
+novo=false. Autor informou demo fechada/sem aplicação no terminal; fase não
+observada, sem inferir câmera/processos. [Atualização do pacote de avaliação](task-07-backup-pos-merge.md#identidade-instalada-reconfirmada-e-atualização-de-avaliação-preparada)
+preparada com guarda de hash/alvo, install -r sem abertura e hash posterior.
+Nenhuma instalação executada pelo Codex; retorno do autor pendente, gate fechado.

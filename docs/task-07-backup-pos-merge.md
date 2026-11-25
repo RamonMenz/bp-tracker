@@ -491,3 +491,120 @@ anterior/novo/outro hash, modelo diferente, splits, travessia, injeção no path
 erro nativo e hash malformado. Alvo USB/pacote/comandos fixos e ausência de paths
 na saída conferidos. Sem ADB/dispositivo real; o retorno do Samsung continua
 pendente, não inferido pelos testes.
+
+## Identidade instalada reconfirmada e atualização de avaliação preparada
+
+Retorno identidade-instalada-1: SM-S731B, pacote de avaliação, uma base APK,
+hash69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c;
+CoincideComAnterior=true/CoincideComNovo=false. Autor esclareceu app fechado no
+celular e sem aplicação rodando no terminal. Registrar fase não observada/app
+fechado; não inferir indicador de câmera ou ausência de processos/serviços apenas
+desse relato. Não foi solicitada abertura para observar fase. Data/hora efetivas
+não informadas. Resultado estático atual se soma às assinaturas iguais e recursos
+conferidos; não prova privacidade em execução ou zero tráfego.
+
+Próximo passo orientado: atualização somente do pacote de avaliação com o APK
+localedf860b7…, mantendo APK69d5a0b3…/fontes anteriores intactos. -r solicita
+substituição preservando dados do pacote; não promete restauração universal,
+ausência de migração ou integridade de todo estado interno SDK/SO. Não executar
+backup/restauração de dados privados para esse fim. Nenhuma alteração no produto
+clínico, deploy, merge ou habilitação decorre dessa instalação de avaliação.
+
+Conectar somente o Samsung de avaliação por USB, desbloqueado. Manter a demo
+fechada e Metro parado. Não pressionar a. O bloco confere hash local, alvo -d e
+modelo; instala sem abrir e consulta hash da base instalada. Executar como um
+bloco completo & { ... }: throw interrompe a sequência antes de novas ações.
+Os caminhos/saídas intermediárias ficam privados em escopo local. Não reexecutar
+por tentativa se falhar: erro posterior ao install pode ocorrer mesmo com APK
+já atualizado. Não desinstalar, limpar dados, trocar assinatura ou usar -d/-g/-t
+como flags de instalação para contornar impedimento. O -d antes de install é
+seleção USB; não é a flag de downgrade, que não está presente após install.
+
+```powershell
+& {
+$ErrorActionPreference = 'Stop'
+$aferiApkAtualizacao = 'C:\dev\aferi-task07-backup-build\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+try { $aferiHashLocalAtualizacao = (Get-FileHash -LiteralPath $aferiApkAtualizacao -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant() }
+catch { throw 'update-apk-unavailable' }
+if ($aferiHashLocalAtualizacao -cne 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed') {
+    throw 'update-apk-changed'
+}
+$aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+try { $aferiEstado = @(& $aferiAdb -d get-state 2>&1); $aferiEstadoCode = $LASTEXITCODE }
+catch { throw 'device-state-unavailable' }
+if ($aferiEstadoCode -ne 0 -or $aferiEstado.Count -ne 1 -or $aferiEstado[0].ToString().Trim() -cne 'device') {
+    throw 'device-state-unexpected'
+}
+try { $aferiModelo = @(& $aferiAdb -d shell getprop ro.product.model 2>&1); $aferiModeloCode = $LASTEXITCODE }
+catch { throw 'device-model-unavailable' }
+if ($aferiModeloCode -ne 0 -or $aferiModelo.Count -ne 1 -or $aferiModelo[0].ToString().Trim() -cne 'SM-S731B') {
+    throw 'device-model-unexpected'
+}
+try {
+    $aferiInstallRaw = @(& $aferiAdb -d install -r $aferiApkAtualizacao 2>&1)
+    $aferiInstallCode = $LASTEXITCODE
+} catch { throw 'update-command-unavailable' }
+if ($aferiInstallCode -ne 0 -or @($aferiInstallRaw | Where-Object { $_.ToString().Trim() -ceq 'Success' }).Count -ne 1) {
+    throw 'update-not-confirmed-stop'
+}
+try { $aferiInstPaths = @(& $aferiAdb -d shell pm path com.ramonmenz.afericapturetest 2>&1); $aferiPathsCode = $LASTEXITCODE }
+catch { throw 'installed-path-unavailable' }
+if ($aferiPathsCode -ne 0 -or $aferiInstPaths.Count -ne 1 -or
+    $aferiInstPaths[0] -isnot [string] -or
+    $aferiInstPaths[0].Trim() -notmatch '^package:(/data/app/[A-Za-z0-9_./=+~\-]+/base\.apk)$') {
+    throw 'installed-apk-set-unexpected'
+}
+$aferiInstBase = $Matches[1]
+if ($aferiInstBase -match '/\.\./') { throw 'installed-path-unexpected' }
+try {
+    $aferiInstHashRaw = @(& $aferiAdb -d shell run-as com.ramonmenz.afericapturetest sha256sum $aferiInstBase 2>&1)
+    $aferiInstHashCode = $LASTEXITCODE
+} catch { throw 'installed-hash-unavailable' }
+if ($aferiInstHashCode -ne 0 -or $aferiInstHashRaw.Count -ne 1 -or
+    $aferiInstHashRaw[0] -isnot [string] -or
+    $aferiInstHashRaw[0] -notmatch '^([0-9a-fA-F]{64})\s') {
+    throw 'installed-hash-unavailable'
+}
+$aferiInstHash = $Matches[1].ToLowerInvariant()
+[pscustomobject]@{
+    Tool = 'atualizacao-avaliacao-1'
+    InstalacaoRetornouSucesso = $true
+    Modelo = 'SM-S731B'
+    Pacote = 'com.ramonmenz.afericapturetest'
+    EntradasApkInstaladas = 1
+    Sha256BaseInstalado = $aferiInstHash
+    CoincideComAnterior = ($aferiInstHash -ceq '69d5a0b31023a9b3647b0036cc2eb3af0683be19a02782a2b8e834635849e09c')
+    CoincideComNovo = ($aferiInstHash -ceq 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed')
+} | ConvertTo-Json
+}
+```
+
+Esperado InstalacaoRetornouSucesso=true, uma base com hashedf860b7…,
+CoincideComNovo=true/CoincideComAnterior=false. Devolver somente JSON ou código
+fixo/impedimento e se o app permaneceu fechado, eventual diálogo/comportamento
+inesperado e indicador de câmera observado. Se não observado, dizer não observado;
+não abrir câmera/dados clínicos para completar campos. Não enviar logs, serial,
+path instalado ou screenshot. Se houver erro, parar; não pedir logs completos.
+
+O comando não inicia Activity/Metro/captura. Android/SDK podem executar eventos
+próprios de atualização; sem ferramenta qualificada, tráfego desse intervalo não
+é medido. Se surgir abertura automática, registrar e não iniciar captura. Se o
+SO bloquear a instalação, informar mensagem curta sanitizada; não desativar
+proteções por tentativa. O APK é artefato estático de desenvolvimento: sua
+transferência/instalação não é arquivo intermediário de imagem capturada.
+
+Após o retorno, identificar o instalado e planejar separadamente abertura com
+Metro da fonte062e9b1, sem misturar bundle antigo de cache com código novo.
+Não usar resultados antigos como se tivessem sido executados nesse APK/SO.
+Os próximos ensaios continuarão sintéticos e dependerão do objetivo/capacidades;
+nenhuma captura solicitada pelo bloco de instalação. Habilitação permanece
+bloqueada por telemetria/ID/UID/destinos/OEM/cross-platform e demais critérios.
+
+
+Verificação do roteiro no host: onze cenários simulados PowerShell cobriram
+resultado instalado anterior/novo/outro, modelo incorreto, splits, path com
+travessia/injeção, erro/hash malformado após atualização, hash local divergente
+e falha de install. Assert do comando fixo install -r e nenhuma instalação antes
+de guardas de hash/modelo aprovados. Saída sem paths privados conferida. Nenhum
+ADB/telefone/instalação real executado pelo Codex. Não é evidência de atualização
+concluída pelo autor; esse retorno permanece pendente.
