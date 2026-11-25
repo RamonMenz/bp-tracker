@@ -629,3 +629,11 @@ Status relatado limpo antes/depois; Refresh index é progresso do Git.
 [Próximo manifesto selecionado](task-07-backup-pos-merge.md#retorno-do-build-windows--apk-gerado-ainda-não-inspecionado),
 sem atualização da worktree, instalação ou nova captura. Recursos empacotados/
 vinculação/assinatura e privacidade ainda não homologados.
+
+
+Novo manifesto recebido: APKedf860b7…, manifesto-1/aapt2 2.20-13193326,
+allowBackup=false e referências de backup presentes, min24/target36;
+cleartext/debuggable true, CAMERA/INTERNET. [Conferência dos recursos empacotados](task-07-backup-pos-merge.md#retorno-do-manifesto-do-novo-apk-e-próximo-extrator)
+prepara backup-1 para cruzar IDs→tabela→XML e excluir nove domínios nas três
+seções. Checks negativos e integração aapt2 com APK sintético passaram; execução
+Windows ainda pendente. APK/fonte062e9b1 preservados; sem instalação/captura/gate.

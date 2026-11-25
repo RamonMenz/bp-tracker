@@ -114,4 +114,121 @@ function Get-AferiManifestMetadata {
     [pscustomobject]@{ Tool = 'manifesto-1'; Aapt2Version = $safeVersion; Sha256ApkLocal = $hash; Manifesto = $summary }
 }
 
-Export-ModuleMember -Function Get-AferiManifestMetadata
+function Get-AferiBackupReferenceIds([object[]] $Lines) {
+    $ids = @{}; $node = ''; $indent = -1
+    foreach ($line in $Lines) {
+        if ($line -match '^(\s*)E:\s+([^\s(]+)') { $indent = $Matches[1].Length; $node = $Matches[2]; continue }
+        if ($node -eq 'application' -and $line -match '^(\s*)A:\s+(?:android:|http://schemas\.android\.com/apk/res/android:)(fullBackupContent|dataExtractionRules)(?:\(0x[0-9a-fA-F]+\))?=@(0x[0-9a-fA-F]{8})$') {
+            if ($Matches[1].Length -ne $indent + 2 -or $ids.ContainsKey($Matches[2])) { throw 'backup-reference-unexpected' }
+            $ids[$Matches[2]] = $Matches[3].ToLowerInvariant()
+        }
+    }
+    if ($ids.Count -ne 2 -or @($ids.Values | Select-Object -Unique).Count -ne 2) { throw 'backup-reference-unavailable' }
+    return $ids
+}
+
+function ConvertFrom-AferiBackupResources([object[]] $Lines, $Ids) {
+    if ($Lines.Count -gt 100000) { throw 'backup-resources-limit' }
+    $expected = @{ aferi_capture_backup_rules = 'fullBackupContent'; aferi_capture_data_extraction_rules = 'dataExtractionRules' }
+    $found = @{}; $current = ''; $files = @{}
+    foreach ($line in $Lines) {
+        if ($line -isnot [string] -or $line.Length -gt 16384 -or $line -match '[\x00-\x1f\x7f]') { throw 'backup-resources-invalid' }
+        if ($line -match '^\s*resource (0x[0-9a-fA-F]{8}) ([^\s]+)') {
+            $id = $Matches[1].ToLowerInvariant(); $key = $Matches[2]; $current = ''
+            foreach ($name in $expected.Keys) {
+                if ($key -ceq ('xml/' + $name)) {
+                    if ($found.ContainsKey($name) -or $id -cne $Ids[$expected[$name]]) { throw 'backup-resource-link-mismatch' }
+                    $found[$name] = $true; $files[$name] = 0; $current = $name
+                }
+            }
+            continue
+        }
+        if ($line -match '^\s*type ') { $current = ''; continue }
+        if ($current -ne '' -and $line -match '^\s*\(') {
+            $pattern = '^\s*\(\) \(file\) res/xml/' + $current + '\.xml type=XML$'
+            if ($line -cnotmatch $pattern) { throw 'backup-resource-configuration-unexpected' }
+            $files[$current]++
+        }
+    }
+    if ($found.Count -ne 2 -or @($files.Values | Where-Object { $_ -ne 1 }).Count -ne 0) { throw 'backup-resources-incomplete' }
+}
+
+function ConvertFrom-AferiBackupRuleTree([object[]] $Lines, [string] $Kind) {
+    if ($Lines.Count -gt 1000) { throw 'backup-rule-limit' }
+    $stack = [Collections.Generic.List[object]]::new(); $roots = [Collections.Generic.List[object]]::new()
+    foreach ($line in $Lines) {
+        if ($line -isnot [string] -or $line.Length -gt 16384 -or $line -match '[\x00-\x1f\x7f]') { throw 'backup-rule-invalid' }
+        if ($line -match '^( *)E: ([a-z-]+) \(line=[0-9]+\)$') {
+            $depth = $Matches[1].Length; $name = $Matches[2]
+            while ($stack.Count -gt 0 -and $stack[$stack.Count - 1].Depth -ge $depth) { $stack.RemoveAt($stack.Count - 1) }
+            $node = [pscustomobject]@{ Name = $name; Depth = $depth; Attributes = @{}; Children = [Collections.Generic.List[object]]::new() }
+            if ($stack.Count -eq 0) { if ($depth -ne 0) { throw 'backup-rule-structure-unexpected' }; $roots.Add($node) }
+            else {
+                $parent = $stack[$stack.Count - 1]
+                if ($depth -ne $parent.Depth + 4) { throw 'backup-rule-structure-unexpected' }
+                $parent.Children.Add($node)
+            }
+            $stack.Add($node); continue
+        }
+        if ($stack.Count -gt 0 -and $line -match '^( *)A: (domain|path)="([^"\r\n]+)"(?: \(Raw: "[^"\r\n]*"\))?$') {
+            $depth = $Matches[1].Length; $key = $Matches[2]; $value = $Matches[3]; $node = $stack[$stack.Count - 1]
+            if ($depth -ne $node.Depth + 2 -or $node.Attributes.ContainsKey($key)) { throw 'backup-rule-attribute-unexpected' }
+            $node.Attributes[$key] = $value; continue
+        }
+        throw 'backup-rule-format-unexpected'
+    }
+    if ($roots.Count -ne 1) { throw 'backup-rule-structure-unexpected' }
+    $root = $roots[0]; $sections = @()
+    if ($Kind -ceq 'legado' -and $root.Name -ceq 'full-backup-content') { $sections = @($root) }
+    elseif ($Kind -ceq 'moderno' -and $root.Name -ceq 'data-extraction-rules') {
+        $sections = @($root.Children.ToArray())
+        if ($sections.Count -ne 2 -or @($sections.Name | Sort-Object) -join ',' -cne 'cloud-backup,device-transfer') { throw 'backup-rule-sections-unexpected' }
+    } else { throw 'backup-rule-root-unexpected' }
+    if ($root.Attributes.Count -ne 0) { throw 'backup-rule-attribute-unexpected' }
+    $domains = @('root','file','database','sharedpref','external','device_root','device_file','device_database','device_sharedpref')
+    $summary = @()
+    foreach ($section in $sections) {
+        if ($section.Attributes.Count -ne 0 -or $section.Children.Count -ne 9) { throw 'backup-rule-exclusions-incomplete' }
+        $seen = @{}
+        foreach ($rule in $section.Children) {
+            if ($rule.Name -cne 'exclude' -or $rule.Children.Count -ne 0 -or $rule.Attributes.Count -ne 2 -or
+                -not $rule.Attributes.ContainsKey('domain') -or -not $rule.Attributes.ContainsKey('path')) { throw 'backup-rule-exclusion-unexpected' }
+            $domain = $rule.Attributes['domain']
+            if ($domains -cnotcontains $domain -or $rule.Attributes['path'] -cne '.' -or $seen.ContainsKey($domain)) { throw 'backup-rule-value-unexpected' }
+            $seen[$domain] = $true
+        }
+        $summary += [pscustomobject]@{ Secao = $section.Name; DominiosExcluidos = 9; SomenteExclusoesRaiz = $true }
+    }
+    return $summary
+}
+
+function Get-AferiBackupMetadata {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string] $Aapt2Path,
+        [Parameter(Mandatory)][string] $ApkPath,
+        [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{64}$')][string] $ExpectedSha256
+    )
+    $manifest = Get-AferiManifestMetadata -Aapt2Path $Aapt2Path -ApkPath $ApkPath -ExpectedSha256 $ExpectedSha256
+    if ($manifest.Manifesto.Aplicacao.allowBackup -cne 'false') { throw 'backup-allow-backup-unexpected' }
+    $dump = Invoke-AferiAapt2 $Aapt2Path ('dump xmltree --file AndroidManifest.xml "' + $ApkPath + '"')
+    if ($dump.Code -ne 0) { throw 'backup-manifest-unavailable' }
+    $null = ConvertFrom-AferiManifestTree $dump.Lines
+    $ids = Get-AferiBackupReferenceIds $dump.Lines
+    $table = Invoke-AferiAapt2 $Aapt2Path ('dump resources "' + $ApkPath + '"')
+    if ($table.Code -ne 0) { throw 'backup-resources-unavailable' }
+    ConvertFrom-AferiBackupResources $table.Lines $ids
+    $rules = @()
+    foreach ($entry in @(@{ File = 'aferi_capture_backup_rules'; Kind = 'legado' }, @{ File = 'aferi_capture_data_extraction_rules'; Kind = 'moderno' })) {
+        $tree = Invoke-AferiAapt2 $Aapt2Path ('dump xmltree --file res/xml/' + $entry.File + '.xml "' + $ApkPath + '"')
+        if ($tree.Code -ne 0) { throw 'backup-rule-unavailable' }
+        $rules += @(ConvertFrom-AferiBackupRuleTree $tree.Lines $entry.Kind)
+    }
+    try { $after = (Get-FileHash -LiteralPath $ApkPath -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant() }
+    catch { throw 'backup-apk-hash-unavailable' }
+    if ($after -cne $manifest.Sha256ApkLocal) { throw 'backup-apk-changed' }
+    [pscustomobject]@{ Tool = 'backup-1'; Aapt2Version = $manifest.Aapt2Version; Sha256ApkLocal = $after;
+        Pacote = $manifest.Manifesto.Pacote; AllowBackup = 'false'; ReferenciasConferidas = $true; Regras = $rules }
+}
+
+Export-ModuleMember -Function Get-AferiManifestMetadata, Get-AferiBackupMetadata

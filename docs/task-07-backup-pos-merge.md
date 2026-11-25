@@ -259,3 +259,72 @@ ou que o XML contém todas as exclusões; análise local selecionada dos recurso
 empacotados e sua vinculação é o passo seguinte, antes de instalação. Não pedir
 que o autor envie XML binário/árvore bruta/APK ou use dump completo como atalho.
 Telemetria/ID/UID/destinos/OEM/cross-platform e gate permanecem pendentes.
+
+## Retorno do manifesto do novo APK e próximo extrator
+
+Autor devolveu manifesto-1/aapt2 **2.20-13193326**, hash
+**edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed** igual ao build.
+Pacote de avaliação, min24/target36; allowBackup=false,
+fullBackupContent/dataExtractionRules referencia-presente; cleartext/debuggable
+true e networkSecurityConfig nao-declarado. CAMERA/INTERNET uses-permission,
+sem maxSdk; sete permissões selecionadas de áudio/storage/mídia não declaradas.
+Data/hora efetivas da execução não informadas. Evidência de manifesto estático
+do novo artefato, sem evidência de instalação ou comportamento no Samsung.
+Não comprova conteúdo/vinculação das regras por si só ou ausência de escrita/rede.
+
+**Extrator backup-1 preparado:** novo Get-AferiBackupMetadata no mesmo módulo
+[AferiManifestMetadata.psm1](../tools/task07/AferiManifestMetadata.psm1), sem alterar
+saída de manifesto-1. Usa os mesmos guards de pacote/hash/processo sem shell.
+Releitura privada do manifesto obtém os dois IDs distintos apenas de atributos
+diretos de application. aapt2 dump resources é retido em memória: verifica os IDs
+contra nomes fixos e um único recurso XML sem qualificador para cada regra.
+Lê via aapt2 somente os dois caminhos fixos res/xml/aferi_capture_*rules.xml,
+sem extrair o APK ou criar relatório/arquivo intermediário no Windows.
+
+O parser exige estrutura conhecida: full-backup-content legado; cloud-backup e
+device-transfer no moderno; nove exclude path="." nos domínios fixos em cada
+seção. Rejeita include, domínio/path desconhecido, duplicata, atributo adicional,
+seção desconhecida, regra ausente, referência divergente, arquivo alternativo,
+variante por configuração ou formato não suportado. Não tenta adivinhar política
+se houver divergência. Reconfere hash ao final para recusar mudança do APK.
+
+A saída contém apenas Tool backup-1, versão aapt2, hash/pacote/AllowBackup,
+ReferenciasConferidas e seção/contagem/SomenteExclusoesRaiz. Não devolve árvore,
+IDs/tabela de recursos, caminhos privados, valores não permitidos ou stderr.
+Erro fixo exige análise, sem enviar dump completo ou recompilar por tentativa.
+A tabela completa de recursos é metadado estático do APK de avaliação e fica
+privada em memória; isso não é inventário/leitura dos arquivos runtime do telefone.
+
+Verificação: novo check PowerShell no CI com árvore/tabela/fronteira nativa
+simuladas cobre vínculos, estrutura, exclusões, erros privados e alteração de hash
+durante análise. Integração real independente passou com aapt2 oficial Linux
+2.19-12782657 e APK sintético sem código: recursos estáticos compilados/vinculados,
+manifesto binário sintético apontando para IDs correspondentes. Não recebeu APK
+do autor; não confundir hash sintético com edf860b7…. Windows/aapt2 do autor
+continua dependente do próximo retorno; nenhum teste de backup real foi executado.
+
+### Como executar sem alterar a fonte avaliada
+
+Preservar C:\dev\aferi-task07-backup-build em062e9b1 e seu APK. Criar outra
+worktree de ferramentas, C:\dev\aferi-task07-backup-tools, no commit publicado
+com este extrator; consultar sua identidade antes de importar. Se o destino já
+existir, parar e preservar. Não mover HEAD da worktree de build, instalar npm ou
+recompilar para obter o extrator. Importar o módulo da nova worktree e apontar
+para o APK existente na worktree de build:
+
+```powershell
+Import-Module .\tools\task07\AferiManifestMetadata.psm1 -Force -ErrorAction Stop
+$aferiAapt2Regras = Join-Path $env:LOCALAPPDATA 'Android\Sdk\build-tools\36.0.0\aapt2.exe'
+$aferiApkRegras = 'C:\dev\aferi-task07-backup-build\demos\android-capture\android\app\build\outputs\apk\debug\app-debug.apk'
+Get-AferiBackupMetadata -Aapt2Path $aferiAapt2Regras -ApkPath $aferiApkRegras -ExpectedSha256 'edf860b77c745b9e44ccfc69ab42cd1a4296549e78f7dfa5a837409f46aed2ed' | ConvertTo-Json -Depth 6
+```
+
+Esperado ReferenciasConferidas=true e três seções com DominiosExcluidos=9 e
+SomenteExclusoesRaiz=true. Devolver apenas JSON ou código fixo/impedimento,
+sem APK/árvore/log completo. Não requer dispositivo conectado.
+
+Resultado positivo confirma essas regras estáticas no binário identificado;
+não garante obediência universal do SO/OEM/serviços de migração e não resolve
+cross-platform/telemetria/ID/UID/destinos. Assinatura e plano de preservação antes
+da atualização ainda devem ser conferidos. Nenhuma instalação/captura nova
+solicitada nesta etapa, nenhuma das quatro tarefas concluída ou habilitação.

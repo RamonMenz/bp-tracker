@@ -204,3 +204,10 @@ worktree Windows pos-merge limpa e allowBackup=false na fonte confirmados pelo a
 legadas/cloud/D2D só da demo e teste dos mods reais Expo; não atualiza APK instalado.
 OEM/cross-platform, recursos empacotados, telemetria/ID e UID/destinos pendentes;
 sem nova captura ou conclusão/habilitação. Próximo retorno: versões Node/npm/Java.
+
+Retornos posteriores da etapa de backup (parcial): Windows Node24.22.0/npm11.19.1/
+JVM17.0.21, Gradle9.3.1; build da fonte062e9b1 gerou APKedf860b7….
+Manifesto selecionado confirma allowBackup=false e referências presentes.
+[Extrator backup-1](docs/task-07-backup-pos-merge.md#retorno-do-manifesto-do-novo-apk-e-próximo-extrator)
+prepara conferência IDs/tabela/XML; resultado físico pendente, sem instalação,
+conclusão ou habilitação. Telemetria/ID/UID/destinos/OEM seguem lacunas.
