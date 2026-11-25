@@ -554,3 +554,14 @@ automaticamente ao novo commit de revisão. Resultado próprio é registrado no 
 TASK-04/06/07/09/18 continuam parciais e habilitação clínica bloqueada. Nenhuma
 falha de sete segmentos foi declarada corrigida. Próxima ação do autor: revisar
 as correções e o veredito no mesmo PR #80; nenhuma ação no dispositivo agora.
+
+## Continuidade após revisão — candidato ROI da Etapa 2
+
+Por solicitação posterior do autor, [implementado roi-1](task-09-candidato-roi-ram.md)
+na branch `feat/task-09-roi-ram`, fonte funcional150bc64. Usa ViewPort/transformações
+CameraX para guia/ROI e NV21 orientado/redimensionado em RAM, duas passagens
+sequenciais e caixas no quadro upright de origem. Preserva bridge-2 e o parser;
+sem luminância, motor alternativo ou habilitação clínica. Dimensões reais,
+compatibilidade/caixas/eficácia e a causa de B continuam sem nova evidência física.
+828 testes/71 suítes e checks puros aprovados não substituem build APK/Samsung.
+Verificação do futuro artefato preparada; não instalar ou capturar nesta entrega.

@@ -179,3 +179,20 @@ ida/volta das coordenadas. Lacunas devem acompanhar o candidato até avaliação
 sem captura isolada para instrumentação e sem impedir preparação experimental
 condicionada. Nenhuma Etapa 2, compilação Kotlin/APK ou coleta nova executada
 nesta revisão; conclusão das TASK-04/06/07/09/18 e habilitação seguem bloqueadas.
+
+## Continuidade — candidato da Etapa 2 implementado
+
+[Candidato ROI em RAM](task-09-candidato-roi-ram.md), código `150bc6419feec9c78b6b0c634cca13a2c66007a0`,
+branch `feat/task-09-roi-ram` sobre 27212a4; #80 ainda aberto, sem exigir merge.
+Uma variante fixa de ROI/orientação/escala NV21, ViewPort compartilhado e guia
+projetada do ROI efetivo; caixas retornam ao upright-frame original. Comparação
+explícita sequencial do mesmo quadro, resultados separados, sem confirmação,
+persistência ou escolha automática. Lease/completions e cancelamento preservados.
+Limites próprios de pixels/buffers e validações testados; luminância não implementada.
+
+Lint/TypeScript, 828 testes/71 suítes e checks Java aprovados. Checagem parcial de
+APIs Kotlin documentada, sem build completo Expo/APK ou execução física. Protocolo
+de verificação do futuro artefato preparado; nenhuma instalação solicitada.
+Lacunas físicas da Etapa 1 e demais gates continuam abertos; não concluir tarefas
+ou declarar correção de segmentos. Próxima etapa é materializar/verificar artefato,
+não repetir captura somente para ampliar instrumentação.
