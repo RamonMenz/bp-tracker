@@ -284,3 +284,12 @@ em RAM com rótulos e transformação de coordenadas, testes/novo APK, comparaç
 controlada e avaliação separada de generalização/LCD. Até duas variantes
 justificadas, com parada se ineficazes; motor/privacidade preservados. Plano não
 implementado, sem nova coleta ou habilitação; tarefas continuam parciais.
+
+
+TASK-09 — etapa 1 do plano implementada em `fix/task-09-diagnostico-bridge`,
+base staginga106a39 após #78/#79: [bridge-1/associacao-3 e contrato de coordenadas](docs/task-09-diagnostico-visor-real.md#etapa-1-do-plano--caminho-conferido-e-diagnóstico-da-bridge-preparado)
+distinguem sinais nas linhas do SDK e após filtros, sem conteúdo no diagnóstico.
+Limites/parser preservados; preview→análise ainda sem transformação estabelecida.
+Lint/TypeScript raiz/demo, 773 testes/68 suítes e checks Java puros aprovados;
+sem compilação Kotlin/APK, pré-processamento ou ensaio físico novo. Etapas 2–6
+pendentes; sem nova captura solicitada, TASK-04/06/07/09/18 parciais/gate bloqueado.

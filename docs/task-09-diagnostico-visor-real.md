@@ -276,3 +276,117 @@ Este item é requisito de próximo experimento, não implementação já realiza
 promessa de acerto. Se não houver abordagem compatível eficaz, registrar a
 limitação e não declarar leitura de medidores reais concluída. Tarefas e gate
 permanecem parciais/bloqueados. Nenhuma repetição A/B ou idle solicitada agora.
+
+## Etapa 1 do plano — caminho conferido e diagnóstico da bridge preparado
+
+Base desta implementação: `origin/staging` consultado em
+`a106a39d10d17b6e5cb16a48fd10328a4dede24e`, com PRs #78 e #79 confirmados
+como merged e nenhum PR aberto na consulta inicial. O plano `26a1c973` já está
+incorporado. Checkout inicial limpo, branch `work` em `3f8220f` preservada;
+implementação na branch própria `fix/task-09-diagnostico-bridge`.
+Nenhuma fonte, APK, bundle ou sessão Windows foi acessada nesta etapa.
+
+### Caminho e contrato de coordenadas encontrados na fonte
+
+| Ponto | Contrato atual e consequência |
+|---|---|
+| Seleção CameraX | Preferência `1280x960`, fallback mais próximo menor/depois maior, filtro de dimensões pares positivas com até `1920000` pixels. Preferência não comprova tamanho selecionado no Samsung. |
+| Preview | `PreviewView` COMPATIBLE, agora `FILL_CENTER` explícito, mesmo default da dependência `1.5.1`. View da demo com altura de 300 dp; tamanho medido pelo Android é em pixels. Preview tem seleção de resolução própria. |
+| Quadro analisado | `frame.width/height` e `rotationDegrees` do quadro recebido. `FrameBytes.nv21` copia o buffer completo usando posições/strides dos planos; não aplica `ImageProxy.cropRect`. Dimensões e igualdade do crop com o buffer passam a ser metadados transitórios. |
+| OCR | `InputImage.fromByteBuffer(NV21, width, height, rotation)`, sem nova rotação física dos bytes, recorte ou escala. Uma chamada ao ML Kit latino embarcado. |
+| Saída | Contrato existente `upright-frame`: dimensões orientadas `W=width,H=height` para 0/180 e `W=height,H=width` para 90/270; caixas de linha do SDK divididas por W/H, com os clamps existentes em `[0,1]`. Não rotacionar novamente essas caixas. |
+| Preview → análise | Dois use cases no bind, sem `UseCaseGroup`/`ViewPort` compartilhado nem matriz de projeção. Igualdade de campo visível e correspondência de uma guia com pixels de análise **não estão estabelecidas**. Razão de dimensões sozinha não fornece essa transformação. |
+
+Foram conferidas as fontes públicas das versões usadas de
+[camera-view 1.5.1](https://dl.google.com/dl/android/maven2/androidx/camera/camera-view/1.5.1/camera-view-1.5.1-sources.jar)
+(`PreviewView`/`PreviewTransformation`, default FILL_CENTER e OutputTransform) e
+[camera-core 1.5.1](https://dl.google.com/dl/android/maven2/androidx/camera/camera-core/1.5.1/camera-core-1.5.1-sources.jar)
+(`Preview.getResolutionInfo`, `ImageAnalysis`). Isso confirma APIs/configuração,
+não a geometria ou nitidez executadas no dispositivo. `upright-frame` é o contrato
+que a bridge já utiliza; esta etapa não comprova por execução a orientação das
+caixas do SDK em todas as rotações.
+
+O ImageProxy continua fechado no finally da cópia; câmera é encerrada antes de
+processar. A referência do NV21 e a lease continuam retidas até completion do
+SDK, inclusive após cancelamento. A projeção nova só é construída no callback
+de sucesso de geração ativa. No JS, só aparece após parse e ACK de cleanup,
+durante a revisão atual. Cancelar, recapturar, confirmar, background e desmontar
+preservam o descarte/rejeição tardia; diagnóstico não entra no histórico de eventos.
+Isso não demonstra sobrescrita física da RAM nem inspeciona internos do SDK/SO.
+
+### `bridge-1` / `associacao-3`: distinguir SDK e filtros sem conteúdo
+
+`OcrLinePolicy` centraliza a política já existente: considerar as primeiras 500
+linhas, rejeitar caixa ausente e depois texto com mais de 500 unidades UTF-16.
+Linhas rejeitadas também consomem o limite, preservando a ordem anterior dos
+filtros. Não há relaxamento, reparo de dígitos ou mudança do parser.
+
+A projeção nativa contém revisão fixa e dez booleanos: presença de linhas e
+dígitos ASCII nas linhas do SDK e nos tokens exportados; presença de rejeições
+por caixa ausente, texto longo e limite; presença de dígitos nessas três classes
+de rejeição. São sinais lexicais, sem contagem de dígitos ou valor reconhecido.
+Se uma linha tem mais de um impedimento, vale o primeiro filtro dessa ordem.
+O percurso inclui linhas após o limite somente para projetar presença; não
+exporta seus textos e não mantém uma lista adicional de linhas rejeitadas.
+
+“SDK” aqui significa **linhas de TextBlocks devolvidas ao callback**, não todos
+os níveis internos do reconhecedor nem uma inspeção de `Text.text`, palavras ou
+hipóteses. Ausência de ASCII também não exclui confusão com letras ou outros
+caracteres. Dígitos presentes podem ser acessórios; nenhuma categoria comprova
+valor útil, associação ou leitura correta.
+
+`describePhotoBridge` aceita somente revisão conhecida/booleanos; metadados de
+geometria aceitam só dimensões limitadas, rotações 0/90/180/270 e crop booleano.
+Mostra dimensões do buffer/orientado, view e buffer do preview quando disponível,
+e sempre explicita transformação não estabelecida. Nenhum texto, caixa de OCR,
+valor, confiança, timestamp, exceção ou propriedade extra é refletido. Payload
+ausente/antigo/malformado vira `bridge:diagnostico-indisponivel`, nunca “SDK sem
+dígitos”. Geometria inválida é indisponível sem apagar os sinais válidos da bridge.
+
+Esta instrumentação é da demo isolada; produto não monta a tela/coordenador
+nem passa a autolinkar o módulo. Não inicia captura, tentativa extra, rede,
+arquivo, logger, writer ou fila. APK antigo continua sem essa instrumentação:
+Metro pode mostrar `associacao-3`, mas somente um futuro APK recompilado pode
+anunciar `Nativo:bridge-1` e produzir o novo diagnóstico.
+
+### Hipótese revisável e decisão para o candidato
+
+A/B histórico não distingue perda na bridge de ausência de dígitos nas linhas
+do SDK. A política pode descartar dígitos por construção, demonstrado apenas
+com entradas sintéticas; não há evidência de que tenha ocorrido em B. Não é
+justificado relaxar filtros ou fabricar candidatos para resolver essa lacuna.
+
+Para a etapa 2, a hipótese é concentrar a região útil e limitar redimensionamento
+em RAM sem cortar os rótulos externos do BSPII. Antes do recorte, estabelecer
+transformação verificável entre guia/preview e análise, considerando ViewPort,
+rotação, escala e cortes; testar ida/volta ao quadro orientado de origem. Esta
+etapa apenas torna explícita a ausência dessa transformação no caminho atual.
+Não há ROI arbitrária, reconstrução de segmentos ou normalização de luminância
+implementada. O diagnóstico será incorporado ao candidato, sem rodada física
+isolada para obtê-lo. Se o retorno futuro revelar descarte relevante, corrigir
+o contrato/filtro com limites equivalentes antes de concluir necessidade de uma
+segunda variante. Contraste não é solução presumida para B.
+
+### Verificações e próxima ação desta etapa
+
+Lint, TypeScript raiz/demo Android e **773 testes em 68 suítes** aprovados.
+Jest emitiu avisos de `act` em testes de edição/tema; não houve falha. Os testes
+novos cobrem whitelist/sentinelas, APK antigo, metadados inválidos, dimensões
+orientadas nas quatro rotações e descarte do diagnóstico durante o ciclo da
+revisão. Checks Java puros de política/limites e buffers aprovados com ECJ 3.38.0
+em modo Java 17 e runtime OpenJDK 21 do host. O CI passa a compilar/executar os
+mesmos checks com JDK 17; não é job de build Android. `git diff --check` aprovado.
+
+Nenhum Kotlin/APK compilado, pré-processamento, comparação original/processado
+ou ensaio ML Kit/Samsung novo foi executado. Nenhum resultado histórico foi
+reatribuído a este código. Tempo/alocação/SDK/SO/rede e eficácia continuam sem
+nova medição; não concluir TASK-04/06/07/09/18 ou habilitar uso clínico.
+
+Próxima ação do autor: revisar o PR da etapa 1 e preservar fontes/APKs/bundle
+históricos. **Nenhum comando no Windows ou dispositivo é necessário agora.**
+Etapa 2 pode continuar sobre esta branch em trabalho dependente sem exigir merge
+intermediário. Antes de qualquer instalação futura, ainda são necessários
+candidato concreto, build nativo/CI, identidade/manifesto/backup/inspector e
+assinatura; os scripts fixados em APK259/fonteca786ed não são atualizadores
+genéricos para esse candidato. Protocolo físico será específico do novo artefato,
+com retorno sanitizado e condições de parada conforme o plano.

@@ -48,7 +48,7 @@ export function AndroidPhotoCaptureScreen() {
             {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
           </NativeText>
           <NativeText selectable style={{ fontSize: 16, color: '#0f172a' }}>
-            {'Associação: associacao-2\n'}
+            {'Associação: associacao-3\n'}
             {interpretationDiagnostic.length ? interpretationDiagnostic.join('\n') : 'Sem diagnóstico de revisão ativa.'}
           </NativeText>
         </View>

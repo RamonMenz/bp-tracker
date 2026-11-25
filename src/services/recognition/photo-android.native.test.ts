@@ -28,7 +28,7 @@ test('carregar binding nao verifica nem solicita permissao ou abre captura', () 
   expect(t.binding.nativeRevision).toBe('anterior');
 });
 
-test.each(['frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
+test.each(['bridge-1', 'frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
   jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: revision, requestCameraPermission: jest.fn() });
   expect(loadAndroidPhotoBinding().nativeRevision).toBe(revision);
   expect(PermissionsAndroid.check).not.toHaveBeenCalled();

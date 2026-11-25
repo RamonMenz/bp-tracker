@@ -30,7 +30,8 @@ test('frame -> contrato -> candidatos, só após Capturar e liberação', async 
     systolic: { status: 'candidate', value: 120, basis: 'label' }, diastolic: { status: 'candidate', value: 80, basis: 'label' },
     pulse: { status: 'candidate', value: 72, basis: 'label' },
   } }, ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
-    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
+    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+    'bridge:diagnostico-indisponivel']);
   expect(t.state().phase).toBe('reviewing');
 });
 test('permissão negada não abre câmera nem reconhecedor', async () => {
@@ -92,7 +93,8 @@ test('OCR antigo chegando durante novo reconhecimento não preenche nem encerra 
   expect(t.result).toHaveBeenCalledWith(next, expect.objectContaining({ fields: expect.objectContaining({
     systolic: { status: 'candidate', value: 130, basis: 'label' },
   }) }), ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
-    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
+    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+    'bridge:diagnostico-indisponivel']);
 });
 
 test.each(['rejection', 'late-ack'] as const)('cleanup %s mantém blocked após cancelamento e novos gestos', async failure => {

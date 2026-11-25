@@ -3,6 +3,7 @@ import { interpretPhoto, parseOcr } from '@/domain/interpret-photo';
 
 import { Attempt } from './capture-attempt';
 import { describePhotoInterpretation } from './photo-interpretation-diagnostic';
+import { describePhotoBridge } from './photo-bridge-diagnostic';
 import { PhotoCaptureError, type AndroidPhotoPorts, type PhotoCaptureCode } from './photo-capture-contract';
 
 export type PhotoPhase = 'idle' | 'permission' | 'opening' | 'ready' | 'recognizing' | 'closing' | 'reviewing' | 'cancelled' | 'failed' | 'blocked';
@@ -61,7 +62,8 @@ export function createAndroidPhotoSession(ports: AndroidPhotoPorts, onState: (st
       }
       const observation = parseOcr(raw);
       candidates = interpretPhoto(observation);
-      diagnostic = describePhotoInterpretation(observation, candidates);
+      const bridge = raw && typeof raw === 'object' && 'bridgeDiagnostic' in raw ? raw.bridgeDiagnostic : null;
+      diagnostic = [...describePhotoInterpretation(observation, candidates), ...describePhotoBridge(bridge)];
     } catch (error) {
       issue = error instanceof PhotoCaptureError ? error.code : 'engine-failed';
     } finally {

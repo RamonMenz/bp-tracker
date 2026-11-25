@@ -19,6 +19,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  photo-bridge:
+    name: Bridge OCR (Java puro, sem Android/ML Kit)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Política de linhas e buffers com entradas sintéticas
+        run: |
+          mkdir -p "$RUNNER_TEMP/aferi-photo-checks"
+          javac -d "$RUNNER_TEMP/aferi-photo-checks" \
+            native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java \
+            native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/OcrLinePolicy.java \
+            native-modules/aferi-photo-capture/checks/FrameBytesTest.java \
+            native-modules/aferi-photo-capture/checks/OcrLinePolicyTest.java
+          java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.FrameBytesTest
+          java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.OcrLinePolicyTest
+
   app:
     name: App (lint, typecheck e testes)
     runs-on: ubuntu-latest

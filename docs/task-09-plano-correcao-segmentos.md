@@ -145,3 +145,19 @@ novo APK, nova coleta física ou garantia de correção nesta entrega. Nenhuma a
 no dispositivo é necessária agora. Próxima implementação é a etapa1 e o candidato
 mínimo da etapa2, em branch própria do staging então atual, com entregas pequenas
 que mantenham um resultado revisável por hipótese. Não concluir TASK-04/06/07/09/18.
+
+## Continuidade — primeira entrega da etapa 1
+
+Etapa 1 implementada na branch `fix/task-09-diagnostico-bridge`, sobre staging
+`a106a39` após confirmação dos merges #78/#79. [Caminho, contrato e limites](task-09-diagnostico-visor-real.md#etapa-1-do-plano--caminho-conferido-e-diagnóstico-da-bridge-preparado):
+projeção `bridge-1`/`associacao-3` separa presença de ASCII nas linhas do SDK e
+após filtros, com categorias de descarte e metadados técnicos em memória.
+Política de 500 linhas/500 caracteres e parser preservados. Fonte explicita
+preview FILL_CENTER, análise completa e ausência de transformação comum; isso
+não demonstra geometria ou descarte de dígitos no A/B físico anterior.
+
+Lint/TypeScript raiz/demo, 773 testes/68 suítes e checks Java puros aprovados.
+Compilação Kotlin/APK e etapas 2–6 continuam pendentes. Nenhum pré-processamento,
+novo artefato ou resultado físico comprovado. Não pedir nova captura para obter
+diagnóstico isolado; incorporá-lo ao candidato posterior. Continuação dependente
+não requer merge intermediário. Tarefas parciais e habilitação bloqueada.

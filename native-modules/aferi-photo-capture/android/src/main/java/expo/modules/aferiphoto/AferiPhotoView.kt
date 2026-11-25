@@ -62,6 +62,7 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
   init {
     // TextureView compoe o preview dentro da hierarquia React/ScrollView.
     preview.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+    preview.scaleType = PreviewView.ScaleType.FILL_CENTER
     addView(preview, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
   }
   private fun status(code: String) {
@@ -110,6 +111,14 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
           val height = frame.height
           val rotation = frame.imageInfo.rotationDegrees
           val capturedAtMs = System.currentTimeMillis()
+          // Metadados do quadro realmente recebido, antes de unbind. Preview e
+          // análise são use cases independentes, sem ViewPort/transformação comum.
+          val previewSize = surface?.resolutionInfo?.resolution
+          val crop = frame.cropRect
+          val frameGeometry = mapOf("width" to width, "height" to height,
+            "rotation" to rotation, "cropMatchesBuffer" to (crop.left == 0 && crop.top == 0 && crop.right == width && crop.bottom == height),
+            "previewViewWidth" to preview.width, "previewViewHeight" to preview.height,
+            "previewBufferWidth" to previewSize?.width, "previewBufferHeight" to previewSize?.height)
           // Somente metadados tecnicos; nunca bytes, pixels ou texto reconhecido.
           val diagnostic = mutableMapOf<String, Any?>("revision" to "frame-1",
             "width" to width, "height" to height, "format" to frame.format,
@@ -152,18 +161,23 @@ class AferiPhotoView(context: Context, appContext: AppContext) : ExpoView(contex
                 if (active && recognitionEpoch == generation && !disposed) {
                   val w = if (rotation % 180 == 0) width else height
                   val h = if (rotation % 180 == 0) height else width
-                  val tokens = text.textBlocks.flatMap { it.lines }.take(500).mapNotNull { line ->
-                    val box = line.boundingBox ?: return@mapNotNull null
-                    if (line.text.length > 500) return@mapNotNull null
+                  val policy = OcrLinePolicy()
+                  // Percorrer as linhas também além do limite só projeta presença.
+                  // Nenhuma linha rejeitada é exportada ou guardada pelo diagnóstico.
+                  val tokens = text.textBlocks.asSequence().flatMap { it.lines.asSequence() }.mapNotNull { line ->
+                    val content = line.text
+                    val box = line.boundingBox
+                    if (!policy.accept(content, box != null) || box == null) return@mapNotNull null
                     val x = (box.left.toDouble() / w).coerceIn(0.0, 1.0)
                     val y = (box.top.toDouble() / h).coerceIn(0.0, 1.0)
-                    mapOf("text" to line.text, "confidence" to null, "box" to mapOf(
+                    mapOf("text" to content, "confidence" to null, "box" to mapOf(
                       "x" to x, "y" to y,
                       "width" to (box.width().toDouble() / w).coerceIn(0.0, 1.0 - x),
                       "height" to (box.height().toDouble() / h).coerceIn(0.0, 1.0 - y)))
-                  }
+                  }.toList()
                   settle(mapOf("kind" to "ocr", "coordinateSpace" to "upright-frame",
-                    "capturedAtMs" to capturedAtMs, "tokens" to tokens))
+                    "capturedAtMs" to capturedAtMs, "tokens" to tokens,
+                    "bridgeDiagnostic" to (policy.diagnostic() + ("frame" to frameGeometry))))
                 }
               }
               .addOnFailureListener(ContextCompat.getMainExecutor(context)) { settle(mapOf("code" to "engine-failed")) }
