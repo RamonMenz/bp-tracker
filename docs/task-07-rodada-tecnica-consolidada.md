@@ -698,3 +698,10 @@ IDs1/2 com16 entradas/categorias1/2/12/1 e delta0. r anterior confirmado, nenhum
 r na janela. [Diagnóstico e build isolado sem inspector](task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
 preparados: fonteca786ed em outra pasta, sem instalação/captura. Idle não homologa
 conteúdo/temporários/rede; APK atualEDF ainda tem configuração anterior.
+
+
+Candidato de inspector recebido: fonteca786ed limpa, APK25990bb4…; flags false
+na geração/invocação, BytecodeInspecionado=false, manifesto/backup/assinaturas
+aprovados no retorno do autor. [Evidência e atualização restrita preparada](task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados)
+fixa EDF→25990bb4… e não abre app; candidato já instalado não é reinstalado.
+Nenhuma instalação do novo candidato recebida ainda, sem nova captura/gate.

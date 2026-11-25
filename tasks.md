@@ -234,3 +234,8 @@ active/idle/nao-carregado sem interrupções percebidas; r anterior confirmado.
 [Build do candidato sem inspector](docs/task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
 preparado sem instalação/captura, com verificações estáticas agregadas. Conteúdo/
 rede/SDK/OEM e tarefas04/06/07/18 continuam parciais, habilitação bloqueada.
+
+Candidato sem inspector: retorno build-inspector-1 com APK25990bb4… da fonteca786ed
+limpa, flags false/manifesto/backup/assinaturas coerentes, BytecodeInspecionado=false.
+[Atualização restrita preparada](docs/task-07-backup-pos-merge.md#candidato-de-inspector-recebido--build-e-metadados-agregados-aprovados),
+sem abertura/captura/produção; instalação e critérios de privacidade ainda pendentes.

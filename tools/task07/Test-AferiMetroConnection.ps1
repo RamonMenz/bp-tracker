@@ -1,4 +1,5 @@
 # Read-only health metadata for the fixed evaluation Metro and ADB reverse mappings.
+param([ValidateSet('backup', 'inspector')][string] $Project = 'backup')
 $ErrorActionPreference = 'Stop'
 function Test-AferiMetroLoopback {
     param([ValidateSet('ipv4', 'ipv6')][string] $Family)
@@ -15,7 +16,8 @@ function Test-AferiMetroLoopback {
         $status = [int]$response.StatusCode
         $header = [string]$response.Headers['X-React-Native-Project-Root']
         $root = [Uri]::UnescapeDataString($header).Replace('/', '\').TrimEnd('\')
-        $source = $root -ieq 'C:\dev\aferi-task07-backup-build\demos\android-capture'
+        $expectedRoot = if ($Project -eq 'inspector') { 'C:\dev\aferi-task07-inspector-build\demos\android-capture' } else { 'C:\dev\aferi-task07-backup-build\demos\android-capture' }
+        $source = $root -ieq $expectedRoot
         # /status is a static development health response. Do not read a different server's body.
         if ($status -eq 200 -and $source) {
             $reader = [IO.StreamReader]::new($response.GetResponseStream())
@@ -62,4 +64,4 @@ if (Test-Path -LiteralPath $aferiAdbHealth -PathType Leaf) {
         $reverse = Convert-AferiReverseHealth $raw $LASTEXITCODE
     } catch { $reverse = Convert-AferiReverseHealth @() 1 }
 }
-[pscustomobject]@{ Tool = 'metro-link-1'; Metro = $metro; Reverse = $reverse } | ConvertTo-Json -Depth 6
+[pscustomobject]@{ Tool = 'metro-link-1'; Projeto = $Project; Metro = $metro; Reverse = $reverse } | ConvertTo-Json -Depth 6

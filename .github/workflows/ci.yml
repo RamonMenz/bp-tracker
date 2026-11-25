@@ -56,6 +56,9 @@ jobs:
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
 
+      - name: Atualização restrita de avaliação (PowerShell, ADB simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorUpdate.check.ps1
+
       - name: Guardas do build de avaliação (PowerShell, sem Gradle)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorBuild.check.ps1
 

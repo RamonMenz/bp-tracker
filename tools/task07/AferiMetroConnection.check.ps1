@@ -2,6 +2,11 @@ $ErrorActionPreference = 'Stop'
 $tokens=$null; $errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Test-AferiMetroConnection.ps1'),[ref]$tokens,[ref]$errors)
 if ($errors.Count) { throw 'metro-health-syntax-failed' }
+$invalidRejected=$false
+try { & (Join-Path $PSScriptRoot 'Test-AferiMetroConnection.ps1') -Project 'invalid' | Out-Null }
+catch { $invalidRejected=$_.FullyQualifiedErrorId -match 'ParameterArgumentValidationError' }
+if(-not $invalidRejected){throw 'metro-health-project-guard-failed'}
+
 $function=$ast.Find({param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Convert-AferiReverseHealth'},$true)
 Invoke-Expression $function.Extent.Text
 function Assert($Condition) { if(-not $Condition){throw 'metro-health-check-failed'} }

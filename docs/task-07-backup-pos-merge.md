@@ -1060,3 +1060,84 @@ já foi conferido no host. **Não executamos esse build completo no Windows ou n
 host; resultado e hash dependem do autor.** CI inclui checks dos helpers, não
 compilação Android ou inspeção bytecode. Habilitação permanece bloqueada após
 qualquer sucesso desse script até os critérios de privacidade aplicáveis.
+
+## Candidato de inspector recebido — build e metadados agregados aprovados
+
+Autor devolveu JSON integral por texto após falha da ferramenta de anexo; não
+executou novo build por causa dessa falha. O anexo inicial não pôde ser baixado
+pelo Codex (diretório temporário em filesystem somente leitura); nenhuma evidência
+foi inferida de seu preview. O retorno agora legível é build-inspector-1:
+
+| Campo | Evidência recebida |
+|---|---|
+| Fonte / estado | ca786ed743bac6132216e554e47a41b5e7372813 / FonteLimpa=true |
+| SHA-256 candidato | 25990bb47cc706f60babf1fc75a215fcc5f5266b0c85332f01a3b58bf2086e1c |
+| InspectorFalseNoGradleProperties / FlagFalsePassadaAoGradle | true / true |
+| BytecodeInspecionado | false |
+| Manifesto, aapt2 2.20-13193326 | Mesmo hash, pacote de avaliação, min24/target36, allowBackup=false, refs de backup presentes; cleartext/debuggable=true, networkSecurityConfig não declarado |
+| Permissões selecionadas | CAMERA/INTERNET uses-permission sem maxSdk; áudio/storage/mídia selecionadas não declaradas |
+| backup-1 | Mesmo hash, AllowBackup=false/ReferenciasConferidas=true; nove domínios e SomenteExclusoesRaiz=true em legado/cloud/D2D |
+| assinatura-1, apksigner0.9 | EDF→25990bb4…, ambas assinaturas verificadas e certificados iguais |
+
+Data/hora efetivas não informadas. Confirma artefato local com configuração e
+invocação declaradas, regras estáticas e assinatura coerentes. Não comprova
+instalação, ausência de classes/chamadas no bytecode, ausência universal de
+inspector/logs/telemetria ou obediência de todo SO/OEM. Não rotular a flag como
+prova de ausência de payloads em todas as bibliotecas. A última base instalada
+confirmada continua EDF; nenhum retorno do candidato instalado foi recebido.
+
+### Atualização restrita do candidato, sem abertura
+
+[Update-AferiInspectorEvaluation.ps1](../tools/task07/Update-AferiInspectorEvaluation.ps1)
+fixa pacote de avaliação e os hashes EDF/25990bb4…. Antes: parar somente Metro A
+conhecido com Ctrl+C e fechar a demo pelo Recentes, sem iniciar câmera. Manter
+somente Samsung de avaliação conectado por USB e desbloqueado. Não limpar dados,
+reinstalar dependências ou fazer outro build. Não tocar no app clínico do produto.
+
+O script confere hash do candidato local, get-state/modelo, uma única base APK
+instalada via pm path e run-as/sha256sum. Caminho é privado, limitado a /data/app/
+com whitelist/sem travessia. Só atualiza se o instalado coincide com EDF; se já
+coincide com25990bb4…, não instala novamente e reporta o fato. Outra base ou erro
+interrompem sem sobrepor trabalho desconhecido. Não altera reverse/redes, não
+chama am start, clear, uninstall, downgrade ou permissões automáticas.
+
+Somente install -r solicita substituição preservando dados. Não garante toda
+migração/estado SDK/SO nem restauração universal. Ao final consulta hash instalado
+e retorna somente metadata; o script não extrai arquivo ou copia dados runtime.
+Se der erro após install, pode já ter atualizado: não repetir por tentativa nem
+presumir rollback. Candidato já instalado gera InstalacaoExecutada=false e
+InstalacaoRetornouSucesso=null, não falso resultado de nova instalação.
+
+Atualizar somente worktree backup-tools limpa ao commit publicado com o script,
+preservando todas as fontes/APKs e o candidato. Executar com &, sem dot-sourcing:
+
+```powershell
+& .\tools\task07\Update-AferiInspectorEvaluation.ps1
+```
+
+Devolver só JSON/código fixo e se app permaneceu fechado, indicador de câmera
+percebido (ou não observado), diálogo/comportamento inesperado. Esperado primeira
+atualização: antesEDF/depois25990bb4…, instalação sucesso e CoincideComCandidato=true.
+Não abrir app, Metro, câmera ou repetir captura depois do script. Se conflito,
+erro ou hash divergente, parar sem limpar dados/desinstalar/reassinar/bypass.
+Nenhuma dessas ações representa deploy ou habilitação clínica.
+
+### Preparação do diagnóstico para a próxima fonte
+
+O helper metro-link-1 agora aceita -Project backup (default anterior preservado)
+ou -Project inspector, ambos de enum fixo. Só muda a comparação privada do header
+para a pasta de referência correspondente; endpoints continuam os mesmos dois
+loopbacks/status. Campo Projeto informa a escolha. Parâmetro inválido falha antes
+de qualquer consulta. Não iniciar Metro novo nesta etapa: futura abertura do
+candidato usará fonteca786ed/inspector-build e flag Node ipv4first, com novo bundle
+consultado, sem assumir que23e7dd6f… seja a identidade desse carregamento.
+
+Verificações do atualizador: onze cenários simulados, incluindo candidato já
+instalado sem mutação, baseline desconhecida, hash local diferente, falha de
+install, hash posterior divergente, split/path injetado/travessia/modelo/formatos.
+Nenhum ADB ou telefone real chamado. Helper HTTP conferido em fixture local de
+duas famílias/raízes com header codificado: enum de projeto reconhece só sua
+fonte, sem imprimir caminho/corpo. Checks do atualizador entram no CI.
+Execução Windows da atualização e nova abertura ainda dependem do autor.
+Telemetria/ID, UID/destinos, bytecode/OEM/cross-platform e critérios clínicos
+continuam pendentes; nenhuma das TASK-04/06/07/18 concluída.
