@@ -690,3 +690,11 @@ percebido ou erro. IPv4HTTP200/fonte/pronto, reverse1/0/sem conflito; IPv6 não
 responde nessa sessão. [Controle de bundle/idle do novo APK](task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
 preparado sem câmera; r anterior não explicitamente confirmado. Não é inspeção
 integral/zero tráfego ou conclusão; inspector false ainda requer futuro build.
+
+
+Idle novo recebido: espera programada30s sem pausa, active/idle/nao-carregado,
+sem preview/revisão/indicador percebido/interrupção. Bundle23e7dd6f…; inventario-1
+IDs1/2 com16 entradas/categorias1/2/12/1 e delta0. r anterior confirmado, nenhum
+r na janela. [Diagnóstico e build isolado sem inspector](task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
+preparados: fonteca786ed em outra pasta, sem instalação/captura. Idle não homologa
+conteúdo/temporários/rede; APK atualEDF ainda tem configuração anterior.

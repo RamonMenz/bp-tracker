@@ -228,3 +228,9 @@ T0 pós-ajuste recebido: tela abriu por a, captura-5/associacao-1, active/idle,
 nao-carregado, Fast Refresh desligado, sem preview/revisão/indicador percebido
 ou erro; IPv4/reverse positivos. [Próximo bundle/idle](docs/task-07-backup-pos-merge.md#t0-recebido--abertura-funcionou-após-ajuste-de-conectividade)
 sem câmera, com nova baseline de metadados; tarefas parciais/gate bloqueado.
+
+Idle pós-atualização recebido: bundle23e7dd6f…, 16→16 entradas e delta0,
+active/idle/nao-carregado sem interrupções percebidas; r anterior confirmado.
+[Build do candidato sem inspector](docs/task-07-backup-pos-merge.md#idle-pós-atualização-recebido--baseline-nova-estável-no-alcance-observado)
+preparado sem instalação/captura, com verificações estáticas agregadas. Conteúdo/
+rede/SDK/OEM e tarefas04/06/07/18 continuam parciais, habilitação bloqueada.

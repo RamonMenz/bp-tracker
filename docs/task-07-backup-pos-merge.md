@@ -970,3 +970,93 @@ de delta não prova privacidade universal. Telemetria/ID, ferramenta UID/destino
 OEM/cross-platform e futura aplicação da flag de inspector false seguem pendentes.
 APKedf860b7…/fonte062e9b1 continuam com configuração de inspector anterior;
 esta medição não substitui validação do próximo artefato ou libera uso clínico.
+
+## Idle pós-atualização recebido — baseline nova estável no alcance observado
+
+Autor confirmou espera programada30s concluída sem pausa adicional, active/idle/
+nao-carregado ao final, sem preview/revisão/indicador de câmera percebido, bloqueio,
+background, recarga ou erro. Esclareceu r feito na abertura anterior e nenhum r
+durante a espera; a lacuna histórica dessa ação fica resolvida, sem repetição.
+Data/hora efetivas não informadas; janela entre snapshots inclui comandos.
+
+Bundle-abertura-1: SHA-256
+**23e7dd6f19c60e35aa0ba64fe3649bfebb35a9d17f1e077029f62bc785389e25**.
+É a identidade atual consultada do cache JS do Dev Client, diferente do antigo
+86017456…; não é hash de mídia nem prova única de todo código executado em RAM.
+Fonte/APK de referência permanecem062e9b1/edf860b7… conforme verificações anteriores.
+
+Inventario-1: AntesId1/DepoisId2, ambos16 arquivos regulares visíveis: um bundle,
+dois nomes DataTransport, doze não classificados e uma preferência nomeada MLKit.
+ChangedEntries=0, Changes vazio. Confirma estabilidade dos metadados coletados
+nesse par/condição, não conteúdo ou eventos entre amostras. As contagens iguais
+às da rodada anterior não identificam os mesmos arquivos/bytes ou demonstram
+estabilidade entre as duas rodadas. Não pedir repetição nem delta zero futuro.
+
+### Diagnóstico atualizado e condição para próxima captura
+
+| Aspecto | Evidência atual | Limite/estado |
+|---|---|---|
+| Manifesto/backup/assinaturas | Novo APK instaladoedf860b7…, refs/XML/9 domínios/assinaturas conferidos | Verificação estática, sem teste universal de transferência OEM |
+| Abertura após ajuste | IPv4/reverse/tela e bundle23e7dd6f… identificados | Uma rodada de abertura; não mede rede de reconhecimento |
+| Idle novo APK | UI e metadados estáveis no par recebido | Sem câmera/inferência; não comprova logs/rede/temporários |
+| Inspector de desenvolvimento | Fonteca786ed força false; prebuild isolado passou | APK atualEDF ainda usa configuração anterior; novo artefato pendente |
+| Telemetria/ID MLKit | Revisão de produtores/encoders e lacunas registradas | Sem resolução de anonimização/ID/transportes; gate fechado |
+| UID/destinos/reconexão | Ferramenta qualificada ainda indisponível | Saúde Metro/reverse não substitui essa inspeção |
+| Clínica/contas/legado | Não integrados por esta demo | Critérios aplicáveis ainda exigem evidência; nenhuma tarefa concluída |
+
+Não iniciar nova captura neste artefato apenas porque o idle passou. Próximo
+passo independente é materializar a correção do inspector em outro APK local,
+sem instalar. A flag é de prebuild/Gradle, não JS; Metro/reload não a aplicam.
+Não é preciso repetir build EDF nem seus checks para obter o mesmo resultado.
+
+### Build sem inspector — uma devolução estática, sem instalação
+
+[Build-AferiInspectorEvaluation.ps1](../tools/task07/Build-AferiInspectorEvaluation.ps1)
+fixa fonte funcional **ca786ed743bac6132216e554e47a41b5e7372813** em nova worktree
+C:\dev\aferi-task07-inspector-build. O destino deve não existir; se já existir,
+parar e preservar. Não remove worktrees/arquivos nem reaproveita node_modules ou
+android da cópia EDF. Não requer merge do PR, credenciais do produto ou ADB.
+Não altera a fonte servida pelo Metro existente; não inicia outro Metro/app.
+
+O script executa npm ci pelo lock raiz, checks dos mods, prebuild somente Android,
+exige exatamente uma propriedade EX_DEV_CLIENT_NETWORK_INSPECTOR=false no arquivo
+gerado e compila assembleDebug arm64 também com
+-PEX_DEV_CLIENT_NETWORK_INSPECTOR=false. Preserva/restaura ANDROID_HOME e
+EXPO_NO_TELEMETRY da sessão, sem modificar JAVA_HOME/PATH global. Código do
+DevLauncherPlugin consome essa propriedade antes de registrar a instrumentação;
+isso é rastreabilidade de configuração/invocação, não inspeção do bytecode ou
+prova de ausência de outros clientes/logs/transporte no SDK/SO.
+
+Depois calcula hash, roda manifesto-1/backup-1, compara assinaturas com o APK
+EDF local de hash esperado e confere HEAD/status/hash ao final. A comparação
+assinatura-1 agora aceita par explícito e hashes obrigatoriamente válidos quando
+fornecidos; defaults69d5a0b3…/edf860b7… e formato de saída foram preservados.
+Continua sem imprimir certificados, chaves ou logs brutos do apksigner.
+
+Atualizar só backup-tools limpa ao commit publicado com o script; preservar as
+outras worktrees, snapshots e APKs. Executar com &, sem dot-sourcing:
+
+```powershell
+& .\tools\task07\Build-AferiInspectorEvaluation.ps1
+```
+
+Logs locais normais de npm/prebuild/Gradle aparecem no terminal, sem relatório em
+arquivo. **Devolver só o JSON final** (Tool build-inspector-1) ou código de etapa/
+mensagem curta sanitizada. Se falhar, pasta parcial é preservada: não apagar,
+reexecutar por tentativa, atualizar dependências ou enviar terminal completo.
+Não desativar proteções ou licenças por tentativa; informar impedimento.
+
+Esperado Fonteca786ed/FonteLimpa=true, hash calculado (não previsto),
+InspectorFalseNoGradleProperties=true/FlagFalsePassadaAoGradle=true,
+BytecodeInspecionado=false, manifesto/backup coerentes e assinaturas verificadas.
+Certificados iguais ainda depende do artefato real; false exige análise sem
+reassinar/desinstalar. Nenhuma tarefa install/adb/abertura é chamada. Não instalar
+o candidato nem trocar o Metro para a pasta nova após o build.
+
+Verificações do preparador: sintaxe, aceitação exclusiva da propriedade false,
+rejeição de ausência/true/duplicata, tratamento de exit code versus warning nativo
+e regressão do comparador de assinaturas. O prebuild real do código funcional
+já foi conferido no host. **Não executamos esse build completo no Windows ou no
+host; resultado e hash dependem do autor.** CI inclui checks dos helpers, não
+compilação Android ou inspeção bytecode. Habilitação permanece bloqueada após
+qualquer sucesso desse script até os critérios de privacidade aplicáveis.

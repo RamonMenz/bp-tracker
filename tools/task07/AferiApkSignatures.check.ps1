@@ -3,6 +3,12 @@ function Assert($Condition, [string] $Name) { if (-not $Condition) { throw "chec
 $tokens = $null; $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'Compare-AferiApkSignatures.ps1'), [ref]$tokens, [ref]$errors)
 Assert ($errors.Count -eq 0) 'syntax'
+Assert ($ast.ParamBlock.Parameters.Count -eq 4) 'explicit-pair-parameters'
+$rejected = $false
+try { & (Join-Path $PSScriptRoot 'Compare-AferiApkSignatures.ps1') -NewExpectedSha256 'invalid' | Out-Null }
+catch { $rejected = $_.FullyQualifiedErrorId -match 'ParameterArgumentValidationError' }
+Assert $rejected 'invalid-expected-hash-rejected-before-tool'
+
 $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Read-AferiSignerDigest' }, $true)
 Assert ($null -ne $definition) 'function-present'
 # Only the checked local function is loaded; fixed Windows paths/frontend are not executed.
@@ -28,6 +34,8 @@ try {
     }.GetNewClosure()
     $result = Read-AferiSignerDigest -ApkPath $apk -ExpectedSha256 $hash
     Assert ($result.Hash -eq $hash -and $result.Digest -ceq ('a' * 64)) 'private-certificate-metadata'
+    $upperResult = Read-AferiSignerDigest -ApkPath $apk -ExpectedSha256 $hash.ToUpperInvariant()
+    Assert ($upperResult.Hash -ceq $hash) 'uppercase-expected-hash'
     Assert (-not ($result | ConvertTo-Json).Contains('PRIVATE')) 'private-output'
     foreach ($mode in @('bad-code','bad-format','multiple','mutate')) {
         $signatureState.Mode = $mode
