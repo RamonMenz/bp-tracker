@@ -15,6 +15,7 @@ import {
 
 import { readingDocPath, readingsCollectionPath } from '@/lib/firestore-paths';
 import { logError } from '@/lib/logger';
+import type { ReportSourceReading, ReportSourceSnapshot } from '@/lib/report/report-model';
 import { firestore } from '@/services/firebase';
 import type { Reading, ReadingInput } from '@/types/models';
 
@@ -35,6 +36,28 @@ const DELETE_PERMISSION_MESSAGE = 'Sem permissão para excluir. Faça login nova
 const DELETE_GENERIC_MESSAGE = 'Não foi possível excluir a medição. Tente novamente.';
 const READ_PERMISSION_MESSAGE = 'Sem permissão para ler seu histórico. Faça login novamente.';
 const READ_GENERIC_MESSAGE = 'Não foi possível carregar suas medições. Tente novamente.';
+
+/** Recorte da leitura do relatório PDF: início inclusivo (null = sem limite) e fim EXCLUSIVO. */
+export interface ReportReadingsRange {
+  startInclusive: Date | null;
+  endExclusive: Date;
+}
+
+export type ReadingsQueryFailure = 'permission' | 'network' | 'generic';
+
+/**
+ * Falha da leitura do relatório com o MOTIVO tipado: quem chama escolhe a própria mensagem
+ * amigável pelo `reason`, sem nunca exibir `error.message` (CLAUDE.md §4.3).
+ */
+export class ReadingsQueryError extends Error {
+  readonly reason: ReadingsQueryFailure;
+
+  constructor(reason: ReadingsQueryFailure) {
+    super(`readings-query-${reason}`);
+    this.name = 'ReadingsQueryError';
+    this.reason = reason;
+  }
+}
 
 function getErrorCode(error: unknown): string | undefined {
   if (error !== null && typeof error === 'object' && 'code' in error) {
@@ -156,5 +179,62 @@ export async function getAllReadings(uid: string, range?: ReadingDateRange): Pro
     }
 
     throw new Error(READ_GENERIC_MESSAGE);
+  }
+}
+
+/**
+ * Leitura única para o relatório PDF (spec-relatorio-pdf §4). NÃO substitui `getAllReadings`, que
+ * segue intacta para o CSV: aqui o retorno precisa de mais do que os registros — o id (desempate
+ * estável), `hasPendingWrites` por registro, `fromCache` do conjunto e QUANTOS documentos foram
+ * omitidos por não passarem no schema. Sem isso, o PDF apresentaria um subconjunto como se fosse o
+ * histórico completo.
+ *
+ * Filtra e ordena por `measuredAt` (nunca `createdAt`), o mesmo campo do índice de campo único já
+ * existente — nenhum índice novo. Fim exclusivo (`<`), como o período civil do relatório.
+ */
+export async function getReadingsForReport(uid: string, range: ReportReadingsRange): Promise<ReportSourceSnapshot> {
+  try {
+    const constraints: QueryConstraint[] = [orderBy('measuredAt', 'asc')];
+
+    if (range.startInclusive !== null) {
+      constraints.push(where('measuredAt', '>=', range.startInclusive));
+    }
+
+    constraints.push(where('measuredAt', '<', range.endExclusive));
+
+    const snapshot = await getDocs(query(collection(firestore, readingsCollectionPath(uid)), ...constraints));
+
+    const readings: ReportSourceReading[] = [];
+    let omittedCount = 0;
+
+    for (const docSnapshot of snapshot.docs) {
+      try {
+        readings.push({
+          ...parseReading(docSnapshot.data()),
+          id: docSnapshot.id,
+          hasPendingWrites: docSnapshot.metadata.hasPendingWrites,
+        });
+      } catch {
+        omittedCount += 1;
+        logError('readings.parse', new Error('reading-parse-failed'), { uid, docId: docSnapshot.id });
+      }
+    }
+
+    return { readings, fromCache: snapshot.metadata.fromCache, omittedCount };
+  } catch (error) {
+    // Erro do SDK pode carregar conteúdo da consulta: só o código decide o motivo, nada é repassado.
+    logError('readings.report-query', new Error('report-query-failed'), { uid });
+
+    const code = getErrorCode(error);
+
+    if (code === 'permission-denied') {
+      throw new ReadingsQueryError('permission');
+    }
+
+    if (code === 'unavailable') {
+      throw new ReadingsQueryError('network');
+    }
+
+    throw new ReadingsQueryError('generic');
   }
 }
