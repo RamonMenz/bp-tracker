@@ -105,10 +105,14 @@ export default function HistoryScreen() {
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const {
     isAvailable: isReportPdfAvailable,
-    generateReport,
-    cancel: cancelReport,
-    isGenerating: isGeneratingReport,
+    stage: reportStage,
+    review: reportReview,
     error: reportError,
+    prepareReport,
+    retry: retryReport,
+    saveReport,
+    changePeriod: changeReportPeriod,
+    cancel: cancelReport,
   } = useReportPdf();
   const router = useRouter();
   const scheme = useColorScheme();
@@ -256,7 +260,7 @@ export default function HistoryScreen() {
                 variant="secondary"
                 icon={FileTextIcon}
                 onPress={() => setIsReportDialogOpen(true)}
-                loading={isGeneratingReport}
+                loading={reportStage === 'preparing'}
               />
             ) : null}
           </View>
@@ -318,16 +322,18 @@ export default function HistoryScreen() {
 
       <ExportPdfDialog
         visible={isReportDialogOpen}
-        isGenerating={isGeneratingReport}
+        stage={reportStage}
+        review={reportReview}
         error={reportError}
-        onGenerate={(request) => {
-          // Fica aberto durante a geração; fecha só quando o PDF foi entregue ao navegador. Erros
-          // (período vazio, sem conexão) aparecem dentro do diálogo para o usuário trocar o período.
-          void generateReport(request).then((isDelivered) => {
-            if (isDelivered) {
-              setIsReportDialogOpen(false);
-            }
-          });
+        // Fica aberto durante a preparação e a revisão; erros (período vazio, sem conexão, limite)
+        // aparecem dentro do diálogo para o usuário trocar o período.
+        onPrepare={(request) => void prepareReport(request)}
+        onRetry={() => void retryReport()}
+        onChangePeriod={changeReportPeriod}
+        onSave={() => {
+          if (saveReport()) {
+            setIsReportDialogOpen(false);
+          }
         }}
         onCancel={() => {
           cancelReport();

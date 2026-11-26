@@ -1,6 +1,12 @@
 import type { SessionReadings } from '@/types/models';
 
-import { buildReportModel, computeReportStats, type ReportModel, type ReportSourceReading } from './report-model';
+import {
+  buildReportModel,
+  computeReportStats,
+  MAX_REPORT_READINGS,
+  type ReportModel,
+  type ReportSourceReading,
+} from './report-model';
 import { resolveReportPeriod, type ReportPeriod, type ReportPeriodSelection } from './report-period';
 
 const TZ = 'America/Sao_Paulo';
@@ -249,5 +255,52 @@ describe('observação é texto literal', () => {
     const model = buildOk([reading({ note, measuredAt: new Date('2026-11-20T12:00:00.000Z') })]);
 
     expect(model.table.rows[0][5]).toBe(`Observação: ${note}`);
+  });
+});
+
+describe('limite de volume (PDF-22)', () => {
+  it('acima do limite não gera modelo nem trunca: informa contagem e limite', () => {
+    const many: ReportSourceReading[] = [];
+    const start = new Date('2025-01-01T12:00:00.000Z').getTime();
+
+    for (let index = 0; index <= MAX_REPORT_READINGS; index += 1) {
+      many.push(reading({ measuredAt: new Date(start + index * 4 * 60 * 60 * 1000) }));
+    }
+
+    expect(buildReportModel({ readings: many, fromCache: false, omittedCount: 0 }, period())).toEqual({
+      ok: false,
+      reason: 'too-many',
+      readingCount: MAX_REPORT_READINGS + 1,
+      limit: MAX_REPORT_READINGS,
+    });
+  });
+
+  it('exatamente no limite gera o relatório com todos os registros', () => {
+    const many: ReportSourceReading[] = [];
+    const start = new Date('2025-01-01T12:00:00.000Z').getTime();
+
+    for (let index = 0; index < MAX_REPORT_READINGS; index += 1) {
+      many.push(reading({ measuredAt: new Date(start + index * 4 * 60 * 60 * 1000) }));
+    }
+
+    expect(buildOk(many).table.rows).toHaveLength(MAX_REPORT_READINGS);
+  });
+});
+
+describe('gráfico no modelo', () => {
+  it('usa o mesmo retrato e cobre o período solicitado inteiro', () => {
+    const model = buildOk(
+      [
+        reading({ systolic: 120, diastolic: 80, measuredAt: new Date('2026-11-20T11:00:00.000Z') }),
+        reading({ systolic: 130, diastolic: 90, measuredAt: new Date('2026-11-20T21:00:00.000Z') }),
+        reading({ systolic: 140, diastolic: 100, measuredAt: new Date('2026-11-22T12:00:00.000Z') }),
+      ],
+      { kind: 'last7' },
+    );
+
+    expect(model.chart.pointCount).toBe(2);
+    expect(model.chart.panels[0].caption).toBe('20/11/2026 a 26/11/2026');
+    expect(model.chart.panels[0].points.map((point) => point.systolic)).toEqual([125, 140]);
+    expect(model.notes.some((note) => /não equivalem a pressão zero/.test(note))).toBe(true);
   });
 });

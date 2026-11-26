@@ -18,6 +18,12 @@ export interface ReportPdfPipeline {
   render: (model: ReportModel) => Promise<Blob>;
 }
 
+/** URL local de pré-visualização. `release` agenda a liberação; nunca revoga de forma síncrona. */
+export interface PdfPreviewHandle {
+  url: string;
+  release: () => void;
+}
+
 /**
  * Contrato comum dos adaptadores `report-pdf-platform.web.ts` / `.native.ts` (CLAUDE.md §3.3:
  * diferença de plataforma por extensão de arquivo, não por `Platform.OS`).
@@ -27,4 +33,6 @@ export interface ReportPdfPlatform {
   loadPipeline: () => Promise<ReportPdfPipeline>;
   /** Entrega o arquivo ao usuário. Só é chamada depois da ação explícita dele. */
   deliver: (fileName: string, pdf: Blob) => void;
+  /** Pré-visualização local (sem upload, sem impressão). */
+  openPreview: (pdf: Blob) => PdfPreviewHandle;
 }

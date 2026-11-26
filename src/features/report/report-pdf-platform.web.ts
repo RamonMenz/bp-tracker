@@ -1,4 +1,4 @@
-import type { ReportPdfPlatform } from './report-pdf-platform.types';
+import type { PdfPreviewHandle, ReportPdfPlatform } from './report-pdf-platform.types';
 
 /**
  * Tempo até liberar a URL de objeto. O `click()` só AGENDA o download: revogar na mesma volta do
@@ -25,8 +25,31 @@ export function downloadPdf(fileName: string, pdf: Blob): void {
   }
 }
 
+/**
+ * URL de objeto para o `<iframe>` de pré-visualização (e para abrir numa aba). `release` é
+ * idempotente e só AGENDA a revogação: uma aba aberta a partir da prévia ainda pode estar
+ * carregando o documento quando o diálogo fecha.
+ */
+export function openPdfPreview(pdf: Blob): PdfPreviewHandle {
+  const url = URL.createObjectURL(pdf);
+  let isReleased = false;
+
+  return {
+    url,
+    release: () => {
+      if (isReleased) {
+        return;
+      }
+
+      isReleased = true;
+      setTimeout(() => URL.revokeObjectURL(url), OBJECT_URL_REVOKE_DELAY_MS);
+    },
+  };
+}
+
 export const reportPdfPlatform: ReportPdfPlatform = {
   isAvailable: true,
   loadPipeline: async () => (await import('./report-pdf-pipeline')).reportPdfPipeline,
   deliver: downloadPdf,
+  openPreview: openPdfPreview,
 };

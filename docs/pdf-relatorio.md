@@ -1,8 +1,10 @@
-# Relatório PDF — etapa P1 (Web)
+# Relatório PDF — Web (etapas P1 e P2)
 
-**Branch:** `feat/pdf-relatorio`, a partir de `origin/staging` em `d28b005`.
+**Branches:** P1 em `feat/pdf-relatorio` (mesclada em `staging` pelo PR #87); P2 em `feat/pdf-relatorio-p2`, a partir de `origin/staging` em `987562c`.
 **Spec:** [`specs/spec-relatorio-pdf.md`](../specs/spec-relatorio-pdf.md) (§2, §3, §4, §5, §7).
-**Estado:** P1 implementada e verificada localmente. **O relatório PDF não está completo:** faltam gráfico, pré-visualização, Android, validação em navegador móvel e inspeção manual de impressão. O Android não foi validado.
+**Estado:** P1 e P2 implementadas e verificadas localmente, com testes automatizados e inspeção do PDF gerado. **O relatório PDF não está completo:** faltam o Android (`expo-print`) e a validação em fluxo logado, navegador móvel, impressão física e leitor de tela. O Android não foi validado.
+
+As seções 1 a 7 registram a P1 e foram mantidas como histórico; onde a P2 mudou algo, a seção 8 diz o quê.
 
 ## 1. O que a P1 entrega
 
@@ -94,75 +96,155 @@ Limite desta verificação: o app não passou pelo login, porque não há conta 
 
 A renderização roda **na thread principal**, sem worker. Não há limite de volume nem timeout configurados; nenhum registro é truncado. Em celular, os tempos devem ser maiores e não foram medidos.
 
-## 8. Matriz de critérios PDF-01..22
+## 8. Etapa P2 — gráfico, revisão antes de salvar, cobertura e volume
 
-| ID | Estado | Evidência / motivo |
-|---|---|---|
-| PDF-01 | **Coberto (Web)** | `import()` dinâmico; nenhum chunk de PDF no carregamento (Chromium, §6); `entry` sem jsPDF (§5); testes legados do Histórico e do CSV verdes. |
-| PDF-02 | **Coberto** | `report-period.test.ts`: atalhos em dias civis, bordas inclusiva e exclusiva, horário de verão em São Paulo e Nova York, bloqueio de inversão, de dia futuro e de data inexistente; diálogo e hook bloqueiam antes da consulta. |
-| PDF-03 | **Parcial** | Cabeçalho, cobertura, três médias e tabela completa do mesmo retrato (`render-report-pdf.test.ts`). **Gráfico pendente** (fora do escopo P1). |
-| PDF-04 | **Coberto** | 130,0/90,0 mmHg (N = 3) e 70,0 bpm (N = 2), também com dois registros no mesmo dia; conferido no modelo e no `pdftotext`. |
-| PDF-05 | **Coberto** | “—” na tabela; “Não informado” com N = 0; pulso `null` fora do denominador. |
-| PDF-06 | **Coberto** | Sessão conta uma vez; detalhe “Média de sessão (2 leituras): 1ª …; 2ª …, pulso —”; documentos antigos sem `sessionReadings` não ganham detalhe reconstruído. |
-| PDF-07 | **Coberto** | Período vazio mostra “Nenhuma medição no período selecionado.” e não gera PDF; vazio não confirmado (cache ou omissão) ganha mensagem própria; documento inválido omitido e declarado; falha de leitura mostra mensagem e permite nova tentativa. |
-| PDF-08 | **Pendente** | Gráfico fora do escopo P1. |
-| PDF-09 | **Coberto** | 400 registros em 15 páginas: as 400 linhas contadas via `pdftotext` por página, cabeçalho repetido e “Página X de Y”; observação longa na mesma linha do registro; primeira e última página inspecionadas em PNG. |
-| PDF-10 | **Parcial** | PNG em escala de cinza (`pdftoppm -gray`) legível; A4 conferido por `pdfinfo`. Falta impressão física e checagem em leitores externos. |
-| PDF-11 | **Parcial** | Chromium com rede externa abortada: a geração só requisitou chunks locais. Sem recurso remoto no template (nenhum `/URI`, `/JS` ou `/Launch` no PDF). Falta inspeção com Firestore real autenticado. |
-| PDF-12 | **Coberto** | HTML, URL, aspas, `\`, `( )`, `%`, `&` e acentos aparecem literais; emoji vira “?” declarado; nenhuma ação ou link no PDF. |
-| PDF-13 | **Coberto (unitário)** | Testes com sentinelas: exceção do renderizador, erro de SDK e documento inválido não chegam ao `logError`; o contexto leva só `uid`/`docId`. Falta inspeção do coletor real (Sentry). |
-| PDF-14 | **Coberto** | Trava de concorrência, botão desabilitado durante a geração, cancelamento descarta o resultado; nenhuma escrita (mocks de `add`/`update`/`delete` nunca chamados). |
-| PDF-15 | **Parcial** | Web: download com `application/pdf` e nome correto, conferido no Chromium. **Android pendente.** |
-| PDF-16 | **Parcial** | Falha no download mostra mensagem amigável e não declara envio. A URL só é revogada após 60 s. Compartilhamento nativo pendente. |
-| PDF-17 | **Parcial** | Web: nada é persistido pelo app (Blob em memória, URL revogada). Temporários Android pendentes. |
-| PDF-18 | **Coberto (Web)** | `useReportPdf.test.ts`: troca de uid durante a renderização descarta o resultado (sem download) e o estado da conta anterior não aparece; teste de mutação confirma que o teste falha sem o descarte. |
-| PDF-19 | **Parcial** | `fromCache`, pendências e omissões declaradas no documento e na mensagem de vazio (testes de modelo, hook e `pdftotext`). Falta avisar **antes** de exportar (spec §3.2.7): hoje o PDF com dados de cache é gerado com aviso interno, sem pedir conexão. |
-| PDF-20 | **Coberto por desenho** | Uma única leitura (`getDocs`) congela o retrato usado por cobertura, médias e tabela; cada nova geração faz nova leitura. Não há teste com alteração concorrente no Firestore real. |
-| PDF-21 | **Parcial** | Diálogo com `radiogroup`/`radio`, rótulos, alvos de 48 dp, escala de fonte preservada e Cancelar sempre ativo (testes de componente). PDF com texto selecionável, mas **não marcado** (`Tagged: no`): não é PDF/UA. Teste manual com leitor de tela e teclado pendente. |
-| PDF-22 | **Parcial** | Volume medido (§7), sem truncamento. Pendentes: worker, limites e timeout definidos e medição em navegador móvel. |
+### 8.1 O que mudou
 
-## 9. Limites conhecidos
+- **Gráfico de tendência** (`src/lib/report/report-chart.ts`, puro, e `render-report-pdf.ts`). Entra depois das médias e antes da tabela, na ordem da spec §3.3.2:
+  - um ponto por dia com dado: média por registro dos valores principais daquele dia, com precisão completa, sem reaproveitar valores arredondados;
+  - dia sem dado não tem ponto, zero nem interpolação; as linhas só ligam dias **consecutivos**, então as lacunas aparecem como interrupção;
+  - com um único dia, só marcadores e a frase “Há medições em apenas um dia: o gráfico mostra os pontos desse dia, sem linha de tendência.”;
+  - eixo X com datas reais (uma faixa por dia, cobrindo o período inteiro, inclusive dias sem dado nas bordas); eixo Y em mmHg com escala numérica única para todos os painéis;
+  - períodos acima de 92 dias viram painéis temporais contíguos (no máximo 12, cada um com pelo menos 92 dias), com a mesma escala e a mesma legenda, sem omitir pontos;
+  - séries distintas por cor **e** por traço/marcador: sistólica com linha contínua e círculo cheio (blue-700); diastólica com linha tracejada e quadrado vazado (amber-700). A distinção sobrevive à impressão em cinza;
+  - nova nota metodológica: “cada ponto é a média diária… dias sem medição não têm ponto (não equivalem a pressão zero)”.
+  - `computeDailyTrend`, o gráfico legado do Histórico, **não** foi alterado.
+- **Revisão antes de salvar** (`useReportPdf`, `ExportPdfDialog`, `ReportReviewPanel`, `PdfPreviewFrame`). O fluxo passou a ser preparar → revisar → salvar. A revisão mostra:
+  - período, cobertura, médias com N e o aviso de que a cópia salva fica fora do controle do Aferi;
+  - a pré-visualização local (Blob + URL de objeto em `<iframe>`, sem impressão e sem upload);
+  - as ações **Salvar PDF**, **Alterar período** (volta à escolha anterior, preservada) e **Cancelar**.
 
-- **Sem gráfico e sem pré-visualização.** O resumo prévio (spec §3.4.1) e os botões “Alterar período / Salvar ou compartilhar” não existem; o PDF é baixado direto após “Gerar PDF”.
-- **Só Web.** O Android não tem botão; o adaptador nativo é inerte.
-- **Fonte padrão não embutida.** Caracteres fora do CP1252 viram “?” (declarado). O PDF não é marcado (sem estrutura de acessibilidade).
-- **Thread principal.** Relatórios muito grandes podem travar a aba por segundos.
-- **Cobertura “confirmada”** significa leitura do servidor (`fromCache = false`) e nenhum documento omitido. Não é auditoria de completude além do que o Firestore informa.
-- **Cache:** com o servidor inacessível, o `getDocs` da Web pode responder do cache. O relatório é gerado e declarado “não confirmado”; não há opção de “pedir conexão e tentar de novo” antes de exportar.
+  O arquivo só sai por “Salvar PDF”, e o PDF salvo é exatamente o pré-visualizado. A URL da prévia é liberada ao salvar, cancelar, alterar o período, trocar de conta ou desmontar, sempre com atraso de 60 s e uma única vez.
+- **Prévia só onde o navegador mostra PDF:** sem visualizador embutido (`navigator.pdfViewerEnabled` falso, como no Chromium headless), um `<iframe>` com PDF **dispara download automático**. A verificação no Chromium mostrou isso: um arquivo com nome UUID foi baixado antes de “Salvar PDF”. Nesses navegadores a prévia não é embutida: o resumo continua e o usuário é orientado a salvar.
+- **PDF-19, aviso antes de exportar:** com cache, omissão de documentos ou escrita pendente, a revisão abre com um bloco “Cobertura não confirmada” (`role="alert"`), a declaração e a lista de avisos. O botão vira “Salvar recorte parcial em PDF” e aparece **Tentar novamente**, que faz nova leitura com o mesmo período. O documento nunca declara histórico completo nesses casos.
+- **PDF-22, volume e prazo:**
+  - `MAX_REPORT_READINGS = 3000`: acima disso o relatório não é gerado nem truncado. A mensagem é “O período tem N medições e o relatório comporta até 3.000. Escolha um período menor.”
+  - `REPORT_PREPARATION_TIMEOUT_MS = 30 s` para as etapas **assíncronas** (carregar o módulo do PDF e ler o Firestore). Ao estourar, o resultado tardio é descartado e aparece uma mensagem pedindo conexão ou período menor.
+  - A renderização é síncrona e não pode ser interrompida; quem a limita é o teto de volume.
+- **Observações longas:** o texto de detalhe é quebrado com as métricas da fonte e fatiado em blocos de até 12 linhas (`src/lib/report/report-table.ts`). Cada bloco é uma linha da tabela que nunca é cortada entre páginas (`rowPageBreak: 'avoid'`). Os blocos seguintes levam “(continuação)” no topo e o anterior termina com “(continua)”. A continuação repete data e hora do registro, mas não os valores, para não contá-lo duas vezes na leitura.
+
+### 8.2 Worker: avaliado e não adotado
+
+O Metro do Expo SDK 57 reconhece `new Worker(new URL('./x', import.meta.url))` (API `unstable_createWorker`). Montei um experimento com tempo limitado, renderizando no worker, e exportei a Web: o serializador passou a gerar um chunk `__common` de **567 KB** (jsPDF/AutoTable compartilhados entre o pipeline e o worker), carregado por `<script defer>` no `index.html`, ou seja, **em toda abertura do app**.
+
+Isso quebra o PDF-01 e o ganho de bundle da P1, e contornar exigiria configurar o serializador do Metro numa API *unstable*. O experimento foi revertido sem commit.
+
+**Decisão:** renderização na thread principal, com o limite de 3.000 registros. A geração sai do Histórico com o diálogo em “Preparando o relatório…”, e o carregamento assíncrono dos chunks já cede a vez à interface antes do desenho.
+
+### 8.3 Volume medido com gráfico (Jest, ambiente node, CPU de servidor)
+
+| Registros | Modelo | Renderização | Páginas | Tamanho | Painéis |
+|---|---|---|---|---|---|
+| 400 | 33 ms | 0,30 s | 14 | 70 KB | 2 |
+| 1.095 | 76 ms | 0,59 s | 37 | 185 KB | 4 |
+| 3.000 (limite) | 136 ms | 1,48 s | 99 | 500 KB | 11 |
+
+Em celular, os tempos devem ser maiores e **não foram medidos**.
+
+### 8.4 Bundle Web da P2 (`npx expo export -p web --clear`, base `origin/staging` `987562c` × P2)
+
+| Arquivo | Base (bytes / gzip -9) | P2 (bytes / gzip -9) | Delta | Carregamento |
+|---|---|---|---|---|
+| `entry-*.js` | 5.593.284 / 1.266.922 | 5.599.340 / 1.268.489 | +6.056 / +1.567 | inicial |
+| `report-pdf-pipeline-*.js` | 85.150 / 27.208 | 91.544 / 29.529 | +6.394 / +2.321 | sob demanda |
+| `jspdf.es-*.js` | 453.919 / 142.310 | 453.919 / 142.319 | 0 / +9 | sob demanda |
+| `jspdf.plugin-*.js` | 32.002 / 10.079 | 32.002 / 10.079 | 0 | sob demanda |
+
+- **Delta total da P2:** +12.450 B (+3.897 B gzip), sendo +1,5 KB gzip no bundle inicial (diálogo, painel de revisão e prévia).
+- Nenhuma dependência nova; `metro.config.js` não foi alterado na P2.
+- `canvg`, `html2canvas` e `dompurify` continuam fora do bundle.
+- O `index.html` carrega só o `entry`.
+
+### 8.5 Verificação no Chromium (local, rede externa abortada)
+
+Com o `dist` da P2 e dados sintéticos, chamando o adaptador Web diretamente (sem login):
+- os chunks do PDF só são requisitados depois da ação;
+- a prévia é uma URL `blob:` legível (5.213 bytes), e nada foi revogado antes de `release()`;
+- o download sai com o nome `aferi-relatorio-2026-11-20_a_2026-11-22.pdf`, e o `pdftotext` do arquivo traz a seção do gráfico (legenda, mmHg, datas);
+- `navigator.pdfViewerEnabled` é `false` no headless, então a prévia não é embutida.
+
+O único host externo tentado continua sendo `www.google.com`, no boot do app (App Check, legado), abortado.
+
+**Não verificado:** a prévia embutida renderizando num navegador com visualizador de PDF. O headless não tem visualizador e não há navegador com interface nesta sessão.
+
+## 9. Matriz de critérios PDF-01..22 (após a P2)
+
+**Legenda.** “Coberto (automatizado)” = há teste automatizado (Jest) **ou** inspeção do PDF gerado (`pdftotext`, `pdftoppm`, `pdfinfo`, `pdffonts`) ou do bundle/Chromium local. **Nenhum critério foi validado em aparelho nem em fluxo logado** (coluna “Aparelho/logado”).
+
+| ID | Estado | Aparelho/logado | Evidência / motivo |
+|---|---|---|---|
+| PDF-01 | **Coberto (automatizado)** | Não | `import()` dinâmico; `entry` sem jsPDF; Chromium: nenhum chunk de PDF antes da ação (§6, §8.5); worker rejeitado por carregar jsPDF na abertura (§8.2). |
+| PDF-02 | **Coberto (automatizado)** | Não | `report-period.test.ts` (dias civis, bordas, horário de verão, bloqueios); diálogo e hook bloqueiam antes da consulta. |
+| PDF-03 | **Coberto (automatizado)** | Não | Cabeçalho, cobertura, três médias, gráfico e tabela do mesmo retrato; ordem médias → gráfico → tabela → notas conferida no `pdftotext`. |
+| PDF-04 | **Coberto (automatizado)** | Não | 130,0/90,0 (N = 3) e 70,0 bpm (N = 2), também com dois registros no mesmo dia; modelo e `pdftotext`. |
+| PDF-05 | **Coberto (automatizado)** | Não | “—” na tabela; “Não informado” com N = 0. |
+| PDF-06 | **Coberto (automatizado)** | Não | Sessão conta uma vez nas médias e no gráfico (ponto diário por registro); detalhes sem reconstrução. |
+| PDF-07 | **Coberto (automatizado)** | Não | Vazio sem PDF; vazio não confirmado com mensagem própria; omissão declarada; nova tentativa. |
+| PDF-08 | **Coberto (automatizado)** | Não | `report-chart.test.ts` (lacuna sem ponto/linha, pontos isolados sem linha, um dia sem linha + explicação, escala única, painéis sem perda de ponto, datas reais) e PNG em cores e cinza da página do gráfico (7 dias, um dia, extenso). |
+| PDF-09 | **Coberto (automatizado)** | Não | 400 registros com as linhas contadas por página; observação de 60 linhas com “(continua)/(continuação)”, as 60 linhas presentes e em ordem; PNG inspecionado. |
+| PDF-10 | **Parcial** | Não | PNG em cores e em cinza legíveis (séries distintas por traço/marcador); A4 por `pdfinfo`. Falta impressão física. |
+| PDF-11 | **Parcial** | Não | Chromium com rede externa abortada: só chunks locais; PDF sem `/URI`, `/JS` ou `/Launch`. Falta inspeção em fluxo logado com Firestore real. |
+| PDF-12 | **Coberto (automatizado)** | Não | HTML, URL, aspas e caracteres especiais literais; emoji vira “?” declarado. |
+| PDF-13 | **Coberto (automatizado)** | Não | Sentinelas em exceção do renderizador, SDK e documento inválido não chegam ao `logError`; prazo estourado loga só um `Error` genérico. Falta o coletor real (Sentry). |
+| PDF-14 | **Coberto (automatizado)** | Não | Sem preparações concorrentes; cancelar descarta o resultado e libera a prévia; nenhuma escrita. |
+| PDF-15 | **Parcial** | Não | Web: só “Salvar PDF” entrega (nome e MIME conferidos no Chromium); prévia não embutida sem visualizador, evitando download automático. **Android pendente.** |
+| PDF-16 | **Parcial** | Não | Falha no download vira mensagem e a revisão é mantida; URLs revogadas só após 60 s. Compartilhamento Android pendente. |
+| PDF-17 | **Parcial** | Não | Web: nada persistido pelo app; URL da prévia liberada ao salvar, cancelar, alterar o período, trocar de conta e desmontar (testes). Temporários Android pendentes. |
+| PDF-18 | **Coberto (automatizado)** | Não | Troca de uid durante a renderização (descarte) e durante a revisão (prévia liberada, resumo oculto, salvar recusado); mutação confirma os testes. |
+| PDF-19 | **Coberto (automatizado)** | Não | Cache, omissão e pendência abrem a revisão com aviso **antes** de salvar, “Tentar novamente” (nova leitura) e “Salvar recorte parcial”; o PDF também declara. Não validado com cache real do Firestore. |
+| PDF-20 | **Coberto (automatizado, com dublês)** | Não | Uma leitura por preparação; o PDF salvo é o mesmo Blob pré-visualizado; “Tentar novamente” faz nova leitura. Sem teste de alteração concorrente no Firestore real. |
+| PDF-21 | **Parcial** | Não | Diálogo e revisão com papéis, rótulos e aviso `role="alert"`; alvos de 48 dp; link da prévia com 48 px. PDF não marcado (não é PDF/UA). Leitor de tela e teclado manuais pendentes. |
+| PDF-22 | **Parcial** | Não | Limite explícito de 3.000 sem truncar e prazo de 30 s para as etapas assíncronas (testes); volume medido no node. Renderização na thread principal (worker avaliado e rejeitado, §8.2); navegador móvel não medido. |
+
+## 10. Limites conhecidos
+
+- **Só Web.** O Android não tem botão; o adaptador nativo é inerte. `expo-print` não foi instalado.
+- **Nada validado em fluxo logado, aparelho, navegador móvel, impressão física ou leitor de tela.**
+- **Prévia embutida não observada** num navegador com visualizador de PDF; só o caminho “sem visualizador” foi exercitado no Chromium.
+- **Fonte padrão não embutida.** Caracteres fora do CP1252 viram “?” (declarado). O PDF não é marcado.
+- **Thread principal.** O limite de 3.000 registros controla o tempo de renderização; o prazo de 30 s não interrompe a renderização síncrona.
+- **Cobertura “confirmada”** = leitura do servidor, nenhum documento omitido e nenhuma escrita pendente na revisão. Não é auditoria além do que o Firestore informa.
+- **Painéis:** no máximo 12, cada um com pelo menos 92 dias. Em períodos muito longos, os marcadores ficam densos, mas nenhum ponto é omitido.
+- **Continuação** usa a métrica de 10 pt da coluna de detalhes; uma linha nunca é cortada entre páginas, e a separação acontece entre blocos.
 - **Diálogo duplicado** em relação ao `ExportCsvDialog`; extrair um seletor compartilhado exigiria refatorar o CSV.
-- **Ícone novo:** `FileTextIcon` (Lucide `file-text`) foi adicionado ao inventário `icons.ts`.
 
-## 10. Registro para o relatório final
+## 11. Registro para o relatório final
 
 **Fatos**
-- P1 do relatório PDF na Web, entregue em 8 commits na branch `feat/pdf-relatorio`, sem push.
-- Testes: 912 em 79 suítes, todos verdes. São 80 testes novos: 77 em 8 suítes novas e 3 no teste do Histórico. Lint e typecheck sem erros.
-- Dependências novas: `jspdf` 4.2.1 e `jspdf-autotable` 5.0.9, ambas MIT. Custo de geração: R$ 0,00. Delta do bundle inicial Web: +3,1 KB gzip; chunks sob demanda: +179,7 KB gzip.
-- O PDF foi gerado e conferido no Jest (node) e no Chromium com `pdftotext`, `pdftoppm`, `pdfinfo` e `pdffonts`, sempre com dados sintéticos.
+- **P1:** 8 commits em `feat/pdf-relatorio`, mesclada em `staging` pelo PR #87, com CI verde (908 testes aprovados e 4 pulados no runner, sem poppler).
+- **P2:** 7 commits em `feat/pdf-relatorio-p2`, sem push.
+  - Testes: 952 em 82 suítes, todos verdes. São 40 novos em relação a `staging`, com 3 suítes novas (`report-chart`, `report-table`, `PdfPreviewFrame.web`).
+  - Lint e typecheck sem erros.
+- **Bundle da P2:** +3,9 KB gzip no total, sendo +1,5 KB gzip no inicial. Nenhuma dependência nova; `metro.config.js` intacto.
+- **Verificação do PDF:** com dados sintéticos, por `pdftotext`, `pdftoppm` (página do gráfico em cores e em cinza), `pdfinfo` e `pdffonts`, e no Chromium headless com rede externa abortada.
+- **Achado do Chromium:** um `<iframe>` com PDF, sem visualizador embutido, baixa o arquivo sozinho. Foi corrigido condicionando a prévia a `navigator.pdfViewerEnabled`.
 
 **Decisões**
-- Período civil com fuso fixado, implementado com luxon (já instalado). O CSV não foi alterado.
-- Média aritmética por registro; pulso ausente fora do denominador; a sessão conta uma vez.
-- Nova leitura `getReadingsForReport` com id, pendência, `fromCache` e omissões; `getAllReadings` intacta.
-- Helvetica padrão (WinAnsi) com troca declarada de caracteres não suportados.
-- Opcionais do jsPDF excluídos do bundle via resolver do Metro.
-- Adaptadores por extensão de arquivo; Android inerte nesta etapa.
+- Pontos do gráfico: média diária por registro, sem arredondar; linhas só entre dias consecutivos; escala única; painéis de pelo menos 92 dias, no máximo 12.
+- Distinção das séries por cor, traço e marcador.
+- Fluxo preparar → revisar → salvar, sem entrega antes da ação explícita; PDF salvo idêntico ao pré-visualizado.
+- Cobertura não confirmada avisada antes de exportar, com nova tentativa e rótulo de recorte parcial.
+- `MAX_REPORT_READINGS = 3000` sem truncamento; prazo de 30 s para as etapas assíncronas.
+- Worker rejeitado: o Metro passa a carregar jsPDF em toda abertura (chunk `__common` de 567 KB).
+- Observações longas fatiadas em blocos de 12 linhas com marcas de continuidade.
 
 **Limitações**
-- Sem gráfico, pré-visualização ou Android.
+- Android/`expo-print` pendente.
+- Sem validação em fluxo logado, aparelho, navegador móvel, impressão física ou leitor de tela.
+- Prévia embutida não observada em navegador com visualizador.
 - PDF não marcado.
-- Renderização na thread principal, sem limite e sem timeout.
-- Pendentes: impressão física, leitor de tela, navegador móvel e coletor de erros real.
+- Renderização na thread principal.
 
 **Comandos de reprodução**
 ```bash
-git switch feat/pdf-relatorio
+git switch feat/pdf-relatorio-p2
 npm ci
 npm run lint && npm run typecheck && npm test
 AFERI_PDF_EVIDENCE_DIR=/tmp/aferi-pdf npx jest src/features/report/render-report-pdf
-pdftotext -layout /tmp/aferi-pdf/exemplo-spec.pdf -
-pdffonts /tmp/aferi-pdf/exemplo-spec.pdf
-pdftoppm -gray -png -r 70 /tmp/aferi-pdf/cobertura-parcial.pdf /tmp/aferi-pdf/cinza
+pdftotext -layout /tmp/aferi-pdf/grafico-7-dias.pdf -
+pdftoppm -png -r 90 -f 1 -l 1 /tmp/aferi-pdf/grafico-7-dias.pdf /tmp/aferi-pdf/grafico
+pdftoppm -gray -png -r 90 -f 1 -l 1 /tmp/aferi-pdf/grafico-7-dias.pdf /tmp/aferi-pdf/grafico-cinza
+pdftotext -layout /tmp/aferi-pdf/observacao-longa.pdf - | grep -E "continua|continuação"
 ```
 Para medir o bundle, defina valores fictícios para as variáveis `EXPO_PUBLIC_*` listadas em `.env.example` apenas no ambiente do comando e rode:
 ```bash

@@ -12,4 +12,7 @@ export const reportPdfPlatform: ReportPdfPlatform = {
   deliver: () => {
     throw new Error(UNAVAILABLE);
   },
+  openPreview: () => {
+    throw new Error(UNAVAILABLE);
+  },
 };
