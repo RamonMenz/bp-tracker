@@ -20,6 +20,7 @@
  * identifica o usuário: não há `Sentry.setUser` em ponto nenhum, mesma paridade do lado nativo.
  */
 import * as Sentry from '@sentry/browser';
+import type { ErrorEvent } from '@sentry/browser';
 import Constants from 'expo-constants';
 
 import { logError, type CrashReporter } from '@/lib/logger';
@@ -35,6 +36,45 @@ const extra = Constants.expoConfig?.extra as { sentry?: { dsn?: string } } | und
  * melhor.
  */
 const SESSION_INTEGRATION_NAME = 'BrowserSession';
+
+/**
+ * Integração de breadcrumbs automáticos do navegador. Por padrão (verificado em @sentry/browser
+ * 10.70.0) ela liga `dom`, `console`, `fetch`, `xhr`, `history` e `sentry`, e cada uma carrega
+ * conteúdo da interface: `dom` serializa `aria-label`/`name`/`title`/`alt`/`id`/`class` do alvo do
+ * clique ou da tecla — e as linhas do Histórico têm rótulos como "128 por 82"; `console` junta os
+ * argumentos de `console.*`; `fetch`/`xhr` guardam a URL; `history` guarda as rotas de origem e
+ * destino; `sentry` copia a mensagem da exceção. Todos acompanham QUALQUER erro enviado.
+ *
+ * DESLIGAR em vez de filtrar: o app não consome breadcrumb nenhum para diagnosticar (todo erro
+ * chega com `scope` + stack via `logError`), e sanitizar seis fontes de texto livre por lista de
+ * padrões é frágil — um rótulo novo na interface voltaria a vazar sem ninguém perceber. Quem não
+ * é coletado não precisa ser limpo.
+ */
+const BREADCRUMBS_INTEGRATION_NAME = 'Breadcrumbs';
+
+/** Texto no lugar da mensagem da exceção: o tipo e o stack bastam para agrupar e diagnosticar. */
+const REDACTED_MESSAGE = '[mensagem removida por privacidade]';
+
+/**
+ * Última barreira antes do envio: reduz o evento ao essencial (tags de scope, tipo e stack do erro,
+ * `extra` já sanitizado por `logError`). Mensagem de erro não é sanitizada em lugar nenhum a
+ * montante — pode vir de um SDK de terceiros com valor de campo, e-mail ou observação dentro
+ * (ver ressalva em `logError`) —, e `request` (URL, referrer) pode carregar query com dado.
+ * Cobre também erros capturados fora de `logError`, como o `onerror` global do navegador.
+ */
+function stripSensitiveFields(event: ErrorEvent): ErrorEvent {
+  delete event.breadcrumbs;
+  delete event.request;
+  delete event.user;
+  delete event.message;
+  delete event.logentry;
+
+  for (const exception of event.exception?.values ?? []) {
+    exception.value = REDACTED_MESSAGE;
+  }
+
+  return event;
+}
 
 /**
  * Memoiza o SDK já inicializado — mesmo desenho de `crashReporter.native.ts`.
@@ -79,7 +119,14 @@ function getSentryClient(): typeof Sentry | null {
     // do dispositivo do usuário.
     tracesSampleRate: 0,
     integrations: (defaults) =>
-      defaults.filter((integration) => integration.name !== SESSION_INTEGRATION_NAME),
+      defaults.filter(
+        (integration) =>
+          integration.name !== SESSION_INTEGRATION_NAME &&
+          integration.name !== BREADCRUMBS_INTEGRATION_NAME,
+      ),
+    // Segunda camada: se algum caminho ainda chamar `addBreadcrumb`, o descarte é incondicional.
+    beforeBreadcrumb: () => null,
+    beforeSend: stripSensitiveFields,
   });
 
   cached = Sentry;

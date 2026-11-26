@@ -98,6 +98,24 @@ describe('crashReporter (web) — entrega ao Sentry', () => {
       { name: 'Dedupe' },
     ]);
   });
+
+  // Privacidade (constitution §2): breadcrumbs carregam texto de interface, console e URLs. O
+  // comportamento ponta a ponta está em `crashReporter.web.privacy.test.ts`; aqui, só o contrato.
+  it('desliga os breadcrumbs automáticos e descarta qualquer outro', () => {
+    loadAdapter().crashReporter.recordError('readings.add', new Error('x'), {});
+
+    const [options] = mockInit.mock.calls[0] as [
+      {
+        integrations: (defaults: { name: string }[]) => { name: string }[];
+        beforeBreadcrumb: () => null;
+      },
+    ];
+
+    expect(options.integrations([{ name: 'Breadcrumbs' }, { name: 'Dedupe' }])).toEqual([
+      { name: 'Dedupe' },
+    ]);
+    expect(options.beforeBreadcrumb()).toBeNull();
+  });
 });
 
 describe('crashReporter (web) — valor não-Error', () => {
