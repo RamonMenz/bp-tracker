@@ -114,7 +114,9 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
+  // reset (não clear): implementações trocadas num teste (ex.: `deliver` que lança) não podem
+  // vazar para os seguintes. Tudo o que os testes precisam é reinstalado logo abaixo.
+  jest.resetAllMocks();
   jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] }).setSystemTime(new Date());
   signedInAs('user-a');
   mockPlatform.isAvailable = true;
@@ -611,5 +613,188 @@ describe('useReportPdf — troca de conta em cada fase (PDF-18)', () => {
     });
     expect(result.current.error).toBe('Sessão expirada. Faça login novamente.');
     expect(mockGetReadingsForReport).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * PDF-14 e PDF-22 — toques repetidos, cancelar e gerar de novo, salvar duas vezes, ciclos sem
+ * vazamento de URL, e as fronteiras do limite de volume e do prazo.
+ */
+describe('useReportPdf — repetição, ciclos, limite e prazo (PDF-14/22)', () => {
+  const created: string[] = [];
+  const revoked: string[] = [];
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+
+  beforeEach(() => {
+    created.length = 0;
+    revoked.length = 0;
+    URL.createObjectURL = jest.fn(() => {
+      const url = `blob:previa-${created.length + 1}`;
+      created.push(url);
+      return url;
+    });
+    URL.revokeObjectURL = jest.fn((url: string) => {
+      revoked.push(url);
+    });
+    mockPlatform.openPreview.mockImplementation(openPdfPreview);
+  });
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+  });
+
+  function readings(count: number): ReportSourceReading[] {
+    const start = Date.now() - (count + 10) * 60 * 60 * 1000;
+    return Array.from({ length: count }, (_, index) => reading(new Date(start + index * 60 * 60 * 1000)));
+  }
+
+  it('cinco toques seguidos em "Preparar" fazem UMA leitura e UMA prévia', async () => {
+    const { result } = await renderHook(() => useReportPdf());
+    let outcomes: boolean[] = [];
+
+    await act(async () => {
+      outcomes = await Promise.all(Array.from({ length: 5 }, () => result.current.prepareReport({ kind: 'all' })));
+    });
+
+    expect(outcomes.filter(Boolean)).toHaveLength(1);
+    expect(mockGetReadingsForReport).toHaveBeenCalledTimes(1);
+    expect(created).toHaveLength(1);
+  });
+
+  it('cancelar e preparar de novo: só o resultado da segunda preparação vira prévia', async () => {
+    const firstRead = deferred<ReportSourceSnapshot>();
+    const secondRead = deferred<ReportSourceSnapshot>();
+    mockGetReadingsForReport.mockReturnValueOnce(firstRead.promise).mockReturnValueOnce(secondRead.promise);
+    const { result } = await renderHook(() => useReportPdf());
+
+    let first: Promise<boolean> = Promise.resolve(true);
+    let second: Promise<boolean> = Promise.resolve(false);
+    await act(async () => {
+      first = result.current.prepareReport({ kind: 'last7' });
+    });
+    await act(async () => {
+      result.current.cancel();
+    });
+    await act(async () => {
+      second = result.current.prepareReport({ kind: 'last30' });
+    });
+
+    // A primeira resposta chega DEPOIS do novo pedido: precisa ser ignorada.
+    await act(async () => {
+      firstRead.resolve(snapshot([recent()], { fromCache: true }));
+      expect(await first).toBe(false);
+    });
+    expect(result.current.stage).toBe('preparing');
+
+    await act(async () => {
+      secondRead.resolve(snapshot([recent()]));
+      expect(await second).toBe(true);
+    });
+
+    expect(mockRender).toHaveBeenCalledTimes(1);
+    expect(created).toEqual(['blob:previa-1']);
+    expect(result.current.review?.requestedPeriod).toMatch(/^Últimos 30 dias/);
+    expect(result.current.review?.isCoverageConfirmed).toBe(true);
+  });
+
+  it('salvar duas vezes entrega uma vez só', async () => {
+    const { result } = await prepared();
+    const outcomes: boolean[] = [];
+
+    await act(async () => {
+      outcomes.push(result.current.saveReport());
+      outcomes.push(result.current.saveReport());
+    });
+
+    expect(outcomes).toEqual([true, false]);
+    expect(mockPlatform.deliver).toHaveBeenCalledTimes(1);
+  });
+
+  it('ciclos de preparar/alterar/cancelar/salvar revogam toda URL criada e não guardam o PDF', async () => {
+    const { result } = await renderHook(() => useReportPdf());
+    const prepare = async () => {
+      await act(async () => {
+        await result.current.prepareReport({ kind: 'all' });
+      });
+    };
+
+    await prepare();
+    await act(async () => result.current.changePeriod());
+    await prepare();
+    await act(async () => result.current.cancel());
+    await prepare();
+    await act(async () => {
+      result.current.retry();
+    });
+    await act(async () => {
+      expect(result.current.saveReport()).toBe(true);
+    });
+    // Termina em "cancelar": a última prévia não tem nenhuma preparação seguinte que a libere.
+    await prepare();
+    await act(async () => result.current.cancel());
+
+    // Depois de cancelar, não sobra PDF guardado para um "salvar" tardio.
+    expect(result.current.saveReport()).toBe(false);
+
+    await act(async () => {
+      jest.advanceTimersByTime(OBJECT_URL_REVOKE_DELAY_MS);
+    });
+
+    expect(created).toHaveLength(5);
+    expect([...revoked].sort()).toEqual([...created].sort());
+    expect(mockPlatform.deliver).toHaveBeenCalledTimes(1);
+  });
+
+  it('exatamente 3.000 registros: gera; 3.001: recusa sem renderizar; período menor volta a funcionar', async () => {
+    mockGetReadingsForReport.mockResolvedValueOnce(snapshot(readings(MAX_REPORT_READINGS)));
+    const { result } = await prepared({ kind: 'all' });
+    expect(result.current.stage).toBe('review');
+    expect(mockRender).toHaveBeenCalledTimes(1);
+    expect(result.current.review?.coverageLines[0]).toBe('Registros incluídos: 3000');
+
+    await act(async () => result.current.cancel());
+    mockGetReadingsForReport.mockResolvedValueOnce(snapshot(readings(MAX_REPORT_READINGS + 1)));
+    await act(async () => {
+      await result.current.prepareReport({ kind: 'all' });
+    });
+    expect(result.current.stage).toBe('idle');
+    expect(result.current.error).toMatch(/3\.001 medições.*até 3\.000/);
+    expect(mockRender).toHaveBeenCalledTimes(1);
+
+    mockGetReadingsForReport.mockResolvedValueOnce(snapshot(readings(10)));
+    await act(async () => {
+      await result.current.prepareReport({ kind: 'last30' });
+    });
+    expect(result.current.stage).toBe('review');
+    expect(result.current.error).toBeNull();
+  });
+
+  it('prazo no carregamento do módulo: espera até 30 s, informa e permite nova tentativa', async () => {
+    mockPlatform.loadPipeline.mockReturnValueOnce(new Promise<ReportPdfPipeline>(() => undefined));
+    const { result } = await renderHook(() => useReportPdf());
+
+    let preparation: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      preparation = result.current.prepareReport({ kind: 'all' });
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(REPORT_PREPARATION_TIMEOUT_MS - 1);
+    });
+    expect(result.current.stage).toBe('preparing');
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+      expect(await preparation).toBe(false);
+    });
+    expect(result.current.error).toMatch(/demorou demais/);
+    expect(logError).toHaveBeenCalledWith('report.timeout', new Error('report-preparation-timeout'), { uid: 'user-a' });
+
+    await act(async () => {
+      expect(await result.current.prepareReport({ kind: 'all' })).toBe(true);
+    });
+    expect(result.current.stage).toBe('review');
   });
 });
