@@ -311,3 +311,38 @@ URLs, valores ou logs completos. Não iniciar câmera, capturar, reconhecer ou
 confirmar. Identificação do bundle, preparo offline e experimento controlado
 serão fases posteriores. Etapa3/aceites físicos continuam parciais; nenhuma
 leitura foi validada, TASK-04/06/07/09/18 abertas, habilitação clínica bloqueada.
+
+## Abertura recebida e identificação do bundle/preparo offline
+
+Autor devolveu roi591-metro-1: fonte45, instalado591, fonte esperada/Metro pronto,
+reverse8097=1 e outras linhas=0; preparo sem install/open/capture. Confirmou todas
+as categorias visuais do roteiro: header/conteúdo, active/idle, comparação
+disponível, ausência percebida de preview/revisão/indicador e Fast Refresh off.
+Isso não é teste de câmera, OCR, consumo, tráfego ou privacidade universal.
+
+Próxima ferramenta fixada em `1eac9017182fbf9e1993eb5028dfaec50a501472`, em pasta
+nova `aferi-task09-roi591-offline-tools`: Prepare-AferiRoi591Offline.ps1 -BuildPath
+da worktree45. Metro deve continuar aberto nessa chamada. Reconfere fonte/hash,
+header/status do Metro e instalado591, lê somente SHA do arquivo estático de
+bundle Dev Client, exige apenas reverse8097 e remove somente esse mapeamento.
+Outras linhas/conflito causam parada ANTES da remoção. Depois exige lista vazia,
+mesmo bundle e instalado591. Nenhum inventário/idle30s repetido, leitura de
+conteúdo, relatório persistente, instalação, abertura ou captura. O hash identifica
+o arquivo consultado, não todo código executado em RAM ou ausência de telemetria.
+
+Após JSON favorável roi591-offline-1, parar Metro por Ctrl+C. No telefone, modo
+avião, Wi-Fi/Bluetooth/dados móveis desligados, VPN e todas as ancoragens
+(inclusive USB) desativadas. Voltar à demo sem reload/reabrir processo/iniciar
+câmera. Mudança de configurações pode gerar background/cancelamento: active com
+fase cancelled é compatível com o cancelamento previsto, não exige nova captura.
+Sem preview/revisão antiga/indicador de câmera; informar qualquer erro em categoria.
+Não alegar redes desligadas apenas por reverse=0: o JSON mantém
+RedesDoTelefoneVerificadas=false e OfflineComprovado=false. As verificações
+manuais devem ser declaradas separadamente, sem prints ou configurações pessoais.
+
+Retornar JSON (hash real novo, sem supor igualdade/diferença de2191), Metro parado,
+categorias manuais de rede/estado/erro. Falha ou divergência: parar para análise,
+preservar tudo e não restaurar mapeamentos/redes automaticamente. Nenhum A/B ou
+LCD nesta ação. Captura permanece etapa posterior com protocolo próprio.
+Lint/TypeScript, 832 testes/71 suítes e check offline com ADB/HTTP simulados
+aprovados; novo CI registrado no PR. Mocks não são desconexão física ou teste SDK.
