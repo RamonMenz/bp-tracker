@@ -34,6 +34,8 @@ Cada tarefa traz identificador, estimativa, resultado esperado e referência. Co
 
 **Verificação local da unificação:** lint/TypeScript da raiz e da PoC aprovados; aplicativo com **64 suítes/691 testes**, PoC com **7 testes** aprovados. Código funcional, regras e clientes da staging `aff2b60` preservados; originais/transcrição do TAP e código da PoC `ccab9a3` preservados. Conflitos de registros e exclusões de lint resolvidos pela união das duas frentes. Essas verificações não homologam captura, voz ou persistência clínica.
 
+**Reavaliação de prioridades — 26/11/2026:** [análise, plano de entregas, decisões e marcos × estado](docs/reavaliacao-2026-11-26.md); [registro corrido de decisões, evidências e pendências para o relatório final](docs/relatorio/decisoes-e-evidencias.md); [prompts de execução](docs/prompts/). Decisão do autor: **pausa operacional da investigação de fotografia** (código, documentos, APKs e checks preservados; TASK-07/09/18 seguem abertas e a fotografia não é considerada concluída nem substituída pelo manual; o estado final depende da orientadora) e prioridade para **voz** (TASK-12/13 e integração) e **PDF** (TASK-23–26). Homologação prevista no ambiente de produção, com conta de teste e salvaguardas registradas em D-003. Nenhuma caixa foi alterada: este registro não conclui tarefa nem funcionalidade. O marco de 24/11 (PDF operante) não foi atendido: o PDF não tem código. Horas, despesas e saldos reais continuam não informados.
+
 ## Fase 1: Fundação e PoC — até 06/10/2026 (18 h)
 
 Marco oficial relacionado: TAP entregue em 22/09; PoCs e decisão técnica previstas para 06/10. Revisar o que já foi realizado antes de iniciar trabalho novo.
