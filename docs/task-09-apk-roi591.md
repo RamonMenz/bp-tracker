@@ -346,3 +346,47 @@ preservar tudo e não restaurar mapeamentos/redes automaticamente. Nenhum A/B ou
 LCD nesta ação. Captura permanece etapa posterior com protocolo próprio.
 Lint/TypeScript, 832 testes/71 suítes e check offline com ADB/HTTP simulados
 aprovados; novo CI registrado no PR. Mocks não são desconexão física ou teste SDK.
+
+## Fechamento técnico da Etapa 3 após recuperação
+
+Houve acionamento extra de a no Metro: autor relatou fluxo de Expo Go e abertura
+externa. Não se inferiu instalação desse app ou substituição do APK591. Ao voltar
+por Recentes, aparecia home de desenvolvimento. Metro/reverse foram restabelecidos
+com os guards existentes e a abertura passou a usar am start com scheme
+afericapturetest/host expo-development-client e pacote Aferi explícito (-p).
+Rota conferida no app.json/DevLauncherURLHelper; causa exata do atalho não provada.
+Não usar a para repetir essa abertura. Sem reinstalação, limpeza ou captura.
+
+Autor confirmou roi591-open-1, fonte45/APK591/pacote esperado; captura5, conteúdo
+montado, active/idle/nao-carregado, comparação disponível e nenhuma percepção de
+preview/revisão/indicador ou erro. Novo preparo offline dessa sessão retornou:
+
+- Bundle `98d31d1e0523c3e8c00fbda33f052ea9e6637b8062c04478a3cb01111d3375c2`,
+  estável na consulta, igual ao arquivo antes da recuperação. Não prova todo JS
+  em RAM. Fonte45 e instalado591 reconfirmados; reverse zero.
+- Autor declarou Metro parado, modo avião ligado, Wi-Fi/Bluetooth/dados móveis
+  desligados, VPN/ancoragens desativadas; active/cancelled/nao-carregado, sem
+  preview/revisão/indicador ou erro percebidos. Cancelled corresponde ao caminho
+  previsto de background; não foi criada nova captura para mudar esse estado.
+- RedesDoTelefoneVerificadas/OfflineComprovado continuam false no script. A
+  declaração manual não é medição independente de tráfego por UID/destino.
+
+**Etapa 3 concluída no escopo de revisão, testes e artefato definido no plano.**
+
+| Critério da etapa | Evidência e limite |
+|---|---|
+| Geometria, strides, dimensões e alocações próprias | Revisão e checks Java sintéticos ampliados; sem prova geométrica ou heap total no Samsung |
+| Ownership, lease, cancelamento, cleanup, resultados tardios e isolamento | Código revisto e modelos/mocks; sem execução física dessas condições no SDK591 |
+| Qualidade e compilação nativa | Lint/TypeScript/Jest832/71, PowerShell e CI; build Android real pelo autor, distinto dos checks JVM |
+| Identidade e configuração do artefato | Fonte45 limpa, hash591, manifesto/backup/assinatura; bytecode dirigido e constantes recebidos do Windows |
+| Atualização e referências anteriores | Guard específico259→591, versionCode1→1, instalado591 reconfirmado; sem uninstall/clear/rebuild antigo |
+| Entrega reproduzível | Ferramentas/commits e fases separados, recuperação documentada, bundle identificado e redes declaradas separadamente |
+
+Esse fechamento não converte mocks em teste físico, ausência de código de I/O
+em prova universal de privacidade, nem inspeção de um método em ausência global
+de interceptores. Etapa1 física continua parcial. Não houve leitura do candidato,
+ensaio A/B, comprovação de rótulos/caixas no Samsung ou correção do LCD.
+Etapas4–6 e TASK-04/06/07/09/18 continuam abertas; habilitação clínica bloqueada.
+Próxima fase é o experimento controlado da etapa4 com roteiro próprio, não uma
+captura improvisada ou repetição de contexto. Nenhuma ação adicional no aparelho
+é solicitada neste fechamento.
