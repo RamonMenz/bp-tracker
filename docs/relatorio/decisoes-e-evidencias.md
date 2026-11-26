@@ -129,6 +129,8 @@ Autor da decisão = autor do projeto, salvo indicação.
 | E-021 | Rede e logs na geração (Chromium local, rede externa bloqueada): nenhuma requisição externa durante a geração; o único host externo na abertura é o reCAPTCHA do App Check, que não vem do relatório; logger em modo produção não recebeu sentinelas clínicas | `tools/pdf-relatorio/browser-check.cjs`, `report-privacy.test.ts`, §9.4 |
 | E-022 | Achado de plataforma: o substituto de `TextDecoder` do Expo só aceita UTF-8, e uma dependência do jsPDF precisa de latin1; reforça manter `expo-print` no Android | `docs/pdf-relatorio.md` §3 |
 | E-023 | Risco residual no legado (fora do PDF): o Sentry da Web grava o `aria-label` do elemento clicado (`dom: true`) e as linhas do Histórico contêm valores de pressão; os rádios do CSV e do tema também não têm `aria-checked` | `docs/pdf-relatorio.md` §9.4, §9.7 |
+| E-024 | Correção de privacidade do Sentry Web mesclada ([#91](https://github.com/RamonMenz/bp-tracker/pull/91), 26/11/2026): integração `Breadcrumbs` desligada, `beforeBreadcrumb` descarta, `beforeSend` reduz o evento ao essencial. Causa confirmada no SDK instalado (`@sentry/browser` 10.70.0): `dom`, `console`, `fetch`, `xhr` e `history` ligados por padrão. 10 testes de privacidade com SDK real falhavam (9 de 10) antes e passam depois. **Não verificado:** chegada ao Sentry real. O diagnóstico perde a mensagem da exceção (ficam tipo, stack e `scope`) | [docs/sentry-privacidade.md](../sentry-privacidade.md) |
+| E-025 | Estado do PDF após #87–#91 (valores reportados pelo agente; matriz em `docs/pdf-relatorio.md` §10): **19 de 22 critérios com evidência automatizada, 3 parciais (PDF-10, 16, 21), 0 validados em aparelho ou fluxo logado**; TASK-23 e 25 parciais (só Web), TASK-24 não iniciada, TASK-26 parcial | [docs/pdf-relatorio.md](../pdf-relatorio.md) §10 |
 
 ---
 
@@ -148,6 +150,8 @@ Autor da decisão = autor do projeto, salvo indicação.
 | Q-010 | **(autor)** Existe Dev Client do produto instalável no Samsung (EAS ou build local)? Há outras contas com dados no Firebase de produção? | — |
 | Q-011 | **(autor)** Validar o PDF Web com dados reais em fluxo logado (local, só leitura) e a prévia num Chrome com visualizador de PDF; informar o número de registros (limite de 3.000); impressão A4 e em cinza | PDF-03, 10, 15 |
 | Q-012 | **(decisão)** Restringir o registro de cliques do Sentry na Web (valores clínicos podem chegar à telemetria; constituição §2) — correção no legado, ainda não iniciada | Constituição §2 |
+| Q-013 | **(decisão)** Coletor nativo: `crashReporter.native.ts` repassa `error.message` sem filtro ao Crashlytics (mesmo vetor fechado no Web); decidir se redige a mensagem também no nativo. Não alterado | Constituição §2; [sentry-privacidade.md](../sentry-privacidade.md) |
+| Q-014 | **(autor)** Quantos registros tem o histórico (limite do PDF: 3.000)? Teste do PDF Web com dados reais em fluxo logado, impressão A4/cinza e leitor de tela real continuam pendentes (ver Q-011) | PDF-03, 10, 21, 22 |
 
 ---
 
@@ -171,3 +175,5 @@ Formato: `AAAA-MM-DD — responsável — o que foi feito — evidência (arquiv
   entregas registrados — [reavaliacao-2026-11-26.md](../reavaliacao-2026-11-26.md), prompts em
   [../prompts](../prompts/) — análise por leitura; testes do app não reexecutados; nada publicado.
 - 2026-11-26 — Claude Code (outro chat) — PDF Web: P1 ([#87](https://github.com/RamonMenz/bp-tracker/pull/87)), P2 ([#88](https://github.com/RamonMenz/bp-tracker/pull/88)) e P4 ([#89](https://github.com/RamonMenz/bp-tracker/pull/89)) mesclados — [docs/pdf-relatorio.md](../pdf-relatorio.md), E-016 a E-023, D-007 a D-009 — Web coberta por testes automatizados; **nenhum critério validado em aparelho nem em fluxo logado**; Android (P3) não iniciado.
+- 2026-11-26 — Claude Code (outro chat) — correção de privacidade do Sentry Web mesclada ([#91](https://github.com/RamonMenz/bp-tracker/pull/91)) — E-024, [sentry-privacidade.md](../sentry-privacidade.md) — **Q-012 atendida no Web** (mantida no histórico acima como pendência aberta na data); nativo e Sentry real seguem pendentes (Q-013).
+- 2026-11-26 — Claude Code (esta sessão) — consolidação do estado do PDF (E-025) e nota de atualização em `docs/pdf-relatorio.md` §12 — verificação por leitura de PRs e documentos; testes e bundle não reexecutados.
