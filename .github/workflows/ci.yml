@@ -81,6 +81,11 @@ jobs:
       - name: Regras de backup da demo (mods reais Expo, sem dispositivo)
         run: node tools/task07/AferiBackupRules.check.cjs
 
+      - name: Inspector e regras de backup da demo de voz (mods reais Expo)
+        run: |
+          node tools/task07/AferiNetworkInspector.check.cjs --voice
+          node tools/task07/AferiBackupRules.check.cjs --voice
+
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
 
