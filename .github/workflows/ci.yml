@@ -102,6 +102,9 @@ jobs:
       - name: Atualização ROI591 restrita (PowerShell, sem dispositivo)
         run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Update.check.ps1
 
+      - name: Metro ROI591 (PowerShell, HTTP/ADB simulados)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Metro.check.ps1
+
       - name: Comparação de assinaturas (PowerShell, apksigner simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
 
