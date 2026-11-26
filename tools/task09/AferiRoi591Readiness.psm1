@@ -14,6 +14,10 @@ function ConvertFrom-AferiRoiBuilderCode([object[]] $Lines) {
     foreach ($line in $Lines) {
         if ($line -isnot [string] -or $line.Length -gt 16384 -or $line -match '[\x00-\x08\x0b-\x1f\x7f]') { return 'formato-nao-reconhecido' }
     }
+    $classes = @($Lines | Where-Object { $_ -match '^\s*\.class\b' })
+    if ($classes.Count -ne 1 -or $classes[0] -cnotmatch '^\s*\.class\s+public\s+final\s+Lokhttp3/OkHttpClient\$Builder;\s*$') {
+        return 'formato-nao-reconhecido'
+    }
     $methods = @(); $body = $null
     foreach ($line in $Lines) {
         if ($line -cmatch '^\s*\.method\s+public(?:\s+final)?\s+build\(\)Lokhttp3/OkHttpClient;\s*$') {
@@ -59,10 +63,19 @@ function Invoke-AferiRoiAnalyzer([string] $Program, [string] $ApkPath, [switch] 
     try {
         $ErrorActionPreference = 'Continue'
         if ($NativeConstants) { $raw = @(& $Program dex code --class 'expo.modules.aferiphoto.FrameTransform' $ApkPath 2>&1) }
-        else { $raw = @(& $Program dex code --class 'okhttp3.OkHttpClient$Builder' --method build $ApkPath 2>&1) }
+        # Ask for the complete class, as for FrameTransform. The parser below
+        # selects the exact method descriptor; CLI method-name matching is not evidence.
+        else { $raw = @(& $Program dex code --class 'okhttp3.OkHttpClient$Builder' $ApkPath 2>&1) }
         $code = $LASTEXITCODE
     } catch { return 'analisador-falhou' }
-    if ($code -ne 0) { return 'analisador-falhou' }
+    if ($code -ne 0) {
+        # Only fixed categories leave this boundary, never the exception/message.
+        $privateError = ($raw | ForEach-Object { $_.ToString() }) -join "`n"
+        if ($privateError -match '(?i)UnsupportedClassVersionError|compiled by a more recent version') { return 'analisador-jvm-incompativel' }
+        if ($privateError -match '(?i)(class[^\r\n]*(not found|does not exist)|could not find class|cannot find class)') { return 'analisador-classe-nao-encontrada' }
+        if ($privateError -match '(?i)(unknown option|unrecognized option|missing required|usage:.*apkanalyzer)') { return 'analisador-argumentos-incompativeis' }
+        return 'analisador-falhou'
+    }
     # Native warnings/errors are private and cannot become evidence of absence.
     if ($NativeConstants) { return ConvertFrom-AferiRoiNativeCode $raw }
     return ConvertFrom-AferiRoiBuilderCode $raw

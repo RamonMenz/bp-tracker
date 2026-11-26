@@ -17,6 +17,14 @@ $method = @'
 .end method
 '@ -split "`n"
 Assert-Roi591 ((ConvertFrom-AferiRoiBuilderCode $method) -ceq 'metodo-build-sem-injecao-expo')
+$otherMethods = @'
+.method public other()V
+    new-instance v0, Lexpo/modules/kotlin/devtools/ExpoNetworkInspectOkHttpAppInterceptor;
+    return-void
+.end method
+'@ -split "`n"
+Assert-Roi591 ((ConvertFrom-AferiRoiBuilderCode ($method + $otherMethods)) -ceq 'metodo-build-sem-injecao-expo')
+Assert-Roi591 ((ConvertFrom-AferiRoiBuilderCode ($method -replace '^\.class.*$', '.class public final LOTHER;')) -ceq 'formato-nao-reconhecido')
 $native = @'
 .class public final Lexpo/modules/aferiphoto/FrameTransform;
 .field public static final REVISION:Ljava/lang/String; = "roi-1"
@@ -118,11 +126,15 @@ try {
         $fixtureBody=@'
 #!/usr/bin/env python3
 import sys
-expected=['dex','code','--class','okhttp3.OkHttpClient$Builder','--method','build','fixture.apk']
+expected=['dex','code','--class','okhttp3.OkHttpClient$Builder','fixture.apk']
 native=['dex','code','--class','expo.modules.aferiphoto.FrameTransform','fixture.apk']
 if sys.argv[1:] == native:
     print('''NATIVE_FIXTURE''')
     sys.exit(0)
+for name, message in [('jvm.apk','UnsupportedClassVersionError PRIVATE'), ('class.apk','Class PRIVATE not found'), ('args.apk','Unknown option PRIVATE')]:
+    if sys.argv[-1] == name:
+        print(message,file=sys.stderr)
+        sys.exit(7)
 if sys.argv[1:] != expected:
     print('PRIVATE',file=sys.stderr)
     sys.exit(7)
@@ -139,6 +151,10 @@ print('''METHOD_FIXTURE''')
         Assert-Roi591 ($result -ceq 'frame-transform-roi1-limite5760000')
         $result=& $module { param($program) & $script:RealAnalyzer $program 'wrong.apk' } $fixtureProgram
         Assert-Roi591 ($result -ceq 'analisador-falhou')
+        foreach ($case in @(@('jvm.apk','analisador-jvm-incompativel'),@('class.apk','analisador-classe-nao-encontrada'),@('args.apk','analisador-argumentos-incompativeis'))) {
+            $result=& $module { param($program,$apk) & $script:RealAnalyzer $program $apk } $fixtureProgram $case[0]
+            Assert-Roi591 ($result -ceq $case[1] -and $result -notmatch 'PRIVATE')
+        }
         $result=& $module { param($program) & $script:RealAnalyzer $program 'unsafe%path.apk' } $fixtureProgram
         Assert-Roi591 ($result -ceq 'analisador-caminho-incompativel')
     }
