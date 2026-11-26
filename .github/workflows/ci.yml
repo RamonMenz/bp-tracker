@@ -96,6 +96,18 @@ jobs:
       - name: Guardas do candidato ROI (PowerShell, sem Gradle ou dispositivo)
         run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoiCandidate.check.ps1
 
+      - name: Inspeção dirigida ROI591 (PowerShell, smali/ADB simulados)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Readiness.check.ps1
+
+      - name: Atualização ROI591 restrita (PowerShell, sem dispositivo)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Update.check.ps1
+
+      - name: Metro ROI591 (PowerShell, HTTP/ADB simulados)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Metro.check.ps1
+
+      - name: Preparo offline ROI591 (PowerShell, ADB simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Offline.check.ps1
+
       - name: Comparação de assinaturas (PowerShell, apksigner simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
 

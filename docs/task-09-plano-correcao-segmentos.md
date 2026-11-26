@@ -206,3 +206,13 @@ ferramentas próprias eb92ec0, mas sem novo APK físico/inspeção de artefato.
 Preparação, build, inspeção, atualização e abertura são fases distintas;
 identidade do APK ainda desconhecida impede liberar guard de atualização.
 Nenhuma captura, instalação, merge, deploy ou habilitação clínica executada.
+
+## Fechamento técnico da Etapa 3
+
+[Matriz e evidências consolidadas](task-09-apk-roi591.md#fechamento-técnico-da-etapa-3-após-recuperação):
+revisão/testes, build Android pelo autor, inspeção/hash/configuração/assinatura,
+atualização259→591, abertura recuperada e bundle98d31d1e… identificados. Etapa3
+concluída nesse escopo técnico; redes desligadas são declaração do autor separada
+do script, não prova independente de tráfego. Sem nova leitura ou eficácia do
+candidato. Etapa1 física e TASK-04/06/07/09/18 continuam parciais; etapas4–6 e
+habilitação clínica permanecem pendentes. Não iniciar captura neste fechamento.
