@@ -6,12 +6,24 @@ import { PdfPreviewFrame } from './PdfPreviewFrame.web';
  * O componente Web é importado pelo sufixo explícito: no Jest (preset nativo) `./PdfPreviewFrame`
  * resolveria para a versão nativa, que não renderiza nada.
  */
+// Node 20 (o do CI) não tem `navigator` global; o 22 tem. O teste instala o próprio e restaura o
+// descritor original, para não depender da versão do Node nem vazar para outras suítes.
+const ORIGINAL_NAVIGATOR = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+
+function setNavigator(value: { pdfViewerEnabled?: boolean } | undefined): void {
+  Object.defineProperty(globalThis, 'navigator', { value, configurable: true, writable: true });
+}
+
 function setPdfViewer(enabled: boolean | undefined): void {
-  Object.defineProperty(globalThis.navigator, 'pdfViewerEnabled', { value: enabled, configurable: true });
+  setNavigator({ pdfViewerEnabled: enabled });
 }
 
 afterEach(() => {
-  setPdfViewer(undefined);
+  if (ORIGINAL_NAVIGATOR === undefined) {
+    delete (globalThis as { navigator?: unknown }).navigator;
+  } else {
+    Object.defineProperty(globalThis, 'navigator', ORIGINAL_NAVIGATOR);
+  }
 });
 
 describe('PdfPreviewFrame (Web)', () => {
@@ -40,4 +52,12 @@ describe('PdfPreviewFrame (Web)', () => {
       expect(screen.getByText(/não exibe PDF dentro da página/)).toBeTruthy();
     },
   );
+
+  it('sem objeto navigator (ambiente sem DOM completo) também não embute', async () => {
+    setNavigator(undefined);
+    const { container } = await render(<PdfPreviewFrame url="blob:previa-sintetica" title="Prévia" />);
+
+    expect(container.queryAll((node) => node.type === 'iframe')).toHaveLength(0);
+    expect(screen.getByText(/não exibe PDF dentro da página/)).toBeTruthy();
+  });
 });
