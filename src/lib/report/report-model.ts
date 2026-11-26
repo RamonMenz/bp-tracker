@@ -1,5 +1,6 @@
 import type { Reading, SessionReadingValues } from '@/types/models';
 
+import { buildReportChart, type ReportChart } from './report-chart';
 import {
   formatCivilDate,
   formatDateInZone,
@@ -49,6 +50,13 @@ export interface ReportAverageLine {
 }
 
 export const REPORT_TITLE = 'Aferi — Relatório de pressão arterial';
+
+/**
+ * Limite explícito de volume do relatório (spec §7.4, PDF-22). Acima dele o relatório NÃO é
+ * gerado — nunca truncado: o usuário escolhe um período menor. 3.000 registros ≈ 2,7 anos com 3
+ * medições por dia; a renderização roda na thread principal da Web (ver docs/pdf-relatorio.md).
+ */
+export const MAX_REPORT_READINGS = 3000;
 export const NOT_INFORMED = 'Não informado';
 export const MISSING_VALUE = '—';
 
@@ -77,6 +85,7 @@ export interface ReportModel {
     statement: string;
   };
   stats: ReportStats;
+  chart: ReportChart;
   averages: ReportAverageLine[];
   warnings: string[];
   table: {
@@ -89,7 +98,8 @@ export interface ReportModel {
 
 export type BuildReportResult =
   | { ok: true; model: ReportModel }
-  | { ok: false; reason: 'empty'; fromCache: boolean; omittedCount: number };
+  | { ok: false; reason: 'empty'; fromCache: boolean; omittedCount: number }
+  | { ok: false; reason: 'too-many'; readingCount: number; limit: number };
 
 function mean(values: readonly number[]): MeanStat {
   if (values.length === 0) {
@@ -235,6 +245,7 @@ function buildNotes(timeZone: string): string[] {
     'Médias do intervalo: média aritmética dos valores principais de cada registro; todos os registros têm o mesmo peso (não é média de médias diárias).',
     'Sessão de duas leituras: o registro salvo (média da sessão) conta uma vez nas contagens e médias; as leituras individuais aparecem só como detalhe.',
     `Pulso ausente aparece como “${MISSING_VALUE}” e não entra no denominador da média de pulso.`,
+    'Gráfico: cada ponto é a média diária dos valores principais dos registros do dia; dias sem medição não têm ponto (não equivalem a pressão zero) e as linhas só ligam dias consecutivos.',
     'Valores arredondados para uma casa decimal apenas na apresentação.',
     `Datas em dd/mm/aaaa e horários em HH:mm no fuso ${timeZone}.`,
     'Este documento organiza medições registradas pelo próprio usuário e não substitui avaliação médica.',
@@ -253,6 +264,10 @@ export function buildReportModel(snapshot: ReportSourceSnapshot, period: ReportP
     return { ok: false, reason: 'empty', fromCache: snapshot.fromCache, omittedCount: snapshot.omittedCount };
   }
 
+  if (readings.length > MAX_REPORT_READINGS) {
+    return { ok: false, reason: 'too-many', readingCount: readings.length, limit: MAX_REPORT_READINGS };
+  }
+
   const { timeZone } = period;
   const first = readings[0];
   const last = readings[readings.length - 1];
@@ -264,6 +279,13 @@ export function buildReportModel(snapshot: ReportSourceSnapshot, period: ReportP
 
   const fileStart = period.firstDay ?? civilDateOf(first.measuredAt, timeZone);
   const fileEnd = period.firstDay === null ? civilDateOf(last.measuredAt, timeZone) : period.lastDay;
+  // O gráfico cobre o período solicitado inteiro; em "Tudo", do primeiro ao último registro.
+  const chart = buildReportChart(readings, { firstDay: fileStart, lastDay: fileEnd }, timeZone);
+
+  if (chart === null) {
+    // Inalcançável com readings.length > 0; mantém o tipo honesto sem asserção.
+    return { ok: false, reason: 'empty', fromCache: snapshot.fromCache, omittedCount: snapshot.omittedCount };
+  }
 
   return {
     ok: true,
@@ -287,6 +309,7 @@ export function buildReportModel(snapshot: ReportSourceSnapshot, period: ReportP
           : 'Cobertura não confirmada: este relatório pode não conter todo o histórico do período (ver avisos).',
       },
       stats,
+      chart,
       averages: buildAverages(stats, readings.length),
       warnings,
       table: {

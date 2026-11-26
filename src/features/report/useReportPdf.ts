@@ -26,6 +26,12 @@ const EMPTY_MESSAGE = 'Nenhuma medição no período selecionado.';
 const EMPTY_UNCONFIRMED_MESSAGE =
   'Nenhuma medição encontrada no período, mas não foi possível confirmar o histórico completo. Verifique sua conexão e tente novamente.';
 const GENERIC_MESSAGE = 'Não foi possível gerar o relatório. Tente novamente.';
+
+const integerFormatter = new Intl.NumberFormat('pt-BR');
+
+function tooManyMessage(readingCount: number, limit: number): string {
+  return `O período tem ${integerFormatter.format(readingCount)} medições e o relatório comporta até ${integerFormatter.format(limit)}. Escolha um período menor.`;
+}
 const DOWNLOAD_MESSAGE = 'Não foi possível baixar o relatório. Tente novamente.';
 
 const PERIOD_MESSAGES: Record<ReportPeriodError, string> = {
@@ -131,7 +137,11 @@ export function useReportPdf(): UseReportPdfResult {
       const built = pipeline.buildModel(snapshot, periodResult.period);
 
       if (!built.ok) {
-        error = built.fromCache || built.omittedCount > 0 ? EMPTY_UNCONFIRMED_MESSAGE : EMPTY_MESSAGE;
+        if (built.reason === 'too-many') {
+          error = tooManyMessage(built.readingCount, built.limit);
+        } else {
+          error = built.fromCache || built.omittedCount > 0 ? EMPTY_UNCONFIRMED_MESSAGE : EMPTY_MESSAGE;
+        }
         return false;
       }
 
