@@ -28,11 +28,18 @@ test('carregar binding nao verifica nem solicita permissao ou abre captura', () 
   expect(t.binding.nativeRevision).toBe('anterior');
 });
 
-test.each(['bridge-2', 'bridge-1', 'frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
+test.each(['roi-1', 'bridge-2', 'bridge-1', 'frame-1', 'preview-1'])('identifica a revisao %s do APK sem capturar ou solicitar permissao', revision => {
   jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: revision, requestCameraPermission: jest.fn() });
   expect(loadAndroidPhotoBinding().nativeRevision).toBe(revision);
   expect(PermissionsAndroid.check).not.toHaveBeenCalled();
 });
+
+test.each([['roi-1', 'roi-1', true], ['bridge-2', 'roi-1', false], ['roi-1', undefined, false]] as const)(
+  'comparação exige as duas capacidades nativas conhecidas: %s/%s', (captureRevision, comparisonRevision, expected) => {
+    jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision, comparisonRevision, requestCameraPermission: jest.fn() });
+    expect(loadAndroidPhotoBinding().supportsComparison).toBe(expected);
+    expect(PermissionsAndroid.check).not.toHaveBeenCalled();
+  });
 
 test('nao exibe constante nativa arbitraria', () => {
   jest.mocked(requireOptionalNativeModule).mockReturnValue({ captureRevision: 'SENTINELA', requestCameraPermission: jest.fn() });

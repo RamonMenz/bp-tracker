@@ -4,7 +4,8 @@ import { AppState } from 'react-native';
 import { createAndroidPhotoSession, type PhotoCaptureState } from '@/services/recognition/android-photo-session';
 import { loadAndroidPhotoBinding, type AndroidPhotoBinding } from '@/services/recognition/photo-android';
 import { describeFrameFailure } from '@/services/recognition/frame-diagnostic';
-import type { AndroidCameraHandle } from '@/services/recognition/photo-capture-contract';
+import { PhotoCaptureError, type AndroidCameraHandle } from '@/services/recognition/photo-capture-contract';
+import type { PhotoComparison } from '@/services/recognition/photo-comparison';
 
 import { useCandidateReview } from './useCandidateReview';
 
@@ -16,7 +17,7 @@ function safeAppState(value: unknown): string {
 }
 function safeNativeStatus(value: unknown): string {
   return value === 'ready' || value === 'resource-busy' || value === 'permission-denied'
-    || value === 'camera-failed' || value === 'cleanup-failed' ? value : 'outro';
+    || value === 'camera-failed' || value === 'cleanup-failed' || value === 'geometry-unavailable' ? value : 'outro';
 }
 
 // Recursos opacos em closures privadas; apenas fases/candidatos vão ao estado de UI.
@@ -31,7 +32,7 @@ function createViewAccess() {
 }
 
 /** Avaliação real do frame -> OCR -> revisão. Confirmação só em memória, sem writer. */
-export function useAndroidPhotoReview() {
+export function useAndroidPhotoReview(comparisonMode = false) {
   const review = useCandidateReview('photo', { simulation: false, previewOnly: true });
   const [captureState, setCaptureState] = useState<PhotoCaptureState>({ phase: 'idle', attemptId: 0, issue: null });
   const [binding, setBinding] = useState<AndroidPhotoBinding | null>(null);
@@ -44,6 +45,7 @@ export function useAndroidPhotoReview() {
   const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
   // Uma única projeção da revisão atual, nunca no histórico de eventos.
   const [interpretationDiagnostic, setInterpretationDiagnostic] = useState<readonly string[]>([]);
+  const [comparison, setComparison] = useState<PhotoComparison | null>(null);
   const diagnosticMounted = useRef(true);
   const record = useCallback((code: string) => {
     if (diagnosticMounted.current) setDiagnostics(previous => [...previous.slice(-17), code]);
@@ -82,6 +84,11 @@ export function useAndroidPhotoReview() {
         }
         return raw;
       },
+      evaluate: async () => {
+        const camera = access.camera();
+        if (!camera?.evaluate) throw new PhotoCaptureError('unsupported');
+        return camera.evaluate();
+      },
       close: () => access.camera()?.cancelCapture() ?? Promise.resolve(true),
     }, next => {
       if (sessions.session === session) {
@@ -93,7 +100,9 @@ export function useAndroidPhotoReview() {
       if (sessions.session === session && review.receive(access.attempt(), candidates)) {
         setInterpretationDiagnostic(diagnostic);
       }
-    });
+    }, comparisonMode ? { comparison: true, onComparison: (_id, value) => {
+      if (sessions.session === session && review.isWaitingFor(access.attempt())) setComparison(value);
+    } } : {});
     sessions.session = session;
     record('sessao:criada');
     const retirement = sessions.retirement;
@@ -101,6 +110,7 @@ export function useAndroidPhotoReview() {
       // Efeitos reiniciados preservam estado React: descartar também a revisão
       // e sua projeção já exibidas, além de invalidar a sessão anterior.
       setInterpretationDiagnostic([]);
+      setComparison(null);
       review.cancel();
       // Nao abrir nova camera enquanto a sessao anterior ainda libera recursos.
       setCaptureState({ phase: 'closing', attemptId: 0, issue: null });
@@ -119,6 +129,7 @@ export function useAndroidPhotoReview() {
       if (state !== 'active') {
         record('cancelamento:mudanca-do-app');
         setInterpretationDiagnostic([]);
+        setComparison(null);
         review.cancel(); void session.cancel();
       }
     });
@@ -133,7 +144,7 @@ export function useAndroidPhotoReview() {
     };
     // Métodos da revisão acessam refs síncronas; identidade fixa por montagem.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [access, record]);
+  }, [access, record, comparisonMode]);
   function start(): number {
     record('toque:iniciar');
     record(`app-no-toque:${safeAppState(AppState.currentState)}`);
@@ -149,10 +160,12 @@ export function useAndroidPhotoReview() {
         record('modulo:carregado');
         record(`modulo-nativo:${loaded.nativeRevision ?? 'anterior'}`);
       }
+      if (comparisonMode && access.binding()?.supportsComparison !== true) throw new PhotoCaptureError('unsupported');
       const accepted = session.start();
       record(accepted ? 'inicio:aceito' : 'inicio:recusado');
       if (accepted) {
         setInterpretationDiagnostic([]);
+        setComparison(null);
         access.setAttempt(review.recapture());
       }
     } catch {
@@ -163,6 +176,7 @@ export function useAndroidPhotoReview() {
   }
   function cancel() {
     record('toque:cancelar'); setInterpretationDiagnostic([]);
+    setComparison(null);
     review.cancel(); void sessionsRef.current.session?.cancel();
   }
   async function confirm() {
@@ -180,6 +194,7 @@ export function useAndroidPhotoReview() {
     capture: () => { record('toque:capturar'); return sessionsRef.current.session?.capture() ?? false; },
     onStatus, busy, diagnostics,
     interpretationDiagnostic: review.state.phase === 'reviewing' ? interpretationDiagnostic : [],
+    comparison: comparisonMode && captureState.phase === 'reviewing' ? comparison : null,
     diagnosticVersion: 'captura-5' as const,
     diagnosticNativeRevision: binding?.nativeRevision ?? 'nao-carregado',
     diagnosticAppState: safeAppState(AppState.currentState) };

@@ -1,16 +1,18 @@
 export type PhotoCaptureCode = 'unsupported' | 'permission-denied' | 'camera-failed'
-  | 'frame-failed' | 'engine-failed' | 'resource-busy' | 'cleanup-failed' | 'timeout' | 'cancelled' | 'device-unavailable';
+  | 'frame-failed' | 'engine-failed' | 'resource-busy' | 'cleanup-failed' | 'timeout' | 'cancelled' | 'device-unavailable' | 'geometry-unavailable';
 export class PhotoCaptureError extends Error {
   constructor(readonly code: PhotoCaptureCode) { super(code); this.name = 'PhotoCaptureError'; }
 }
 export interface AndroidCameraHandle {
   recognize(): Promise<unknown>;
+  evaluate?(): Promise<unknown>;
   cancelCapture(): Promise<boolean>;
 }
 export interface AndroidPhotoPorts {
   requestPermission(): Promise<boolean>;
   open(attemptId: number): void;
   recognize(): Promise<unknown>;
+  evaluate?(): Promise<unknown>;
   close(): Promise<boolean>;
 }
 export const PHOTO_MESSAGES: Record<PhotoCaptureCode, string> = {
@@ -19,6 +21,7 @@ export const PHOTO_MESSAGES: Record<PhotoCaptureCode, string> = {
   'device-unavailable': 'Câmera indisponível. Tente novamente ou volte ao manual.',
   'camera-failed': 'Não foi possível preparar a câmera. Tente novamente ou volte ao manual.',
   'frame-failed': 'Não foi possível preparar o quadro da câmera em memória. Tente novamente ou volte ao manual.',
+  'geometry-unavailable': 'A guia perdeu a correspondência com a câmera. Cancele e inicie outra tentativa explicitamente.',
   'engine-failed': 'Não foi possível interpretar esta captura. Tente novamente ou preencha manualmente.',
   'resource-busy': 'O reconhecedor ainda está liberando recursos. Aguarde antes de tentar novamente.',
   'cleanup-failed': 'Não foi possível comprovar a liberação dos recursos. Saia deste fluxo antes de tentar novamente.',

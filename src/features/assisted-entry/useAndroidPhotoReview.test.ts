@@ -3,6 +3,7 @@ import type { EffectCallback } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
 import { loadAndroidPhotoBinding } from '@/services/recognition/photo-android';
+import { photoComparisonFixture } from '@/services/recognition/photo-comparison.test-fixture';
 
 import { useAndroidPhotoReview } from './useAndroidPhotoReview';
 import { PHOTO_INTERPRETATION_EXAMPLES } from './photo-interpretation-examples';
@@ -65,14 +66,65 @@ function trackEffectRestarts() {
   };
 }
 
-async function setup() {
+async function setup(comparisonMode = false) {
   const permission = jest.fn(async () => true);
-  const handle = { recognize: jest.fn(async (): Promise<unknown> => fixture), cancelCapture: jest.fn(async () => true) };
-  jest.mocked(loadAndroidPhotoBinding).mockReturnValue({ requestPermission: permission, Camera: () => null });
-  const rendered = await renderHook(useAndroidPhotoReview);
+  const handle = { recognize: jest.fn(async (): Promise<unknown> => fixture),
+    evaluate: jest.fn(async (): Promise<unknown> => photoComparisonFixture()), cancelCapture: jest.fn(async () => true) };
+  jest.mocked(loadAndroidPhotoBinding).mockReturnValue({ requestPermission: permission, Camera: () => null, supportsComparison: true });
+  const rendered = await renderHook<ReturnType<typeof useAndroidPhotoReview>, { comparison: boolean }>(
+    ({ comparison }) => useAndroidPhotoReview(comparison), { initialProps: { comparison: comparisonMode } });
   await act(() => { rendered.result.current.attachCamera(handle); });
   return { ...rendered, permission, handle };
 }
+
+test.each(['cancel', 'background', 'recapture', 'restart'] as const)('comparação explícita separada e descartada em %s', async action => {
+  const restart = action === 'restart' ? trackEffectRestarts() : null;
+  const t = await setup(true); await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  expect(t.result.current.comparison?.original.candidates.fields.systolic).toMatchObject({ value: 120 });
+  expect(t.result.current.comparison?.processed.candidates.fields.systolic).toMatchObject({ value: 130 });
+  expect(t.result.current.review.state.draft).toBeNull();
+  expect(t.handle.recognize).not.toHaveBeenCalled();
+  expect(t.handle.evaluate).toHaveBeenCalledTimes(1);
+  expect(t.result.current.diagnostics.join(' ')).not.toMatch(/120|130|transformacao:|tokens/);
+  await act(async () => {
+    if (action === 'cancel') t.result.current.review.cancel();
+    if (action === 'background') listeners.forEach(listener => listener('background'));
+    if (action === 'recapture') t.result.current.start();
+    await flush();
+  });
+  if (restart) await restart();
+  expect(t.result.current.comparison).toBeNull();
+  expect(t.result.current.review.state.confirmed).toBeNull();
+  await act(async () => { t.result.current.review.cancel(); await flush(); });
+});
+
+test('APK sem capacidade roi-1 não inicia câmera para comparação nem usa recognize como fallback', async () => {
+  const t = await setup(true);
+  jest.mocked(loadAndroidPhotoBinding).mockReturnValue({ requestPermission: t.permission, Camera: () => null, supportsComparison: false });
+  await act(() => { t.result.current.start(); });
+  expect(t.result.current.captureState.issue).toBe('unsupported');
+  expect(t.permission).not.toHaveBeenCalled(); expect(t.handle.evaluate).not.toHaveBeenCalled();
+  expect(t.handle.recognize).not.toHaveBeenCalled();
+});
+
+test('troca de modo aguarda cleanup e descarta comparação tardia antes de permitir revisão simples', async () => {
+  const t = await setup(true); await ready(t);
+  let finish!: (value: unknown) => void, release!: (value: boolean) => void;
+  t.handle.evaluate.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+  t.handle.cancelCapture.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+  await act(async () => { t.result.current.capture(); await flush(); });
+  await t.rerender({ comparison: false });
+  await act(async () => { t.result.current.start(); await flush(); });
+  expect(t.permission).toHaveBeenCalledTimes(1);
+  expect(t.result.current.captureState.phase).toBe('closing');
+  await act(async () => { finish(photoComparisonFixture()); release(true); await flush(); });
+  expect(t.result.current.comparison).toBeNull(); expect(t.result.current.review.state.draft).toBeNull();
+  await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  expect(t.handle.recognize).toHaveBeenCalledTimes(1);
+  expect(t.result.current.review.state.draft?.systolic).toBe('120');
+});
 async function ready(t: Awaited<ReturnType<typeof setup>>) {
   await act(async () => { t.result.current.start(); await flush(); });
   await act(async () => { t.result.current.onStatus(t.result.current.captureState.attemptId, 'ready'); await flush(); });

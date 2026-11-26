@@ -302,3 +302,13 @@ da primeira variante completos. Lint/TypeScript, 788 testes/68 suítes e checks
 Java puros aprovados. Dimensões/saída SDK/caixas no Samsung e build Kotlin/APK
 seguem sem nova evidência; Etapa 2 não iniciada, sem captura isolada solicitada.
 TASK-04/06/07/09/18 permanecem parciais e habilitação clínica bloqueada.
+
+TASK-09 — [candidato ROI da Etapa 2](docs/task-09-candidato-roi-ram.md), branch
+`feat/task-09-roi-ram`, código730b721 sobre27212a4, sem exigir merge#80. Variante
+única em RAM com guia CameraX/ViewPort, orientação/escala limitadas e retorno de
+caixas à origem; comparação original/processado sequencial, separada e sem writer.
+828 testes/71 suítes, lint/TypeScript e checks Java aprovados; checagem Kotlin
+parcial com limites documentados. Sem build APK/Samsung, resultado físico ou
+luminância. Protocolo de verificação do artefato preparado; instalação não
+solicitada. Lacunas físicas da Etapa 1 e TASK-04/06/07/09/18 permanecem parciais;
+habilitação clínica bloqueada, sem merge/deploy acionado.

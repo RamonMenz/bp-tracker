@@ -12,7 +12,7 @@ class AferiPhotoModule : Module() {
   private val cameras = mutableSetOf<AferiPhotoView>()
   override fun definition() = ModuleDefinition {
     Name("AferiPhotoCapture")
-    Constants("captureRevision" to "bridge-2")
+    Constants("captureRevision" to "roi-1", "comparisonRevision" to "roi-1")
     AsyncFunction("requestCameraPermission") { promise: Promise ->
       val context = appContext.reactContext
       val permissions = appContext.permissions
@@ -27,8 +27,10 @@ class AferiPhotoModule : Module() {
       Events("onStatus")
       Prop("active") { view: AferiPhotoView, value: Boolean -> cameras.add(view); view.requestedActive = value }
       Prop("attemptId") { view: AferiPhotoView, value: Int -> view.attemptId = value }
+      Prop("comparison") { view: AferiPhotoView, value: Boolean -> view.requestedComparison = value }
       OnViewDidUpdateProps { view: AferiPhotoView -> view.applyProps() }
       AsyncFunction("recognize") { view: AferiPhotoView, promise: Promise -> view.recognize(promise) }
+      AsyncFunction("evaluate") { view: AferiPhotoView, promise: Promise -> view.evaluate(promise) }
       AsyncFunction("cancelCapture") { view: AferiPhotoView, promise: Promise -> view.cancel(promise) }
       OnViewDestroys { view: AferiPhotoView -> cameras.remove(view); view.destroyCapture() }
     }

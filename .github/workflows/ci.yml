@@ -36,10 +36,16 @@ jobs:
           javac -d "$RUNNER_TEMP/aferi-photo-checks" \
             native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java \
             native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/OcrLinePolicy.java \
+            native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameTransform.java \
+            native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/CaptureRun.java \
             native-modules/aferi-photo-capture/checks/FrameBytesTest.java \
+            native-modules/aferi-photo-capture/checks/FrameTransformTest.java \
+            native-modules/aferi-photo-capture/checks/CaptureRunTest.java \
             native-modules/aferi-photo-capture/checks/OcrLinePolicyTest.java
           java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.FrameBytesTest
           java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.OcrLinePolicyTest
+          java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.FrameTransformTest
+          java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.CaptureRunTest
 
   app:
     name: App (lint, typecheck e testes)

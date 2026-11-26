@@ -16,6 +16,9 @@ public final class FrameBytes {
     if (!acceptsDimensions(width, height)) throw new IllegalArgumentException("frame-size");
     if (yRow <= 0 || yPixel <= 0 || uRow <= 0 || uPixel <= 0 || vRow <= 0 || vPixel <= 0)
       throw new IllegalArgumentException("frame-stride");
+    validatePlane(y, width, height, yRow, yPixel);
+    validatePlane(u, width / 2, height / 2, uRow, uPixel);
+    validatePlane(v, width / 2, height / 2, vRow, vPixel);
     byte[] bytes = new byte[width * height * 3 / 2];
     int offset = 0;
     for (int row = 0; row < height; row++) {
@@ -28,6 +31,13 @@ public final class FrameBytes {
       }
     }
     return bytes;
+  }
+  private static void validatePlane(ByteBuffer buffer, int columns, int rows, int rowStride, int pixelStride) {
+    if (buffer == null) throw new IllegalArgumentException("frame-plane");
+    long span = (long) (columns - 1) * pixelStride + 1;
+    if (span > rowStride) throw new IllegalArgumentException("frame-stride");
+    long end = (long) buffer.position() + (long) (rows - 1) * rowStride + span;
+    if (end > buffer.limit()) throw new IllegalArgumentException("frame-plane");
   }
   private static byte sample(ByteBuffer buffer, int row, int col, int rowStride, int pixelStride) {
     long index = (long) buffer.position() + (long) row * rowStride + (long) col * pixelStride;
