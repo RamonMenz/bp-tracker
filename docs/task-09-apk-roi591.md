@@ -167,3 +167,94 @@ Retornar somente JSON ou categoria sanitizada. Erro, formato desconhecido,
 fonte/hash/modelo/instalado divergente exige parada para análise; não interpretar
 campo false como presença de injeção. Continua AtualizacaoLiberada=false em
 todos os casos. Etapa3 parcial, nenhuma atualização ou validação clínica.
+
+## Retorno favorável e atualização restrita preparada
+
+Autor retornou `metodo-build-sem-injecao-expo`, BytecodeInspecionado=true e
+InjecaoExpoAusenteNoMetodo=true, no escopo exato declarado. FrameTransform roi-1
+e limite5760000 confirmados; fonte45/hash591 preservados, instalado259/modelo
+reconfirmados. Nenhuma instalação/abertura/captura ocorreu nessa consulta.
+Esse resultado não comprova ausência global de interceptores/telemetria/logs,
+comportamento runtime de CameraX/ML Kit ou correção dos segmentos.
+
+Ferramentas de atualização fixadas em `0dbfe42c98db528c30a6e91aeb56abc202197868`.
+`Update-AferiRoi591Evaluation.ps1` tem fase padrão Inspect e Install explícita.
+Antes de ADB, reconfere fonte limpa/flag false, hashes exatos dos dois APKs,
+manifesto/backup selecionados, versionName0.1.0 e versionCode não inferior ao
+baseline local, assinaturas válidas/iguais e bytecode/constantes. Não supõe
+versionCode ainda não devolvido: lê ambos por aapt2 e bloqueia formato inesperado.
+Antes da mutação, exige SM-S731B/base única com259 ou591, reconfirma hashes/fonte
+e dispositivo inalterado. Somente `install -r` do591 se ainda instalado259;
+se já591, não reinstala. Reconfere hash591 depois. Falha nunca dispara retry,
+clear, uninstall, downgrade, abertura, reverse ou captura. Recuperação por Inspect.
+Isso preserva a estratégia de atualização, não prova todo estado SDK/SO preservado.
+
+Checks locais: lint/TypeScript, 832 testes/71 suítes e check PowerShell novo
+aprovados. Fixtures cobrem parsing de versão, chamada privada de badging,
+identidades/manifesto/permissões/backup/assinaturas/bytecode, downgrade, ADB e
+mudança de baseline/hash, Inspect sem mutação, install único, no-op591, saída
+ambígua/erro e hash posterior divergente. Não são instalação real no Windows ou
+Samsung. CI do novo head será registrado no PR83. Instalador histórico preservado.
+
+### Windows: preparar ferramentas e inspecionar antes da instalação
+
+Executar na raiz da mesma cópia original, demo fechada/Metro parado, somente
+Samsung por USB. Caminho do APK259 é digitado localmente, sem publicar:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $repo = (git rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or -not $repo) { throw 'repo-unavailable' }
+    $parent = Split-Path -Parent $repo
+    $tools = Join-Path $parent 'aferi-task09-roi591-update-tools'
+    $build = Join-Path $parent 'aferi-task09-roi-build'
+    if (Test-Path -LiteralPath $tools) { throw 'roi591-update-tools-exist-preserve' }
+    git -C $repo fetch origin fix/task-09-guards-roi591
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-fetch-failed' }
+    git -C $repo worktree add --detach $tools 0dbfe42c98db528c30a6e91aeb56abc202197868
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-update-tools-failed' }
+    $oldApk = Read-Host 'Caminho completo do APK259 preservado, sem aspas'
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$tools\tools\task09\Update-AferiRoi591Evaluation.ps1" -BuildPath $build -PreviousApkPath $oldApk -Phase Inspect
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-inspect-failed-stop' }
+}
+```
+
+Esperado: JSON roi591-update-1, Fase=Inspect,
+AtualizacaoDeAvaliacaoPermitida=true, instalado259 (ou já591), versões numéricas
+sem downgrade, InstalacaoExecutada=false e HabilitacaoClinica=false.
+Se erro ou permissão false, parar e retornar somente JSON/categoria; não executar
+o próximo bloco. A assinatura fornecida deve ser do arquivo259 cujo hash é
+conferido pelo script; não enviar certificado/caminho privado.
+
+### Windows: instalação em fase separada
+
+Só após Inspect favorável, executar este bloco em outro PowerShell aberto na
+raiz da mesma cópia original. Ele repete as guardas no momento da atualização:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $repo = (git rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or -not $repo) { throw 'repo-unavailable' }
+    $parent = Split-Path -Parent $repo
+    $tools = Join-Path $parent 'aferi-task09-roi591-update-tools'
+    $build = Join-Path $parent 'aferi-task09-roi-build'
+    $head = (git -C $tools rev-parse HEAD)
+    if ($LASTEXITCODE -ne 0 -or $head -cne '0dbfe42c98db528c30a6e91aeb56abc202197868') { throw 'roi591-update-tools-head-unexpected' }
+    $changes = @(git --no-optional-locks -C $tools status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0 -or $changes.Count -ne 0) { throw 'roi591-update-tools-not-clean' }
+    $oldApk = Read-Host 'Caminho completo do APK259 preservado, sem aspas'
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$tools\tools\task09\Update-AferiRoi591Evaluation.ps1" -BuildPath $build -PreviousApkPath $oldApk -Phase Install
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-install-failed-use-inspect-stop' }
+}
+```
+
+Esperado: JSON Fase=Install, InstalacaoExecutada=true (false se já591),
+CoincideComCandidato=true e hash591 em InstaladoDepois; abertura/captura/clinical
+false. Devolver os dois JSONs, sem saídas brutas, certificados, dumps ou caminhos.
+Se instalação falhar/for interrompida, preservar tudo e não repetir Install;
+reconsultar por Inspect antes de qualquer recuperação. Não abrir a demo após
+instalar: Metro/bundle/revisões e avaliação offline são fases posteriores.
+Etapa3 continua parcial nesta entrega; nenhuma execução física da atualização
+é alegada. TASK-04/06/07/09/18 e habilitação clínica continuam pendentes.
