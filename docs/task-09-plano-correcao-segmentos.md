@@ -145,3 +145,37 @@ novo APK, nova coleta física ou garantia de correção nesta entrega. Nenhuma a
 no dispositivo é necessária agora. Próxima implementação é a etapa1 e o candidato
 mínimo da etapa2, em branch própria do staging então atual, com entregas pequenas
 que mantenham um resultado revisável por hipótese. Não concluir TASK-04/06/07/09/18.
+
+## Continuidade — primeira entrega da etapa 1
+
+Implementação inicial da Etapa 1 na branch `fix/task-09-diagnostico-bridge`, sobre staging
+`a106a39` após confirmação dos merges #78/#79. [Caminho, contrato e limites](task-09-diagnostico-visor-real.md#etapa-1-do-plano--caminho-conferido-e-diagnóstico-da-bridge-preparado):
+projeção `bridge-1`/`associacao-3` separa presença de ASCII nas linhas do SDK e
+após filtros, com categorias de descarte e metadados técnicos em memória.
+Política de 500 linhas/500 caracteres e parser preservados. Fonte explicita
+preview FILL_CENTER, análise completa e ausência de transformação comum; isso
+não demonstra geometria ou descarte de dígitos no A/B físico anterior.
+
+Lint/TypeScript raiz/demo, 773 testes/68 suítes e checks Java puros aprovados.
+Compilação Kotlin/APK e etapas 2–6 continuam pendentes. Nenhum pré-processamento,
+novo artefato ou resultado físico comprovado. Não pedir nova captura para obter
+diagnóstico isolado; incorporá-lo ao candidato posterior. Continuação dependente
+não requer merge intermediário. Tarefas parciais e habilitação bloqueada.
+
+## Revisão da primeira entrega — Etapa 1 parcial
+
+[Revisão por requisito, filtros e diagnóstico priorizado](task-09-diagnostico-visor-real.md#revisão-da-etapa-1--veredito-parcial)
+confronta `6d2fb88` com a etapa exigida. Corrige abrangência de SDK com
+`bridge-2` (Text/TextBlock/Line separados), proteção dos metadados dentro do
+fechamento do ImageProxy e revisão/diagnóstico antigos após reiniciar efeitos.
+Policy/parser preservados, sem tokenização de texto de bloco como fallback.
+Lint/TypeScript, 788 testes/68 suítes e checks Java puros aprovados.
+
+**Etapa 1 parcial:** revisão de código e preparação concluídas nesta revisão;
+dimensões/resolução efetivas, orientação/caixas e saída SDK pré-filtros no
+Samsung ainda não observadas. Causa de B permanece indeterminada. Requisitos
+concretos da primeira variante estão registrados, incluindo rótulos externos e
+ida/volta das coordenadas. Lacunas devem acompanhar o candidato até avaliação,
+sem captura isolada para instrumentação e sem impedir preparação experimental
+condicionada. Nenhuma Etapa 2, compilação Kotlin/APK ou coleta nova executada
+nesta revisão; conclusão das TASK-04/06/07/09/18 e habilitação seguem bloqueadas.

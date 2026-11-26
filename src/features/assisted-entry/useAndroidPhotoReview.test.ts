@@ -14,6 +14,16 @@ jest.mock('@/features/auth/useSession', () => { throw new Error('Auth proibida n
 
 const fixture = { kind: 'ocr', coordinateSpace: 'upright-frame', capturedAtMs: 1793001600000,
   tokens: ['SYS 120', 'DIA 80', 'PUL 72'].map(text => ({ text, confidence: null, box: { x: 0, y: 0, width: 1, height: 0.1 } })) };
+const nativeDiagnostic = {
+  revision: 'bridge-2', sdkLinesPresent: true, sdkAsciiDigitPresent: true,
+  sdkTextAsciiDigitPresent: true, sdkBlockAsciiDigitPresent: true, sdkLineAsciiDigitPresent: true,
+  bridgeLinesPresent: true, bridgeAsciiDigitPresent: true,
+  droppedWithoutBox: false, droppedLongText: false, droppedLineLimit: false,
+  asciiDigitDroppedWithoutBox: false, asciiDigitDroppedLongText: false, asciiDigitDroppedLineLimit: false,
+  frame: { width: 1280, height: 960, rotation: 90, cropMatchesBuffer: true,
+    previewViewWidth: 360, previewViewHeight: 300, previewBufferWidth: null, previewBufferHeight: null },
+  text: 'SENTINELA-CLINICA',
+};
 let listeners: ((state: AppStateStatus) => void)[];
 const originalCurrentState = Object.getOwnPropertyDescriptor(AppState, 'currentState');
 function setCurrentState(state: AppStateStatus) {
@@ -68,11 +78,17 @@ async function ready(t: Awaited<ReturnType<typeof setup>>) {
   await act(async () => { t.result.current.onStatus(t.result.current.captureState.attemptId, 'ready'); await flush(); });
 }
 test.each(['cancel', 'background', 'recapture', 'confirm'] as const)('diagnóstico da associação é descartado ao %s', async action => {
-  const t = await setup(); await ready(t);
+  const t = await setup();
+  t.handle.recognize.mockResolvedValue({ ...fixture, bridgeDiagnostic: nativeDiagnostic });
+  await ready(t);
   await act(async () => { t.result.current.capture(); await flush(); });
-  expect(t.result.current.interpretationDiagnostic).toEqual(['ocr:linhas-presentes',
+  expect(t.result.current.interpretationDiagnostic.slice(0, 8)).toEqual(['ocr:linhas-presentes',
     'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
     'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
+  expect(t.result.current.interpretationDiagnostic).toContain('bridge:revisao=bridge-2');
+  expect(t.result.current.interpretationDiagnostic).toContain('sdk:digitos-ascii=presente');
+  expect(t.result.current.interpretationDiagnostic).toContain('quadro:buffer=1280x960; orientado=960x1280; rot=90');
+  expect(t.result.current.interpretationDiagnostic.join(' ')).not.toContain('SENTINELA');
   await act(async () => {
     if (action === 'cancel') t.result.current.review.cancel();
     if (action === 'background') listeners.forEach(listener => listener('background'));
@@ -82,6 +98,7 @@ test.each(['cancel', 'background', 'recapture', 'confirm'] as const)('diagnósti
   });
   expect(t.result.current.interpretationDiagnostic).toEqual([]);
   expect(t.result.current.diagnostics.join(' ')).not.toContain('associacao:');
+  expect(t.result.current.diagnostics.join(' ')).not.toMatch(/sdk:|digitos-descartados:|quadro:buffer=|SENTINELA/);
   await act(async () => { t.result.current.review.cancel(); await flush(); });
 });
 
@@ -90,10 +107,12 @@ test('diagnóstico não reaparece após cancelamento com OCR tardio ou falha de 
   let complete!: (value: unknown) => void;
   t.handle.recognize.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
   await act(async () => { t.result.current.capture(); await flush(); });
-  await act(async () => { t.result.current.review.cancel(); await flush(); complete(fixture); await flush(); });
+  await act(async () => { t.result.current.review.cancel(); await flush();
+    complete({ ...fixture, bridgeDiagnostic: nativeDiagnostic }); await flush(); });
   expect(t.result.current.interpretationDiagnostic).toEqual([]);
   expect(t.result.current.review.state.draft).toBeNull();
   t.handle.cancelCapture.mockResolvedValue(false);
+  t.handle.recognize.mockResolvedValue({ ...fixture, bridgeDiagnostic: nativeDiagnostic });
   await ready(t);
   await act(async () => { t.result.current.capture(); await flush(); });
   expect(t.result.current.captureState.phase).toBe('blocked');
@@ -190,6 +209,20 @@ test('reinicio dos efeitos cria uma sessao nova em vez de reutilizar a descartad
   expect(t.permission).toHaveBeenCalledTimes(1);
   expect(t.result.current.captureState.phase).toBe('opening');
   await act(async () => { t.result.current.review.cancel(); await flush(); });
+});
+
+test('reinício dos efeitos descarta diagnóstico e revisão já exibidos antes de nova tentativa', async () => {
+  const restartEffects = trackEffectRestarts();
+  const t = await setup();
+  t.handle.recognize.mockResolvedValue({ ...fixture, bridgeDiagnostic: nativeDiagnostic });
+  await ready(t);
+  await act(async () => { t.result.current.capture(); await flush(); });
+  expect(t.result.current.interpretationDiagnostic).toContain('bridge:revisao=bridge-2');
+  await restartEffects();
+  expect(t.result.current.interpretationDiagnostic).toEqual([]);
+  expect(t.result.current.review.state.draft).toBeNull();
+  expect(t.result.current.review.state.candidates).toBeNull();
+  expect(t.handle.recognize).toHaveBeenCalledTimes(1);
 });
 
 test('concessao depois de background nao retoma; novo gesto explicito pode iniciar', async () => {

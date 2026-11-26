@@ -2,6 +2,13 @@ import { createAndroidPhotoSession, type PhotoCaptureState } from './android-pho
 
 const raw = () => ({ kind: 'ocr', coordinateSpace: 'upright-frame', capturedAtMs: 1793001600000,
   tokens: ['SYS 120', 'DIA 80', 'PUL 72'].map(text => ({ text, confidence: null, box: { x: 0, y: 0, width: 1, height: 0.1 } })) });
+const emptyDiagnostic = (textHasDigits = false) => ({
+  revision: 'bridge-2', sdkLinesPresent: false, sdkAsciiDigitPresent: textHasDigits,
+  sdkTextAsciiDigitPresent: textHasDigits, sdkBlockAsciiDigitPresent: false, sdkLineAsciiDigitPresent: false,
+  bridgeLinesPresent: false, bridgeAsciiDigitPresent: false,
+  droppedWithoutBox: false, droppedLongText: false, droppedLineLimit: false,
+  asciiDigitDroppedWithoutBox: false, asciiDigitDroppedLongText: false, asciiDigitDroppedLineLimit: false,
+});
 async function flush() { for (let i = 0; i < 12; i++) await Promise.resolve(); }
 function setup() {
   let state: PhotoCaptureState = { phase: 'idle', attemptId: 0, issue: null };
@@ -30,8 +37,44 @@ test('frame -> contrato -> candidatos, só após Capturar e liberação', async 
     systolic: { status: 'candidate', value: 120, basis: 'label' }, diastolic: { status: 'candidate', value: 80, basis: 'label' },
     pulse: { status: 'candidate', value: 72, basis: 'label' },
   } }, ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
-    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
+    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+    'bridge:diagnostico-indisponivel']);
   expect(t.state().phase).toBe('reviewing');
+});
+
+test.each([false, true])('saída sem tokens, SDK Text com dígitos=%s, não fabrica candidatos', async digits => {
+  const t = setup();
+  t.ports.recognize.mockResolvedValue({ ...raw(), tokens: [], bridgeDiagnostic: emptyDiagnostic(digits) });
+  await t.ready(); t.session.capture(); await t.session.settled();
+  expect(t.state().phase).toBe('reviewing');
+  expect(t.result).toHaveBeenCalledWith(expect.any(Number), expect.objectContaining({ fields: {
+    systolic: { status: 'missing' }, diastolic: { status: 'missing' }, pulse: { status: 'missing' },
+  } }), expect.arrayContaining(['ocr:sem-digitos-ascii',
+    `sdk:digitos-ascii=${digits ? 'presente' : 'ausente'}`, 'bridge:digitos-ascii=ausente']));
+});
+
+test('diagnóstico inválido não altera candidatos reconhecidos nem transforma sucesso em falha', async () => {
+  const t = setup();
+  t.ports.recognize.mockResolvedValue({ ...raw(), bridgeDiagnostic: { ...emptyDiagnostic(),
+    sdkAsciiDigitPresent: 'SENTINELA-CLINICA' } });
+  await t.ready(); t.session.capture(); await t.session.settled();
+  expect(t.state().phase).toBe('reviewing');
+  expect(t.result).toHaveBeenCalledWith(expect.any(Number), expect.objectContaining({ fields: expect.objectContaining({
+    systolic: { status: 'candidate', value: 120, basis: 'label' },
+  }) }), expect.arrayContaining(['bridge:diagnostico-indisponivel']));
+  expect(JSON.stringify(t.result.mock.calls)).not.toContain('SENTINELA');
+});
+
+test('desmontagem durante OCR descarta também diagnóstico tardio sem reabrir a sessão', async () => {
+  const t = setup();
+  let complete!: (value: unknown) => void;
+  t.ports.recognize.mockImplementationOnce(() => new Promise(resolve => { complete = resolve; }));
+  await t.ready(); t.session.capture(); await flush();
+  t.session.dispose(); await t.session.settled();
+  complete({ ...raw(), tokens: [], bridgeDiagnostic: emptyDiagnostic(true) }); await flush();
+  expect(t.result).not.toHaveBeenCalled();
+  expect(t.ports.close).toHaveBeenCalledTimes(1);
+  expect(t.session.start()).toBe(false);
 });
 test('permissão negada não abre câmera nem reconhecedor', async () => {
   const t = setup(); t.ports.requestPermission.mockResolvedValue(false);
@@ -92,7 +135,8 @@ test('OCR antigo chegando durante novo reconhecimento não preenche nem encerra 
   expect(t.result).toHaveBeenCalledWith(next, expect.objectContaining({ fields: expect.objectContaining({
     systolic: { status: 'candidate', value: 130, basis: 'label' },
   }) }), ['ocr:linhas-presentes', 'associacao:SYS=candidato', 'associacao:DIA=candidato', 'associacao:PUL=candidato',
-    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente']);
+    'ocr:digitos-ascii-presentes', 'rotulo:SYS=presente', 'rotulo:DIA=presente', 'rotulo:PUL=presente',
+    'bridge:diagnostico-indisponivel']);
 });
 
 test.each(['rejection', 'late-ack'] as const)('cleanup %s mantém blocked após cancelamento e novos gestos', async failure => {

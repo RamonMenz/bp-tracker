@@ -98,6 +98,10 @@ export function useAndroidPhotoReview() {
     record('sessao:criada');
     const retirement = sessions.retirement;
     if (retirement) {
+      // Efeitos reiniciados preservam estado React: descartar também a revisão
+      // e sua projeção já exibidas, além de invalidar a sessão anterior.
+      setInterpretationDiagnostic([]);
+      review.cancel();
       // Nao abrir nova camera enquanto a sessao anterior ainda libera recursos.
       setCaptureState({ phase: 'closing', attemptId: 0, issue: null });
       void retirement.then(released => {
