@@ -200,3 +200,11 @@ de qualquer gesto. Preparar offline separadamente. Não abrir por scripts de bui
 inspeção ou instalação. Não pressionar `a` no Metro. Não iniciar experimento A/B
 ou LCD neste roteiro. Condições da etapa4 e gates SDK/rede/privacidade continuam
 abertos; compilação não valida reconhecimento ou uso clínico.
+
+## Retorno do build e inspeção — candidato591 identificado
+
+Autor concluiu build45f7376 e devolveu SHA591555a2…, manifesto/backup coerentes e
+assinaturas locais259/591 verificadas/iguais. [Registro selecionado e próxima
+consulta](task-09-apk-roi591.md). Build Android passa a evidência recebida do
+autor; Codex não recebeu/executou o APK. Bytecode e instalado ainda não conferidos
+nesse retorno. Etapa3 continua parcial; atualização, abertura e captura pendentes.
