@@ -86,6 +86,12 @@ jobs:
           node tools/task07/AferiNetworkInspector.check.cjs --voice
           node tools/task07/AferiBackupRules.check.cjs --voice
 
+      - name: Build, identidade e saúde Metro da voz (PowerShell, simulações)
+        run: |
+          pwsh -NoLogo -NoProfile -File tools/task12/Build-AferiVoiceEvaluation.check.ps1
+          pwsh -NoLogo -NoProfile -File tools/task12/Test-AferiVoiceInstalled.check.ps1
+          pwsh -NoLogo -NoProfile -File tools/task12/Test-AferiVoiceMetro.check.ps1
+
       - name: Coletor de metadados (PowerShell, ADB simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiPrivacyMetadata.check.ps1
 
