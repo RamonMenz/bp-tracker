@@ -1,4 +1,4 @@
-import { downloadPdf, OBJECT_URL_REVOKE_DELAY_MS, reportPdfPlatform } from './report-pdf-platform.web';
+import { downloadPdf, OBJECT_URL_REVOKE_DELAY_MS, openPdfPreview, reportPdfPlatform } from './report-pdf-platform.web';
 
 /**
  * O ambiente do Jest não tem DOM: `document` e as funções de URL de objeto são substituídos por
@@ -80,5 +80,30 @@ describe('downloadPdf (Web)', () => {
   it('o adaptador Web está disponível e entrega pelo download', () => {
     expect(reportPdfPlatform.isAvailable).toBe(true);
     expect(reportPdfPlatform.deliver).toBe(downloadPdf);
+  });
+});
+
+describe('openPdfPreview (Web)', () => {
+  const pdf = { type: 'application/pdf', size: 10 } as Blob;
+
+  it('cria URL local e só revoga depois de liberada e do atraso de consumo, uma única vez', () => {
+    const preview = openPdfPreview(pdf);
+
+    expect(preview.url).toBe('blob:aferi-sintetico');
+    jest.advanceTimersByTime(OBJECT_URL_REVOKE_DELAY_MS * 2);
+    // Enquanto o diálogo usa a prévia, nada é revogado.
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    preview.release();
+    preview.release();
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+
+    jest.advanceTimersByTime(OBJECT_URL_REVOKE_DELAY_MS);
+    expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:aferi-sintetico');
+  });
+
+  it('o adaptador Web expõe a pré-visualização', () => {
+    expect(reportPdfPlatform.openPreview).toBe(openPdfPreview);
   });
 });
