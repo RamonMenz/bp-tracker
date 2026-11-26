@@ -135,6 +135,15 @@ export function useReportPdf(): UseReportPdfResult {
   const { user } = useSession();
   const uid = user?.uid ?? null;
   const [state, setState] = useState<ReportPdfState>({ owner: null, ...IDLE });
+  const [sessionUid, setSessionUid] = useState(uid);
+
+  if (sessionUid !== uid) {
+    // Conta mudou: o estado da anterior é DESCARTADO já neste render (padrão do React para
+    // reiniciar estado a partir de uma prop), não só escondido. Sem isto, A → B → A faria a
+    // revisão antiga de A reaparecer, com a URL da prévia já revogada (PDF-18).
+    setSessionUid(uid);
+    setState({ owner: uid, ...IDLE });
+  }
 
   const generationRef = useRef(0);
   const inFlightRef = useRef(false);

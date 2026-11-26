@@ -17,8 +17,14 @@ import {
 } from '@/lib/report/report-model';
 import { civilDateOf, resolveReportPeriod } from '@/lib/report/report-period';
 
+// `./report-pdf-platform` (mockado abaixo) e `./report-pdf-platform.web` (o adaptador real, usado
+// para provar a revogação das URLs) são módulos distintos no Jest; o resolvedor do ESLint os
+// confunde por causa do sufixo de plataforma.
+// eslint-disable-next-line import/no-duplicates
 import { reportPdfPlatform } from './report-pdf-platform';
 import type { ReportPdfPipeline } from './report-pdf-platform.types';
+// eslint-disable-next-line import/no-duplicates
+import { OBJECT_URL_REVOKE_DELAY_MS, openPdfPreview } from './report-pdf-platform.web';
 import { REPORT_PREPARATION_TIMEOUT_MS, useReportPdf } from './useReportPdf';
 
 jest.mock('@/features/auth/useSession', () => ({ useSession: jest.fn() }));
@@ -439,5 +445,171 @@ describe('useReportPdf — prazo, concorrência, cancelamento e troca de conta',
     });
     expect(saved).toBe(false);
     expect(mockPlatform.deliver).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * PDF-18 — troca de conta em cada fase. A prévia usa o `openPdfPreview` REAL do adaptador Web, com
+ * `URL.createObjectURL`/`revokeObjectURL` substituídos por dublês, para provar a revogação de fato
+ * (não só a chamada a `release`).
+ */
+describe('useReportPdf — troca de conta em cada fase (PDF-18)', () => {
+  const created: string[] = [];
+  const revoked: string[] = [];
+  const originalCreate = URL.createObjectURL;
+  const originalRevoke = URL.revokeObjectURL;
+
+  beforeEach(() => {
+    created.length = 0;
+    revoked.length = 0;
+    URL.createObjectURL = jest.fn(() => {
+      const url = `blob:previa-${created.length + 1}`;
+      created.push(url);
+      return url;
+    });
+    URL.revokeObjectURL = jest.fn((url: string) => {
+      revoked.push(url);
+    });
+    mockPlatform.openPreview.mockImplementation(openPdfPreview);
+  });
+
+  afterEach(() => {
+    URL.createObjectURL = originalCreate;
+    URL.revokeObjectURL = originalRevoke;
+  });
+
+  async function switchTo(uid: string | null, rerender: (props: object) => Promise<void>): Promise<void> {
+    signedInAs(uid);
+    await rerender({});
+  }
+
+  function expectCleanFor(result: { current: ReturnType<typeof useReportPdf> }): void {
+    expect(result.current.stage).toBe('idle');
+    expect(result.current.review).toBeNull();
+    expect(result.current.error).toBeNull();
+  }
+
+  it('durante o carregamento do módulo: a conta anterior não chega a ser consultada', async () => {
+    const pendingPipeline = deferred<ReportPdfPipeline>();
+    mockPlatform.loadPipeline.mockReturnValue(pendingPipeline.promise);
+    const { result, rerender } = await renderHook(() => useReportPdf());
+
+    let preparation: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      preparation = result.current.prepareReport({ kind: 'all' });
+    });
+    await switchTo('user-b', rerender);
+
+    await act(async () => {
+      pendingPipeline.resolve(pipeline);
+      expect(await preparation).toBe(false);
+    });
+
+    expect(mockGetReadingsForReport).not.toHaveBeenCalled();
+    expect(created).toEqual([]);
+    expect(mockPlatform.deliver).not.toHaveBeenCalled();
+    expectCleanFor(result);
+  });
+
+  it('durante a leitura do Firestore: o retrato da conta anterior não é renderizado', async () => {
+    const pendingRead = deferred<ReportSourceSnapshot>();
+    mockGetReadingsForReport.mockReturnValue(pendingRead.promise);
+    const { result, rerender } = await renderHook(() => useReportPdf());
+
+    let preparation: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      preparation = result.current.prepareReport({ kind: 'all' });
+    });
+    await switchTo('user-b', rerender);
+
+    await act(async () => {
+      pendingRead.resolve(snapshot([recent()]));
+      expect(await preparation).toBe(false);
+    });
+
+    expect(mockGetReadingsForReport.mock.calls.map(([uid]) => uid)).toEqual(['user-a']);
+    expect(mockRender).not.toHaveBeenCalled();
+    expect(created).toEqual([]);
+    expectCleanFor(result);
+  });
+
+  it('durante a geração do PDF: nenhuma prévia nem entrega tardia', async () => {
+    const pendingRender = deferred<Blob>();
+    mockRender.mockReturnValue(pendingRender.promise);
+    const { result, rerender } = await renderHook(() => useReportPdf());
+
+    let preparation: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      preparation = result.current.prepareReport({ kind: 'all' });
+    });
+    await switchTo(null, rerender);
+
+    await act(async () => {
+      pendingRender.resolve(FAKE_PDF);
+      expect(await preparation).toBe(false);
+    });
+
+    expect(created).toEqual([]);
+    expect(mockPlatform.deliver).not.toHaveBeenCalled();
+    expectCleanFor(result);
+  });
+
+  it('durante a revisão: prévia revogada após o atraso, salvar recusado e a nova conta começa do zero', async () => {
+    const { result, rerender } = await prepared();
+    expect(created).toEqual(['blob:previa-1']);
+
+    await switchTo('user-b', rerender);
+    expectCleanFor(result);
+
+    let saved = true;
+    await act(async () => {
+      saved = result.current.saveReport();
+    });
+    expect(saved).toBe(false);
+    expect(mockPlatform.deliver).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(OBJECT_URL_REVOKE_DELAY_MS);
+    });
+    expect(revoked).toEqual(['blob:previa-1']);
+
+    await act(async () => {
+      await result.current.prepareReport({ kind: 'last7' });
+    });
+    expect(mockGetReadingsForReport.mock.calls.map(([uid]) => uid)).toEqual(['user-a', 'user-b']);
+    expect(result.current.review?.previewUrl).toBe('blob:previa-2');
+  });
+
+  it('A → B → A: a revisão antiga da conta A NÃO reaparece ao voltar', async () => {
+    const { result, rerender } = await prepared();
+    expect(result.current.stage).toBe('review');
+
+    await switchTo('user-b', rerender);
+    await switchTo('user-a', rerender);
+
+    expectCleanFor(result);
+    let saved = true;
+    await act(async () => {
+      saved = result.current.saveReport();
+    });
+    expect(saved).toBe(false);
+    expect(mockPlatform.deliver).not.toHaveBeenCalled();
+  });
+
+  it('sair da conta durante a revisão: prévia revogada e nova preparação pede login', async () => {
+    const { result, rerender } = await prepared();
+
+    await switchTo(null, rerender);
+    await act(async () => {
+      jest.advanceTimersByTime(OBJECT_URL_REVOKE_DELAY_MS);
+    });
+    expect(revoked).toEqual(['blob:previa-1']);
+    expectCleanFor(result);
+
+    await act(async () => {
+      await result.current.prepareReport({ kind: 'all' });
+    });
+    expect(result.current.error).toBe('Sessão expirada. Faça login novamente.');
+    expect(mockGetReadingsForReport).toHaveBeenCalledTimes(1);
   });
 });
