@@ -35,6 +35,8 @@
     "expo-sharing": "~57.0.7",
     "expo-splash-screen": "~57.0.5",
     "firebase": "^12.16.0",
+    "jspdf": "4.2.1",
+    "jspdf-autotable": "5.0.9",
     "lucide-react-native": "^1.31.0",
     "luxon": "^3.7.2",
     "nativewind": "4.2.6",

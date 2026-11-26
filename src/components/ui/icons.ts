@@ -23,6 +23,7 @@ export { default as CircleHelpIcon } from 'lucide-react-native/icons/circle-ques
 export { default as ClipboardListIcon } from 'lucide-react-native/icons/clipboard-list';
 export { default as ClockIcon } from 'lucide-react-native/icons/clock';
 export { default as DownloadIcon } from 'lucide-react-native/icons/download';
+export { default as FileTextIcon } from 'lucide-react-native/icons/file-text';
 export { default as HeartPulseIcon } from 'lucide-react-native/icons/heart-pulse';
 export { default as InfoIcon } from 'lucide-react-native/icons/info';
 export { default as LogOutIcon } from 'lucide-react-native/icons/log-out';

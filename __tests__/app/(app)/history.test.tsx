@@ -43,6 +43,10 @@ jest.mock('@/features/readings/useDeleteReading', () => ({
   useDeleteReading: jest.fn(),
 }));
 
+jest.mock('@/features/report/useReportPdf', () => ({
+  useReportPdf: jest.fn(),
+}));
+
 // TrendChart puxa react-native-gifted-charts, que publica ESM cru (mesmo problema do FlashList)
 // e não tem exceção no transformIgnorePatterns do projeto. O gráfico não é o alvo deste teste.
 jest.mock('@/components/bp/TrendChart', () => ({
@@ -61,6 +65,21 @@ const { useExportCsv } = jest.requireMock('@/features/export/useExportCsv') as {
 const { useDeleteReading } = jest.requireMock('@/features/readings/useDeleteReading') as {
   useDeleteReading: jest.Mock;
 };
+const { useReportPdf } = jest.requireMock('@/features/report/useReportPdf') as {
+  useReportPdf: jest.Mock;
+};
+const generateReportMock = jest.fn<Promise<boolean>, [unknown]>();
+const cancelReportMock = jest.fn();
+
+function reportPdfAvailable(isAvailable: boolean): void {
+  useReportPdf.mockReturnValue({
+    isAvailable,
+    generateReport: generateReportMock,
+    cancel: cancelReportMock,
+    isGenerating: false,
+    error: null,
+  });
+}
 
 const READING: ReadingListItem = {
   id: 'reading-1',
@@ -82,6 +101,8 @@ beforeEach(() => {
   useReadingsTrend.mockReturnValue({ trend7d: [], trend30d: [], isLoading: false, error: null });
   useExportCsv.mockReturnValue({ exportCsv: jest.fn(), isExporting: false, error: null });
   useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: false, error: null });
+  generateReportMock.mockResolvedValue(true);
+  reportPdfAvailable(true);
 });
 
 /**
@@ -263,5 +284,42 @@ describe('HistoryScreen — exportar CSV', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(exportCsvMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Relatório PDF (P1, só Web): o botão é independente do CSV e só aparece onde o adaptador da
+ * plataforma está disponível. A geração em si é coberta em useReportPdf.test.ts.
+ */
+describe('HistoryScreen — relatório PDF', () => {
+  it('mostra "Gerar relatório PDF" ao lado do CSV e abre o diálogo de período sem gerar nada', async () => {
+    await render(<HistoryScreen />);
+
+    expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+
+    expect(await screen.findByText('Período do relatório')).toBeTruthy();
+    expect(generateReportMock).not.toHaveBeenCalled();
+  });
+
+  it('gera com o período escolhido e cancelar invalida a geração', async () => {
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar PDF' }));
+    expect(generateReportMock).toHaveBeenCalledWith({ kind: 'last30' });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(cancelReportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('não mostra o botão onde o PDF não está disponível (Android nesta etapa)', async () => {
+    reportPdfAvailable(false);
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Gerar relatório PDF' })).toBeNull();
   });
 });
