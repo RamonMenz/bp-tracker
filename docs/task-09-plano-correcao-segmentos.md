@@ -235,3 +235,13 @@ Critério numérico falhou. Sem justificativa concreta para normalização de
 luminância; encerrar ROI/orientação/escala como ineficaz para B nessa rodada.
 Nenhuma repetição ou segunda variante automática. Etapa6 deve formalizar o limite
 e eventual governança de escopo; não mudar motor/stack ou habilitar clínica.
+
+## Etapa 6 — diagnóstico e encaminhamento entregues
+
+[Diagnóstico de viabilidade ROI591](task-09-etapa-6-viabilidade-roi591.md):
+resultado negativo delimitado, ausência de justificativa para luminância e
+encerramento da linha experimental. Matriz separa critérios demonstrados e
+pendências; texto pronto para o autor encaminhar à orientadora, sem envio ou
+aprovação presumida. Fotografia é irredutível no TAP: manual preservado não
+significa substituição/corte autorizado. Etapa6 documental entregue, decisão de
+escopo e TASK-04/06/07/09/18 pendentes. Nenhuma nova ação no dispositivo.
