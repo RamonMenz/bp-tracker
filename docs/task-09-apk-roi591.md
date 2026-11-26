@@ -65,6 +65,9 @@ Não há install, uninstall, clear, reverse, Metro, lançamento ou captura.
 
 ## Windows — próximo comando
 
+Roteiro inicial preservado. Após os retornos abaixo, usar a consulta revisada
+na seção final; não recriar nem editar a worktree a9373eb já existente.
+
 Demo fechada, Metro parado. Conectar somente o Samsung por USB para consulta,
 sem abrir a demo. Executar na raiz da mesma cópia original do repositório:
 
@@ -111,3 +114,56 @@ restantes. Atualização requer futura guarda específica, manifesto/versões,
 assinatura e baseline instalado conferidos; nenhum instalador é fornecido aqui.
 Abertura e experimento A/B são etapas posteriores, com bundle/revisões próprios.
 Etapa1 física e TASK-04/06/07/09/18 continuam parciais; habilitação clínica bloqueada.
+
+## Retornos e consulta revisada da classe OkHttp
+
+Primeiro retorno: analisador indisponível nas duas consultas; SDK/modelo e hash
+instalado259 conferidos. Após o autor disponibilizar Android SDK Command-line
+Tools no SDK existente, FrameTransform confirmou roi-1/5760000 no APK591. Somente
+a consulta OkHttp retornou `analisador-falhou`; fonte45/hash591 preservados,
+instalado259 reconfirmado e nenhuma atualização/abertura/captura.
+
+A chamada anterior usava `--method build`, sem evidência de compatibilidade desse
+seletor com a CLI instalada. A revisão solicita somente a classe Builder inteira
+e seleciona internamente o descritor exato do método. Não atribui definitivamente
+a falha ao seletor: classe/argumentos/JVM e erros não classificados permanecem
+possíveis. Não muda parser OCR, aplicativo, APK, JDK ou SDK. O reconhecimento
+exige uma única classe conhecida e método completo; código de outros métodos
+não é tratado como parte de build. Categorias fixas distinguem falhas conhecidas
+da ferramenta sem expor mensagens privadas. Sem fallback silencioso ou retry.
+
+Ferramentas revisadas: `e994fcab621adc53d579351603a20b104fba4911`. Lint,
+TypeScript, 832 testes/71 suítes e check PowerShell aprovados. Regressão falhou
+antes e passou após a correção. Processo fictício verifica classe literal sem
+--method, seleção isolada, rejeição de outra classe e erros sanitizados; não é
+apkanalyzer real no Windows. CI do novo head é registrado no PR #83.
+
+Executar na raiz da mesma cópia original, demo fechada, Metro parado e somente
+Samsung por USB. Nova pasta de ferramentas; fontes/APKs anteriores preservados:
+
+```powershell
+& {
+    $ErrorActionPreference = 'Stop'
+    $repo = (git rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or -not $repo) { throw 'repo-unavailable' }
+    $parent = Split-Path -Parent $repo
+    $tools = Join-Path $parent 'aferi-task09-roi591-class-tools'
+    $build = Join-Path $parent 'aferi-task09-roi-build'
+    if (Test-Path -LiteralPath $tools) { throw 'roi591-class-tools-exist-preserve' }
+    git -C $repo fetch origin fix/task-09-guards-roi591
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-fetch-failed' }
+    git -C $repo worktree add --detach $tools e994fcab621adc53d579351603a20b104fba4911
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-class-tools-failed' }
+    $head = (git -C $tools rev-parse HEAD)
+    if ($LASTEXITCODE -ne 0 -or $head -cne 'e994fcab621adc53d579351603a20b104fba4911') { throw 'roi591-class-tools-head-unexpected' }
+    $changes = @(git --no-optional-locks -C $tools status --porcelain --untracked-files=all)
+    if ($LASTEXITCODE -ne 0 -or $changes.Count -ne 0) { throw 'roi591-class-tools-not-clean' }
+    powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$tools\tools\task09\Read-AferiRoi591Readiness.ps1" -BuildPath $build
+    if ($LASTEXITCODE -ne 0) { throw 'roi591-readiness-failed-stop' }
+}
+```
+
+Retornar somente JSON ou categoria sanitizada. Erro, formato desconhecido,
+fonte/hash/modelo/instalado divergente exige parada para análise; não interpretar
+campo false como presença de injeção. Continua AtualizacaoLiberada=false em
+todos os casos. Etapa3 parcial, nenhuma atualização ou validação clínica.
