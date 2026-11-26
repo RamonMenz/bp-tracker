@@ -17,6 +17,16 @@ $method = @'
 .end method
 '@ -split "`n"
 Assert-Roi591 ((ConvertFrom-AferiRoiBuilderCode $method) -ceq 'metodo-build-sem-injecao-expo')
+$native = @'
+.class public final Lexpo/modules/aferiphoto/FrameTransform;
+.field public static final REVISION:Ljava/lang/String; = "roi-1"
+.field public static final MAX_OWNED_PIXEL_BYTES:I = 0x57e400
+'@ -split "`n"
+Assert-Roi591 ((ConvertFrom-AferiRoiNativeCode $native) -ceq 'frame-transform-roi1-limite5760000')
+foreach ($bad in @(@($native + $native), @($native -replace 'roi-1','other'), @($native -replace '0x57e400','0x1'), @($native -replace 'FrameTransform','Other'))) {
+    Assert-Roi591 ((ConvertFrom-AferiRoiNativeCode $bad) -ceq 'constantes-nao-confirmadas')
+}
+Assert-Roi591 ((ConvertFrom-AferiRoiNativeCode @()) -ceq 'formato-nao-reconhecido')
 foreach ($name in @('App','Network')) {
     $injected = $method -replace 'new-instance v0, Lokhttp3/OkHttpClient;', ('new-instance v0, Lexpo/modules/kotlin/devtools/ExpoNetworkInspectOkHttp' + $name + 'Interceptor;')
     Assert-Roi591 ((ConvertFrom-AferiRoiBuilderCode $injected) -ceq 'injecao-expo-presente')
@@ -87,7 +97,7 @@ $module = Get-Module AferiRoi591Readiness
         $expected=@{model='roi-device-model-unexpected';split='roi-installed-package-unexpected';traversal='roi-installed-path-unexpected';path='roi-installed-package-unexpected';hash='roi-installed-hash-unavailable';'hash-path'='roi-installed-hash-unavailable'}[$mode]
         Reject-Roi591 { Get-AferiRoiInstalledIdentity 'fixture' } $expected
     }
-    function script:Invoke-AferiRoiAnalyzer([string] $Program, [string] $ApkPath) { return 'fixture-analyzer-selected' }
+    function script:Invoke-AferiRoiAnalyzer([string] $Program, [string] $ApkPath, [switch] $NativeConstants) { return 'fixture-analyzer-selected' }
 }
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('roi591-' + [guid]::NewGuid().ToString('N'))
 try {
@@ -109,17 +119,24 @@ try {
 #!/usr/bin/env python3
 import sys
 expected=['dex','code','--class','okhttp3.OkHttpClient$Builder','--method','build','fixture.apk']
+native=['dex','code','--class','expo.modules.aferiphoto.FrameTransform','fixture.apk']
+if sys.argv[1:] == native:
+    print('''NATIVE_FIXTURE''')
+    sys.exit(0)
 if sys.argv[1:] != expected:
     print('PRIVATE',file=sys.stderr)
     sys.exit(7)
 print('''METHOD_FIXTURE''')
 '@
         $fixtureBody=$fixtureBody.Replace('METHOD_FIXTURE',($method -join "`n"))
+        $fixtureBody=$fixtureBody.Replace('NATIVE_FIXTURE',($native -join "`n"))
         [IO.File]::WriteAllText($fixtureProgram,$fixtureBody)
         & chmod +x $fixtureProgram
         if ($LASTEXITCODE -ne 0) { throw 'roi591-fixture-executable' }
         $result=& $module { param($program) & $script:RealAnalyzer $program 'fixture.apk' } $fixtureProgram
         Assert-Roi591 ($result -ceq 'metodo-build-sem-injecao-expo')
+        $result=& $module { param($program) & $script:RealAnalyzer $program 'fixture.apk' -NativeConstants } $fixtureProgram
+        Assert-Roi591 ($result -ceq 'frame-transform-roi1-limite5760000')
         $result=& $module { param($program) & $script:RealAnalyzer $program 'wrong.apk' } $fixtureProgram
         Assert-Roi591 ($result -ceq 'analisador-falhou')
         $result=& $module { param($program) & $script:RealAnalyzer $program 'unsafe%path.apk' } $fixtureProgram
@@ -152,7 +169,12 @@ function Fixture-Get-AferiRoiHash {
     if ($orchestration.Mode -eq 'hash' -or ($orchestration.Mode -eq 'changed' -and $orchestration.Hashes -eq 2)) { throw 'fixture-hash-blocked' }
     $id.Candidate
 }
-function Fixture-Get-AferiRoiBytecodeStatus { param($SdkPath,$ApkPath) if ($orchestration.Mode -eq 'pending') { 'formato-nao-reconhecido' } else { 'metodo-build-sem-injecao-expo' } }
+function Fixture-Get-AferiRoiBytecodeStatus {
+    param($SdkPath,$ApkPath,[switch]$NativeConstants)
+    if ($orchestration.Mode -eq 'pending') { 'formato-nao-reconhecido' }
+    elseif ($NativeConstants) { 'frame-transform-roi1-limite5760000' }
+    else { 'metodo-build-sem-injecao-expo' }
+}
 function Fixture-Get-AferiRoiInstalledIdentity {
     param($AdbPath)
     $orchestration.AdbCalls++
@@ -167,6 +189,7 @@ try {
         Assert-Roi591 ($r.CoincideComBaseline259 -and -not $r.CoincideComCandidato591 -and
             -not $r.AtualizacaoLiberada -and -not $r.InstalacaoExecutada -and -not $r.AplicativoAberto -and $orchestration.AdbCalls -eq 1)
         Assert-Roi591 ($r.BytecodeInspecionado -eq ($mode -ceq 'normal'))
+        Assert-Roi591 ($r.RevisaoELimiteNoApkConferidos -eq ($mode -ceq 'normal'))
     }
     foreach ($mode in @('source','hash','changed')) {
         $orchestration.Mode=$mode; $orchestration.AdbCalls=0; $orchestration.Hashes=0

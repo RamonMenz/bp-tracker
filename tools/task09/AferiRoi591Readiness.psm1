@@ -40,21 +40,34 @@ function ConvertFrom-AferiRoiBuilderCode([object[]] $Lines) {
         $instructions[2] -cnotmatch ('^return-object\s+' + $register + '$')) { return 'estrutura-nao-prevista' }
     return 'metodo-build-sem-injecao-expo'
 }
-function Invoke-AferiRoiAnalyzer([string] $Program, [string] $ApkPath) {
+function ConvertFrom-AferiRoiNativeCode([object[]] $Lines) {
+    if ($Lines.Count -eq 0 -or $Lines.Count -gt 20000) { return 'formato-nao-reconhecido' }
+    foreach ($line in $Lines) {
+        if ($line -isnot [string] -or $line.Length -gt 16384 -or $line -match '[\x00-\x08\x0b-\x1f\x7f]') { return 'formato-nao-reconhecido' }
+    }
+    $class = @($Lines | Where-Object { $_ -cmatch '^\s*\.class\s+public\s+final\s+Lexpo/modules/aferiphoto/FrameTransform;\s*$' })
+    $revision = @($Lines | Where-Object { $_ -cmatch '^\s*\.field\s+public\s+static\s+final\s+REVISION:Ljava/lang/String;\s*=\s*"roi-1"\s*$' })
+    $limit = @($Lines | Where-Object { $_ -cmatch '^\s*\.field\s+public\s+static\s+final\s+MAX_OWNED_PIXEL_BYTES:I\s*=\s*(?:0x57e400|5760000)\s*$' })
+    if ($class.Count -ne 1 -or $revision.Count -ne 1 -or $limit.Count -ne 1) { return 'constantes-nao-confirmadas' }
+    return 'frame-transform-roi1-limite5760000'
+}
+function Invoke-AferiRoiAnalyzer([string] $Program, [string] $ApkPath, [switch] $NativeConstants) {
     # Batch paths and APK arguments must not introduce cmd.exe expansion/metacharacters.
     if ($Program -match '[&|<>^%!"\x00-\x1f]' -or $ApkPath -match '[&|<>^%!"\x00-\x1f]') {
         return 'analisador-caminho-incompativel'
     }
     try {
         $ErrorActionPreference = 'Continue'
-        $raw = @(& $Program dex code --class 'okhttp3.OkHttpClient$Builder' --method build $ApkPath 2>&1)
+        if ($NativeConstants) { $raw = @(& $Program dex code --class 'expo.modules.aferiphoto.FrameTransform' $ApkPath 2>&1) }
+        else { $raw = @(& $Program dex code --class 'okhttp3.OkHttpClient$Builder' --method build $ApkPath 2>&1) }
         $code = $LASTEXITCODE
     } catch { return 'analisador-falhou' }
     if ($code -ne 0) { return 'analisador-falhou' }
     # Native warnings/errors are private and cannot become evidence of absence.
+    if ($NativeConstants) { return ConvertFrom-AferiRoiNativeCode $raw }
     return ConvertFrom-AferiRoiBuilderCode $raw
 }
-function Get-AferiRoiBytecodeStatus([string] $SdkPath, [string] $ApkPath) {
+function Get-AferiRoiBytecodeStatus([string] $SdkPath, [string] $ApkPath, [switch] $NativeConstants) {
     $latest = Join-Path $SdkPath 'cmdline-tools/latest/bin/apkanalyzer.bat'
     $legacy = Join-Path $SdkPath 'tools/bin/apkanalyzer.bat'
     if (Test-Path -LiteralPath $latest -PathType Leaf) { $program = $latest }
@@ -72,7 +85,7 @@ function Get-AferiRoiBytecodeStatus([string] $SdkPath, [string] $ApkPath) {
         if ($programs.Count -ne 1) { return 'analisador-ambiguo' }
         $program = $programs[0]
     }
-    Invoke-AferiRoiAnalyzer $program $ApkPath
+    Invoke-AferiRoiAnalyzer $program $ApkPath -NativeConstants:$NativeConstants
 }
 function Get-AferiRoiAdbState($Result) {
     if ($Result.Code -eq 0 -and $Result.Lines.Count -eq 1 -and $Result.Lines[0].Trim() -ceq 'device') { return 'device' }
@@ -102,4 +115,4 @@ function Get-AferiRoiInstalledIdentity([string] $AdbPath) {
         $Matches[2] -cne $base) { throw 'roi-installed-hash-unavailable' }
     [pscustomobject]@{ EstadoAdb = 'device'; ModeloConfere = $true; Sha256Instalado = $Matches[1].ToLowerInvariant() }
 }
-Export-ModuleMember -Function Get-AferiRoi591Identity, ConvertFrom-AferiRoiBuilderCode, Get-AferiRoiBytecodeStatus, Get-AferiRoiAdbState, Get-AferiRoiInstalledIdentity
+Export-ModuleMember -Function Get-AferiRoi591Identity, ConvertFrom-AferiRoiBuilderCode, ConvertFrom-AferiRoiNativeCode, Get-AferiRoiBytecodeStatus, Get-AferiRoiAdbState, Get-AferiRoiInstalledIdentity
