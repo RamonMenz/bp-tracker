@@ -280,3 +280,13 @@ parser, câmera, buffers e dependências permanecem iguais. Qualidade do reposit
 e integridade dos comandos/links/cartão são verificadas antes de publicar; não há
 build novo ou execução física pelo Codex. Etapa4 **aguarda retorno do autor**;
 não declarar conclusão/eficácia, custos, durações ou métricas não medidos.
+
+## Retorno posterior — resultado analisado
+
+[Análise por cartão/passagem e decisão](task-09-etapa-4-resultado-roi591.md).
+O protocolo acima permanece o congelado antes da coleta. A foi preservado; B
+processado permaneceu incerto nos três campos. Critério de avanço não atendido,
+sem justificativa fotométrica para a segunda variante. Encerrar esta linha ROI1
+no escopo observado, sem repetir/selecionar sucessos ou declarar inviabilidade
+universal do motor. Etapa4 analisada com resultado negativo; não iniciar etapa5
+como correção aprovada. TASKs e habilitação clínica continuam pendentes.
