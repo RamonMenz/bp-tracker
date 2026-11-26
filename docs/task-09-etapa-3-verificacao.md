@@ -208,3 +208,12 @@ assinaturas locais259/591 verificadas/iguais. [Registro selecionado e próxima
 consulta](task-09-apk-roi591.md). Build Android passa a evidência recebida do
 autor; Codex não recebeu/executou o APK. Bytecode e instalado ainda não conferidos
 nesse retorno. Etapa3 continua parcial; atualização, abertura e captura pendentes.
+
+## Fechamento posterior
+
+[Consolidação e matriz de alcance](task-09-apk-roi591.md#fechamento-técnico-da-etapa-3-após-recuperação):
+recebidos bytecode dirigido, atualização259→591, abertura recuperada e preparo
+offline do bundle98d31d1e… com redes declaradas pelo autor. Etapa3 concluída no
+escopo técnico de revisão/testes/artefato. As classificações anteriores registram
+o estado de cada entrega. Sem teste físico de OCR, geometria/lease/heap do SDK,
+homologação clínica ou conclusão das TASK-04/06/07/09/18; etapas4–6 pendentes.
