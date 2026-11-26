@@ -80,6 +80,36 @@ public final class FrameTransformTest {
   }
   public static void main(String[] args) {
     for (int rotation : new int[] {0, 90, 180, 270}) { rotation(rotation); guide(rotation); }
+    // Projeções de preview com quarter turn e espelhamento: guia e ROI conhecidos.
+    for (double[] matrix : new double[][] {{0,-10,1000,10,0,0,0,0,1}, {-10,0,1000,0,10,0,0,0,1}}) {
+      FrameTransform.Plan projected = FrameTransform.fromPreview(1000,1000,90,100,100,matrix);
+      check(projected.left == 80 && projected.top == 80 && projected.right == 920 && projected.bottom == 920);
+      double[] drawn = projected.guideInPreview();
+      near(drawn[0],8); near(drawn[1],8); near(drawn[2],92); near(drawn[3],92);
+    }
+    // Oráculos pequenos e explícitos, independentes das fórmulas de rotação do transformador.
+    byte[] grid = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,11,21,12,22,13,23,14,24};
+    byte[][] cropExpected = {{2,3,6,7,12,22}, {4,0,5,1,11,21}, {13,12,9,8,13,23}, {11,15,10,14,14,24}};
+    int cropIndex = 0;
+    for (int rotation : new int[] {0,90,180,270}) {
+      byte[] cropped = FrameTransform.nv21(grid, FrameTransform.region(4,4,rotation,2,0,4,2,2,2), () -> false);
+      check(Arrays.equals(cropped, cropExpected[cropIndex++]));
+    }
+    byte[] reduced = FrameTransform.nv21(grid, FrameTransform.region(4,4,0,0,0,4,4,2,2), () -> false);
+    check(Arrays.equals(reduced, new byte[] {3,5,11,13,13,23}));
+    byte[] enlargedCrop = FrameTransform.nv21(grid, FrameTransform.region(4,4,0,2,0,4,2,4,4), () -> false);
+    check(Arrays.equals(enlargedCrop, new byte[] {2,2,3,3,3,3,4,4,5,5,6,6,6,6,7,7,12,22,12,22,12,22,12,22}));
+    // Limite real de arrays próprios, sem confundi-lo com heap/SDK/GPU totais.
+    FrameTransform.Plan maximum = FrameTransform.region(1600,1200,0,0,0,1600,1200,1600,1200);
+    check(maximum.ownedPixelBytes() == 5760000 && maximum.outputBytes() == 2880000);
+    byte[] maximumSource = new byte[maximum.outputBytes()];
+    byte[] maximumOutput = FrameTransform.nv21(maximumSource, maximum, () -> false);
+    check(maximumOutput.length == maximum.outputBytes() && maximumOutput != maximumSource);
+    fails(() -> FrameTransform.nv21(new byte[maximumSource.length + 1], maximum, () -> false));
+    fails(() -> FrameTransform.region(4,4,0,0,0,4,4,3,4));
+    fails(() -> FrameTransform.region(4,4,0,0,0,4,4,0,4));
+    fails(() -> maximum.toSourceBox(Double.POSITIVE_INFINITY,0,1,1));
+    fails(() -> maximum.toSourceBox(3,0,2,1));
     byte[] uniform = new byte[8 * 6 * 3 / 2]; Arrays.fill(uniform, (byte) 173);
     FrameTransform.Plan up = FrameTransform.region(8, 6, 90, 0, 0, 6, 8, 12, 16);
     for (byte value : FrameTransform.nv21(uniform, up, () -> false)) check((value & 255) == 173);

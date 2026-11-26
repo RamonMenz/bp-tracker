@@ -93,6 +93,9 @@ jobs:
       - name: Guardas do build de avaliação (PowerShell, sem Gradle)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiInspectorBuild.check.ps1
 
+      - name: Guardas do candidato ROI (PowerShell, sem Gradle ou dispositivo)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoiCandidate.check.ps1
+
       - name: Comparação de assinaturas (PowerShell, apksigner simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
 

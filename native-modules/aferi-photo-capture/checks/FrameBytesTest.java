@@ -44,6 +44,15 @@ public final class FrameBytesTest {
     fails(() -> FrameBytes.nv21(4,2,null,4,1,u,2,1,v,2,1));
     ByteBuffer offsetShort = y.duplicate(); offsetShort.position(1);
     fails(() -> FrameBytes.nv21(4,2,offsetShort,4,1,u,2,1,v,2,1));
+    ByteBuffer limited = y.duplicate(); limited.limit(7);
+    fails(() -> FrameBytes.nv21(4,2,limited,4,1,u,2,1,v,2,1));
+    ByteBuffer direct = ByteBuffer.allocateDirect(12);
+    direct.put(new byte[] {0,0,1,2,3,4,5,6,7,8,0,0}); direct.position(2); direct.limit(10);
+    equal(FrameBytes.nv21(4,2,direct.slice(),4,1,u,2,1,v,2,1), expected);
+    fails(() -> FrameBytes.nv21(4,2,y,4,1,u,-2,1,v,2,1));
+    fails(() -> FrameBytes.nv21(4,2,y,4,1,u,2,-1,v,2,1));
+    ByteBuffer shortChroma = v.duplicate(); shortChroma.limit(1);
+    fails(() -> FrameBytes.nv21(4,2,y,4,1,u,2,1,shortChroma,2,1));
     dimensions(1280, 960, true);
     dimensions(1440, 1080, true);
     dimensions(1600, 1200, true);
