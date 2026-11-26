@@ -332,6 +332,14 @@ A diferença da rodada 1 se inverte na rodada 2, quando a ordem é trocada. É e
 
 ## 12. Registro para o relatório final
 
+> **Atualização posterior (26/11/2026, sem alterar o texto abaixo, que é o registro da P4 no momento
+> em que foi escrito):** a P4 foi mesclada em `staging` pelo PR #89 (CI verde nos quatro jobs). O
+> risco residual dos breadcrumbs do Sentry (§9.4, §11 e "Achados registrados") foi **corrigido
+> fora do PDF** pelo PR #91; ver [sentry-privacidade.md](sentry-privacidade.md). Continua sem
+> verificação a chegada ao Sentry real e a mensagem de exceção no coletor nativo (Crashlytics).
+> Estado consolidado do PDF, tarefas e pendências:
+> [registro de decisões e evidências](relatorio/decisoes-e-evidencias.md).
+
 **Fatos**
 - **P1 e P2:** mescladas em `staging` (PRs #87 e #88), com CI verde.
 - **P4:** 8 commits em `feat/pdf-relatorio-p4`, a partir de `d22a2e9`, sem push.
