@@ -105,6 +105,9 @@ jobs:
       - name: Metro ROI591 (PowerShell, HTTP/ADB simulados)
         run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Metro.check.ps1
 
+      - name: Preparo offline ROI591 (PowerShell, ADB simulado)
+        run: pwsh -NoLogo -NoProfile -File tools/task09/AferiRoi591Offline.check.ps1
+
       - name: Comparação de assinaturas (PowerShell, apksigner simulado)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiApkSignatures.check.ps1
 
