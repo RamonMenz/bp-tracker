@@ -135,6 +135,9 @@ export function ExportPdfDialog({
                             accessibilityRole="radio"
                             accessibilityLabel={option.label}
                             accessibilityState={{ checked: isSelected, selected: isSelected, disabled: isGenerating }}
+                            // O react-native-web 0.21 ignora accessibilityState: sem aria-checked, o
+                            // leitor de tela na Web não sabe qual período está marcado (PDF-21).
+                            aria-checked={isSelected}
                             disabled={isGenerating}
                             onPress={() => setShortcut(option.value)}
                             className="min-h-[48px] flex-1 items-center justify-center rounded-2xl border px-2"

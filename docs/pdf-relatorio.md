@@ -1,10 +1,10 @@
-# Relatório PDF — Web (etapas P1 e P2)
+# Relatório PDF — Web (etapas P1, P2 e P4)
 
-**Branches:** P1 em `feat/pdf-relatorio` (mesclada em `staging` pelo PR #87); P2 em `feat/pdf-relatorio-p2`, a partir de `origin/staging` em `987562c`.
+**Branches:** P1 em `feat/pdf-relatorio` (PR #87) e P2 em `feat/pdf-relatorio-p2` (PR #88), ambas mescladas em `staging`; P4 (endurecimento e aceite sem aparelho) em `feat/pdf-relatorio-p4`, a partir de `origin/staging` em `d22a2e9`.
 **Spec:** [`specs/spec-relatorio-pdf.md`](../specs/spec-relatorio-pdf.md) (§2, §3, §4, §5, §7).
-**Estado:** P1 e P2 implementadas e verificadas localmente, com testes automatizados e inspeção do PDF gerado. **O relatório PDF não está completo:** faltam o Android (`expo-print`) e a validação em fluxo logado, navegador móvel, impressão física e leitor de tela. O Android não foi validado.
+**Estado:** P1 e P2 implementadas; P4 converteu em evidência objetiva o que é verificável sem aparelho (seção 9). **O relatório PDF não está completo:** faltam o Android (`expo-print`, P3) e toda validação em aparelho, fluxo logado, navegador móvel, impressão física e leitor de tela. **Nenhum critério está validado em aparelho ou fluxo logado.**
 
-As seções 1 a 7 registram a P1 e foram mantidas como histórico; onde a P2 mudou algo, a seção 8 diz o quê.
+As seções 1 a 7 registram a P1 e a seção 8 registra a P2, ambas mantidas como histórico. A P4 está na seção 9, e a matriz atual na seção 10.
 
 ## 1. O que a P1 entrega
 
@@ -167,86 +167,226 @@ O único host externo tentado continua sendo `www.google.com`, no boot do app (A
 
 **Não verificado:** a prévia embutida renderizando num navegador com visualizador de PDF. O headless não tem visualizador e não há navegador com interface nesta sessão.
 
-## 9. Matriz de critérios PDF-01..22 (após a P2)
+## 9. Etapa P4 — endurecimento e aceite sem aparelho
 
-**Legenda.** “Coberto (automatizado)” = há teste automatizado (Jest) **ou** inspeção do PDF gerado (`pdftotext`, `pdftoppm`, `pdfinfo`, `pdffonts`) ou do bundle/Chromium local. **Nenhum critério foi validado em aparelho nem em fluxo logado** (coluna “Aparelho/logado”).
+Sem funcionalidade nova. Cada item virou teste automatizado ou verificação reproduzível. Os **dois defeitos encontrados foram corrigidos** com teste que falhava antes da correção.
 
-| ID | Estado | Aparelho/logado | Evidência / motivo |
+### 9.1 PDF-18: troca de conta em cada fase (`useReportPdf.test.ts`)
+
+- **Cobertura dos testes:** trocam o uid durante o carregamento do módulo, a leitura do Firestore, a geração do PDF e a revisão, e cobrem também sair da conta.
+- **Revogação real:** a prévia usa o `openPdfPreview` real do adaptador Web, com `URL.createObjectURL`/`revokeObjectURL` substituídos por dublês, então a revogação é conferida de fato.
+- **Resultados verificados:**
+  - nenhuma consulta, prévia ou entrega tardia da conta anterior;
+  - a URL da prévia é revogada após o atraso;
+  - “salvar” é recusado;
+  - a nova conta começa do zero e consulta com o próprio uid.
+- **Defeito corrigido:** em A → B → A, a revisão antiga de A **reaparecia** ao voltar, com a URL já revogada, porque o estado era só escondido. O estado agora é reiniciado no render quando o uid muda.
+- **Isolamento no emulador:** outra conta e um contexto sem autenticação recebem `permission` (§9.3).
+
+### 9.2 PDF-14/22: repetição, ciclos, limite e prazo (`useReportPdf.test.ts`)
+
+- **Concorrência:** cinco toques seguidos fazem uma leitura e geram uma prévia. Se o usuário cancelar e preparar de novo, a resposta tardia da primeira leitura é descartada.
+- **Salvar duas vezes** entrega o arquivo uma vez só.
+- **Ciclos sem vazamento:** preparar, alterar, cancelar, tentar de novo, salvar e cancelar revogam **todas** as 5 URLs criadas. Depois de cancelar, não sobra PDF para um “salvar” tardio. Uma mutação removendo a liberação em “cancelar” faz o teste falhar.
+- **Limite:** 3.000 registros geram o relatório; 3.001 são recusados sem renderizar; um período menor volta a funcionar.
+- **Prazo:** no carregamento do módulo, aos 29.999 ms a preparação ainda está em andamento e aos 30.000 ms termina com a mensagem e um log genérico; uma nova tentativa funciona em seguida.
+- **Isolamento entre testes:** o `beforeEach` passou de `clearAllMocks` para `resetAllMocks`. Uma implementação de `deliver` que lança erro, definida num teste anterior, vazava para os seguintes.
+
+### 9.3 PDF-20: retrato congelado no emulador do Firestore (`tests/report-readings.rules.test.ts`)
+
+**Executado localmente** com `npm run test:rules` (Java 21, emulador do `firebase-tools` travado no lock), duas vezes seguidas: 86 testes, sendo 79 da suíte de rules e 7 novos. Está ligado ao job “Security Rules” do CI, porque o padrão do `jest.rules.config.js` é `tests/**/*.test.ts`. A função `getReadingsForReport` **real** lê com o contexto autenticado; um segundo contexto da mesma conta faz o papel de outro aparelho.
+- **Bordas** em `Timestamp` real (São Paulo): 30/09 23:59:59.999 e 24/10 00:00 ficam de fora; 01/10 00:00 e 23/10 23:59:59.999 entram. Ordem por `measuredAt`.
+- **Documento inválido** é omitido e contado (`omittedCount = 1`), e a cobertura deixa de ser confirmada.
+- **Escrita depois da leitura** (atualizar, apagar, criar): o retrato e o modelo já entregues não mudam (comparação byte a byte do JSON); a nova geração incorpora as três alterações.
+- **Escrita concorrente com a leitura:** cada documento vem inteiro (versão antiga ou nova, nunca meio-termo); médias, N e tabela são calculados só sobre o retrato entregue; a geração seguinte vê as escritas.
+- **Isolamento:** Bob e um contexto sem autenticação recebem `ReadingsQueryError('permission')`; Bob lê só o que é dele.
+- **Projeto próprio no emulador:** a suíte usa o projeto `demo-aferi-pdf20`. Na primeira tentativa, as duas suítes rodaram em paralelo no mesmo projeto e o `clearFirestore` de uma apagou dados da outra, derrubando também um teste antigo.
+- **Rede da CLI:** durante o `test:rules`, o `firebase-tools` tentou acessar `firebase-public.firebaseio.com`, uma consulta da própria CLI. O proxy da sessão recusou. Nenhum teste depende disso.
+
+### 9.4 PDF-11/13: rede e logs
+
+**Teste automatizado** (`src/features/report/report-privacy.test.ts`, ambiente node). Percorre o caminho real hook → repositório → modelo → jsPDF:
+- O logger real roda em modo produção (`__DEV__ = false`), com um coletor espião no lugar do Sentry, e o console é espionado.
+- As sentinelas ficam na observação, nos valores (263/197), no nome e e-mail da conta, na mensagem de erro do SDK e na exceção do renderizador.
+- Cenários: caminho feliz com documento inválido, erro do SDK, erro do renderizador, falha no download e prazo estourado.
+- Garantias verificadas:
+  - nenhuma sentinela chega ao coletor nem ao console (mensagem e pilha incluídas);
+  - toda mensagem registrada pertence a uma lista fixa, e o contexto só tem `uid`/`docId`;
+  - `fetch`, `http`, `https`, `XMLHttpRequest` e `WebSocket` não são usados;
+  - o PDF entregue não tem `/Author`, e-mail nem uid.
+- Uma mutação que loga a exceção crua do renderizador faz o teste falhar.
+
+**Chromium local** (`node tools/pdf-relatorio/browser-check.cjs <dist>`, rede externa abortada, export da P4):
+
+| Fase | Requisições locais | Hosts externos tentados (bloqueados) |
+|---|---|---|
+| Abertura do app | 3 (HTML, `entry`, recursos); **nenhum** chunk do relatório | `www.google.com/recaptcha/enterprise.js`: script do **App Check** (reCAPTCHA Enterprise), carregado no boot do app, **não vem do relatório** |
+| Geração do relatório | só `report-pdf-pipeline`, `jspdf.es`, `jspdf.plugin` (e o `blob:` local da prévia) | **nenhum** |
+
+**Risco residual fora do escopo, sugerido como tarefa separada.** O Sentry da Web usa a integração padrão de breadcrumbs (`dom: true`), e o SDK instalado grava o `aria-label` do elemento clicado. No fluxo do relatório, os elementos clicáveis não têm valores clínicos nos rótulos. As linhas do **Histórico legado**, porém, têm rótulos como “128 por 82”, e esses breadcrumbs seguem com qualquer erro reportado depois. A correção fica em `crashReporter.web.ts`, não no relatório.
+
+### 9.5 PDF-17: temporários
+
+**Web (Chromium local, mesmo script):** a geração não altera nada no armazenamento do navegador. IndexedDB, Cache Storage, OPFS, localStorage, sessionStorage e service workers são comparados antes e depois. As três bases IndexedDB do Firebase já existiam desde a abertura do app.
+
+URLs de objeto, com o relógio da página controlado:
+
+| Momento | Criadas | Revogadas |
+|---|---|---|
+| Logo após salvar | 2 (prévia e download) | 0 |
+| Depois de adiantar 61 s | 2 | 2 |
+
+Não há arquivo temporário em disco gerado pelo app: o PDF vive num `Blob` em memória até a revogação. O arquivo baixado fica onde o navegador e o usuário decidirem, fora do controle do Aferi.
+
+**Android: pendente para a P3.** A spec §3.5.3–3.5.4 pede:
+- gerar em cache privado;
+- compartilhar por URI com permissão de leitura;
+- limpar após o uso sem apagar o arquivo antes de o consumidor terminar;
+- rotina para resíduos de interrupção;
+- não copiar para `documentDirectory`.
+
+Nada disso existe nem foi testado.
+
+### 9.6 PDF-01 e regressão do legado
+
+- **Guarda estática:** `src/features/report/report-lazy-loading.test.ts` falha se qualquer módulo de `app/` ou `src/` importar `jspdf`/`jspdf-autotable` de forma estática; se o `import()` desses pacotes sair do renderizador; se o pipeline for alcançado por outro caminho que não o `import()` do adaptador Web; ou se o adaptador nativo os referenciar. Um `import { jsPDF } from 'jspdf'` no Histórico faz o teste falhar.
+- **Runtime:** o `browser-check` confirma que nenhum chunk do relatório é requisitado na abertura do app.
+- **Suítes do legado:** CSV, diálogo e hook do CSV, Histórico, formulário manual (`index`, `useReadingForm`, `useAddReading`), repositório, `useReadings`, `useReadingsTrend` e `ReadingRow`. São 12 suítes e 129 testes, todos verdes, e a suíte completa também passa.
+- **Tempo de abertura** (`node tools/pdf-relatorio/open-timing.cjs`). Condições:
+  - Chromium headless (Playwright 1.63) numa VM com 4 vCPUs, rede externa bloqueada e servidor local;
+  - 20 execuções por build, alternadas A/B depois de um aquecimento;
+  - builds comparados: export de `d28b005` (antes da P1) e da P4.
+
+  O Histórico exige login, então a medida é a abertura do app até a tela de entrada, com o mesmo `entry` que carrega o Histórico.
+
+| Rodada | Build | Mediana até “Entrar com Google” | p90 | FCP mediana | DOMContentLoaded mediana | Heap JS |
+|---|---|---|---|---|---|---|
+| 1 (antes = A) | antes da P1 | 897 ms | 956 ms | 416 ms | 244 ms | 23 MB |
+| 1 | P4 | 939 ms | 980 ms | 448 ms | 257 ms | 23 MB |
+| 2 (P4 = A) | P4 | 901 ms | 954 ms | 420 ms | 246 ms | 23 MB |
+| 2 | antes da P1 | 905 ms | 948 ms | 420 ms | 238 ms | 23 MB |
+
+A diferença da rodada 1 se inverte na rodada 2, quando a ordem é trocada. É efeito de posição e ruído (amplitude de cerca de 450 a 1.000 ms em ambos), não degradação atribuível ao relatório. O `entry` cresceu 18,2 KB brutos (+4,7 KB gzip) desde antes da P1. Celular e Histórico logado **não foram medidos**.
+
+### 9.7 PDF-21: acessibilidade da interface
+
+**Chromium local** (`node tools/pdf-relatorio/a11y-check.cjs <dist>`). Monta o `ExportPdfDialog` **real** do bundle exportado numa raiz React própria, localizando os módulos do diálogo, do React e do `react-dom/client` no `entry`. Dados sintéticos.
+- **Papéis e nomes:** o `radiogroup` contém 4 `radio` com nome; os botões têm nome; o aviso de cobertura tem `role="alert"`; o diálogo é `aria-modal`.
+- **Defeito corrigido:** os rádios **não tinham `aria-checked` na Web**, porque o react-native-web 0.21 ignora `accessibilityState`. O leitor de tela não sabia qual período estava marcado. O diálogo do PDF passou a declarar `aria-checked`; o script falhava antes da correção (`null`) e agora a árvore acessível mostra `[checked]`.
+- **Foco:** depois da animação de abertura (cerca de 250 ms), o foco entra no primeiro rádio. Tab e Shift+Tab circulam 7 rádios/botões sem sair do modal, e focar o fundo devolve o foco ao modal.
+- **Teclado:**
+  - Enter marca o rádio e aciona os botões; Espaço aciona os botões; Esc fecha (`onCancel`).
+  - Durante a preparação, “Preparar relatório” fica `aria-disabled="true"` e “Cancelar” continua ativo.
+  - **Limitação:** Espaço **não** marca rádio, e as setas não navegam no grupo, porque o `PressResponder` do RNW só trata Espaço em `button`/`menuitem`. O mesmo vale para o diálogo do CSV e o seletor de tema, que também não têm `aria-checked`; ambos foram sugeridos como tarefa separada.
+- **Alvos:** todos os rádios e botões têm pelo menos 48 × 48 px (rádios 189 × 48; botões até 686 × 48).
+- **Zoom de 200 %** (janela de 640 px com `zoom: 2`, ou seja, 320 px CSS): seleção (8 textos) e revisão (17 textos) sem sobreposição, sem texto cortado e sem rolagem horizontal da página. A revisão rola dentro do cartão.
+- **Testing-library:** papéis, rótulos, estados, aviso e ações (`ExportPdfDialog.test.tsx`, `PdfPreviewFrame.web.test.tsx`).
+- **Não verificado:**
+  - leitor de tela real (NVDA, VoiceOver, TalkBack);
+  - contraste medido nos estados;
+  - modo escuro;
+  - PDF marcado (o PDF tem texto selecionável mas `Tagged: no`).
+
+**Não há declaração de conformidade WCAG AA.**
+
+## 10. Matriz de critérios PDF-01..22 (após a P4)
+
+“Automatizado” = teste automatizado (Jest, emulador do Firestore) ou verificação local reproduzível (inspeção do PDF com poppler, Chromium headless com rede externa bloqueada, export Web). **Nenhum critério está validado em aparelho ou fluxo logado.**
+
+| ID | Automatizado | Validado em aparelho/fluxo logado | Pendente (motivo) |
 |---|---|---|---|
-| PDF-01 | **Coberto (automatizado)** | Não | `import()` dinâmico; `entry` sem jsPDF; Chromium: nenhum chunk de PDF antes da ação (§6, §8.5); worker rejeitado por carregar jsPDF na abertura (§8.2). |
-| PDF-02 | **Coberto (automatizado)** | Não | `report-period.test.ts` (dias civis, bordas, horário de verão, bloqueios); diálogo e hook bloqueiam antes da consulta. |
-| PDF-03 | **Coberto (automatizado)** | Não | Cabeçalho, cobertura, três médias, gráfico e tabela do mesmo retrato; ordem médias → gráfico → tabela → notas conferida no `pdftotext`. |
-| PDF-04 | **Coberto (automatizado)** | Não | 130,0/90,0 (N = 3) e 70,0 bpm (N = 2), também com dois registros no mesmo dia; modelo e `pdftotext`. |
-| PDF-05 | **Coberto (automatizado)** | Não | “—” na tabela; “Não informado” com N = 0. |
-| PDF-06 | **Coberto (automatizado)** | Não | Sessão conta uma vez nas médias e no gráfico (ponto diário por registro); detalhes sem reconstrução. |
-| PDF-07 | **Coberto (automatizado)** | Não | Vazio sem PDF; vazio não confirmado com mensagem própria; omissão declarada; nova tentativa. |
-| PDF-08 | **Coberto (automatizado)** | Não | `report-chart.test.ts` (lacuna sem ponto/linha, pontos isolados sem linha, um dia sem linha + explicação, escala única, painéis sem perda de ponto, datas reais) e PNG em cores e cinza da página do gráfico (7 dias, um dia, extenso). |
-| PDF-09 | **Coberto (automatizado)** | Não | 400 registros com as linhas contadas por página; observação de 60 linhas com “(continua)/(continuação)”, as 60 linhas presentes e em ordem; PNG inspecionado. |
-| PDF-10 | **Parcial** | Não | PNG em cores e em cinza legíveis (séries distintas por traço/marcador); A4 por `pdfinfo`. Falta impressão física. |
-| PDF-11 | **Parcial** | Não | Chromium com rede externa abortada: só chunks locais; PDF sem `/URI`, `/JS` ou `/Launch`. Falta inspeção em fluxo logado com Firestore real. |
-| PDF-12 | **Coberto (automatizado)** | Não | HTML, URL, aspas e caracteres especiais literais; emoji vira “?” declarado. |
-| PDF-13 | **Coberto (automatizado)** | Não | Sentinelas em exceção do renderizador, SDK e documento inválido não chegam ao `logError`; prazo estourado loga só um `Error` genérico. Falta o coletor real (Sentry). |
-| PDF-14 | **Coberto (automatizado)** | Não | Sem preparações concorrentes; cancelar descarta o resultado e libera a prévia; nenhuma escrita. |
-| PDF-15 | **Parcial** | Não | Web: só “Salvar PDF” entrega (nome e MIME conferidos no Chromium); prévia não embutida sem visualizador, evitando download automático. **Android pendente.** |
-| PDF-16 | **Parcial** | Não | Falha no download vira mensagem e a revisão é mantida; URLs revogadas só após 60 s. Compartilhamento Android pendente. |
-| PDF-17 | **Parcial** | Não | Web: nada persistido pelo app; URL da prévia liberada ao salvar, cancelar, alterar o período, trocar de conta e desmontar (testes). Temporários Android pendentes. |
-| PDF-18 | **Coberto (automatizado)** | Não | Troca de uid durante a renderização (descarte) e durante a revisão (prévia liberada, resumo oculto, salvar recusado); mutação confirma os testes. |
-| PDF-19 | **Coberto (automatizado)** | Não | Cache, omissão e pendência abrem a revisão com aviso **antes** de salvar, “Tentar novamente” (nova leitura) e “Salvar recorte parcial”; o PDF também declara. Não validado com cache real do Firestore. |
-| PDF-20 | **Coberto (automatizado, com dublês)** | Não | Uma leitura por preparação; o PDF salvo é o mesmo Blob pré-visualizado; “Tentar novamente” faz nova leitura. Sem teste de alteração concorrente no Firestore real. |
-| PDF-21 | **Parcial** | Não | Diálogo e revisão com papéis, rótulos e aviso `role="alert"`; alvos de 48 dp; link da prévia com 48 px. PDF não marcado (não é PDF/UA). Leitor de tela e teclado manuais pendentes. |
-| PDF-22 | **Parcial** | Não | Limite explícito de 3.000 sem truncar e prazo de 30 s para as etapas assíncronas (testes); volume medido no node. Renderização na thread principal (worker avaliado e rejeitado, §8.2); navegador móvel não medido. |
+| PDF-01 | Sim: guarda estática de imports; `browser-check` sem chunk do relatório na abertura; abertura do app igual antes/depois (§9.6); 129 testes do legado verdes. | Não | Medir o Histórico logado (exige conta) e no celular; Android fora do escopo (P3). |
+| PDF-02 | Sim: `report-period.test.ts` (dias civis, horário de verão, bloqueios); bordas em `Timestamp` real no emulador (§9.3). | Não | Conferir no navegador do usuário, com o fuso real do aparelho. |
+| PDF-03 | Sim: modelo e PDF (`pdftotext`) com cabeçalho, cobertura, médias, gráfico e tabela do mesmo retrato. | Não | Aceite com dados reais em fluxo logado; Android (P3). |
+| PDF-04 | Sim: exemplo da spec no modelo e no PDF. | Não | Aceite em fluxo logado. |
+| PDF-05 | Sim: “—” e “Não informado”. | Não | Aceite em fluxo logado. |
+| PDF-06 | Sim: sessão conta uma vez nas médias e no gráfico. | Não | Aceite em fluxo logado com sessões reais. |
+| PDF-07 | Sim: vazio sem PDF; vazio não confirmado; omissão declarada (inclusive no emulador). | Não | Aceite em fluxo logado. |
+| PDF-08 | Sim: `report-chart.test.ts` e PNG em cores e cinza. | Não | Impressão física; Android (P3). |
+| PDF-09 | Sim: 400 registros contados por página; continuidade de observação longa. | Não | Impressão física. |
+| PDF-10 | Parcial: PNG em cores e cinza; A4 por `pdfinfo`. | Não | **Impressão física** A4/cinza e leitores externos: exige impressora e leitura humana. |
+| PDF-11 | Sim: `report-privacy.test.ts` (nenhuma API de rede usada pelo relatório); `browser-check` (geração sem host externo; abertura só com o App Check, alheio ao relatório). | Não | Inspeção em **fluxo logado** com o Firestore real, separando as consultas autorizadas: exige conta. |
+| PDF-12 | Sim: HTML, URL e especiais literais; sem `/URI`, `/JS` ou `/Launch`. | Não | Aceite em fluxo logado. |
+| PDF-13 | Sim: logger real em modo produção com coletor espião e sentinelas; mutação detectada. | Não | Inspeção do **Sentry real** (DSN de produção); risco residual de breadcrumbs do legado (§9.4), sugerido como tarefa. |
+| PDF-14 | Sim: toques repetidos, cancelar e gerar de novo, salvar duas vezes, ciclos sem vazamento de URL. | Não | Aceite em fluxo logado. |
+| PDF-15 | Sim (Web): download com nome e MIME conferidos; nada sai antes de “Salvar PDF”; prévia não embutida sem visualizador. | Não | **Android (P3)**; abrir o arquivo em leitor externo, de forma manual. |
+| PDF-16 | Parcial (Web): falha no download vira mensagem e mantém a revisão. | Não | **Compartilhamento Android (P3).** |
+| PDF-17 | Sim (Web): armazenamento inalterado; 2 de 2 URLs revogadas só após o atraso. | Não | **Temporários Android (P3):** cache privado, limpeza e resíduos. |
+| PDF-18 | Sim: troca de uid em cada fase, A → B → A corrigido; isolamento entre contas no emulador. | Não | Troca real de conta em fluxo logado. |
+| PDF-19 | Sim: aviso antes de salvar, nova tentativa e recorte parcial; `role="alert"` no Chromium. | Não | Cache offline **real** do Firestore num navegador logado. |
+| PDF-20 | Sim: **emulador do Firestore** (retrato congelado, escrita concorrente, nova geração); antes era só com dublês. | Não | Firestore de produção em fluxo logado. |
+| PDF-21 | Parcial: Chromium (papéis, `aria-checked` corrigido, foco preso no modal, Enter e Esc, `aria-disabled`, alvos de 48 px, zoom 200 %) e testing-library. | Não | **Leitor de tela real**; contraste e modo escuro; Espaço e setas nos rádios (limitação do RNW, tarefa sugerida); PDF não marcado. Não é AA completo. |
+| PDF-22 | Sim: limite 3.000/3.001, prazo de 30 s com recuperação, volume medido no node. | Não | **Celular/navegador móvel** (tempo e memória); renderização na thread principal (worker rejeitado, §8.2). |
 
-## 10. Limites conhecidos
+## 11. Limites conhecidos
 
-- **Só Web.** O Android não tem botão; o adaptador nativo é inerte. `expo-print` não foi instalado.
-- **Nada validado em fluxo logado, aparelho, navegador móvel, impressão física ou leitor de tela.**
-- **Prévia embutida não observada** num navegador com visualizador de PDF; só o caminho “sem visualizador” foi exercitado no Chromium.
-- **Fonte padrão não embutida.** Caracteres fora do CP1252 viram “?” (declarado). O PDF não é marcado.
-- **Thread principal.** O limite de 3.000 registros controla o tempo de renderização; o prazo de 30 s não interrompe a renderização síncrona.
-- **Cobertura “confirmada”** = leitura do servidor, nenhum documento omitido e nenhuma escrita pendente na revisão. Não é auditoria além do que o Firestore informa.
-- **Painéis:** no máximo 12, cada um com pelo menos 92 dias. Em períodos muito longos, os marcadores ficam densos, mas nenhum ponto é omitido.
-- **Continuação** usa a métrica de 10 pt da coluna de detalhes; uma linha nunca é cortada entre páginas, e a separação acontece entre blocos.
-- **Diálogo duplicado** em relação ao `ExportCsvDialog`; extrair um seletor compartilhado exigiria refatorar o CSV.
+- **Só Web.** O Android (P3) não tem botão; o adaptador nativo é inerte e `expo-print` não está instalado.
+- **Nada validado em aparelho, fluxo logado, navegador móvel, impressão física ou leitor de tela.**
+- **Prévia embutida não observada** num navegador com visualizador de PDF; só o caminho sem visualizador foi exercitado.
+- **Rádios na Web:** Espaço não marca e as setas não navegam (react-native-web 0.21). O diálogo do CSV e o seletor de tema também não têm `aria-checked`, mas isso é legado e está fora do escopo.
+- **Breadcrumbs do Sentry** podem levar `aria-label` com valores clínicos do Histórico legado (§9.4).
+- **Fonte padrão não embutida;** caracteres fora do CP1252 viram “?” (declarado). O PDF não é marcado.
+- **Thread principal:** o limite de 3.000 registros controla o tempo; o prazo de 30 s não interrompe a renderização síncrona.
+- **Medições de abertura** feitas na casca do app, sem o Histórico logado, em VM de servidor.
+- **Cobertura “confirmada”** = leitura do servidor, nenhum documento omitido e nenhuma escrita pendente. Não é auditoria além do que o Firestore informa.
 
-## 11. Registro para o relatório final
+## 12. Registro para o relatório final
 
 **Fatos**
-- **P1:** 8 commits em `feat/pdf-relatorio`, mesclada em `staging` pelo PR #87, com CI verde (908 testes aprovados e 4 pulados no runner, sem poppler).
-- **P2:** 7 commits em `feat/pdf-relatorio-p2`, sem push.
-  - Testes: 952 em 82 suítes, todos verdes. São 40 novos em relação a `staging`, com 3 suítes novas (`report-chart`, `report-table`, `PdfPreviewFrame.web`).
-  - Lint e typecheck sem erros.
-- **Bundle da P2:** +3,9 KB gzip no total, sendo +1,5 KB gzip no inicial. Nenhuma dependência nova; `metro.config.js` intacto.
-- **Verificação do PDF:** com dados sintéticos, por `pdftotext`, `pdftoppm` (página do gráfico em cores e em cinza), `pdfinfo` e `pdffonts`, e no Chromium headless com rede externa abortada.
-- **Achado do Chromium:** um `<iframe>` com PDF, sem visualizador embutido, baixa o arquivo sozinho. Foi corrigido condicionando a prévia a `navigator.pdfViewerEnabled`.
+- **P1 e P2:** mescladas em `staging` (PRs #87 e #88), com CI verde.
+- **P4:** 8 commits em `feat/pdf-relatorio-p4`, a partir de `d22a2e9`, sem push.
+- **Testes:** `npm test` passa com 976 testes em 84 suítes (eram 953 em 82): 23 novos e 2 suítes novas (`report-privacy`, `report-lazy-loading`).
+- **Rules:** `npm run test:rules` passa com 86 testes em 2 suítes (79 + 7 novos no emulador), executado localmente duas vezes.
+- **Lint e typecheck** sem erros.
+- **Verificações locais:** `browser-check` (rede, temporários, URLs, carregamento sob demanda), `a11y-check` (interface) e `open-timing` (abertura), todas no export Web da P4, com dados sintéticos e rede externa bloqueada.
+- **Bundle:** o `entry` cresceu 91 B em relação à P2. Sem dependência nova e sem mudança em `metro.config.js`, rules, schema, índices ou CSV.
 
-**Decisões**
-- Pontos do gráfico: média diária por registro, sem arredondar; linhas só entre dias consecutivos; escala única; painéis de pelo menos 92 dias, no máximo 12.
-- Distinção das séries por cor, traço e marcador.
-- Fluxo preparar → revisar → salvar, sem entrega antes da ação explícita; PDF salvo idêntico ao pré-visualizado.
-- Cobertura não confirmada avisada antes de exportar, com nova tentativa e rótulo de recorte parcial.
-- `MAX_REPORT_READINGS = 3000` sem truncamento; prazo de 30 s para as etapas assíncronas.
-- Worker rejeitado: o Metro passa a carregar jsPDF em toda abertura (chunk `__common` de 567 KB).
-- Observações longas fatiadas em blocos de 12 linhas com marcas de continuidade.
+**Defeitos encontrados e corrigidos**
+- A → B → A reexibia a revisão da conta A com a URL revogada. Agora o estado é reiniciado no render.
+- Os rádios do diálogo do PDF não expunham `aria-checked` na Web. Corrigido.
+- Implementações de mocks vazavam entre testes do hook (`resetAllMocks`).
+- As duas suítes de rules se apagavam em paralelo no emulador. Corrigido com um projeto `demo-` próprio.
 
-**Limitações**
-- Android/`expo-print` pendente.
-- Sem validação em fluxo logado, aparelho, navegador móvel, impressão física ou leitor de tela.
-- Prévia embutida não observada em navegador com visualizador.
-- PDF não marcado.
-- Renderização na thread principal.
+**Achados registrados, sem correção (fora do escopo)**
+- Breadcrumbs de clique do Sentry gravam `aria-label` do Histórico legado com valores clínicos.
+- Espaço e setas não operam rádios no react-native-web 0.21; `aria-checked` falta no diálogo do CSV e no seletor de tema.
+- A abertura do app tenta carregar o reCAPTCHA Enterprise do App Check.
+- O `firebase-tools` tenta `firebase-public.firebaseio.com` durante o `test:rules`.
+
+**Pendências e motivo**
+- **Android (P3):** geração, compartilhamento e temporários.
+- **Aparelho e fluxo logado:** exigem conta e dispositivo.
+- **Impressão física:** exige impressora.
+- **Leitor de tela real:** exige NVDA, VoiceOver ou TalkBack e operação humana.
+- **Sentry real:** exige DSN de produção.
+- **Navegador móvel:** tempo e memória não medidos.
 
 **Comandos de reprodução**
 ```bash
-git switch feat/pdf-relatorio-p2
+git switch feat/pdf-relatorio-p4
 npm ci
 npm run lint && npm run typecheck && npm test
-AFERI_PDF_EVIDENCE_DIR=/tmp/aferi-pdf npx jest src/features/report/render-report-pdf
-pdftotext -layout /tmp/aferi-pdf/grafico-7-dias.pdf -
-pdftoppm -png -r 90 -f 1 -l 1 /tmp/aferi-pdf/grafico-7-dias.pdf /tmp/aferi-pdf/grafico
-pdftoppm -gray -png -r 90 -f 1 -l 1 /tmp/aferi-pdf/grafico-7-dias.pdf /tmp/aferi-pdf/grafico-cinza
-pdftotext -layout /tmp/aferi-pdf/observacao-longa.pdf - | grep -E "continua|continuação"
 ```
-Para medir o bundle, defina valores fictícios para as variáveis `EXPO_PUBLIC_*` listadas em `.env.example` apenas no ambiente do comando e rode:
+Emulador do Firestore (exige Java 21+; baixa o emulador na primeira execução):
+```bash
+npm run test:rules
+```
+PDF real conferido com poppler:
+```bash
+AFERI_PDF_EVIDENCE_DIR=/tmp/aferi-pdf npx jest src/features/report/render-report-pdf
+```
+Export Web, com valores fictícios para as variáveis `EXPO_PUBLIC_*` de `.env.example` só no ambiente do comando:
 ```bash
 npx expo export -p web --clear --output-dir /tmp/aferi-dist
+```
+Verificações em Chromium (exigem Playwright e Chromium no ambiente; não são dependências do projeto):
+```bash
+node tools/pdf-relatorio/browser-check.cjs /tmp/aferi-dist /tmp/aferi-browser-check
+```
+```bash
+node tools/pdf-relatorio/a11y-check.cjs /tmp/aferi-dist /tmp/aferi-a11y
+```
+Tempo de abertura, comparando com um export anterior (por exemplo, de `d28b005`):
+```bash
+node tools/pdf-relatorio/open-timing.cjs /tmp/aferi-dist-antes antes /tmp/aferi-dist depois 20
 ```
