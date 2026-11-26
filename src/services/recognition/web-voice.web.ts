@@ -5,7 +5,7 @@ import { VoiceCaptureError, VOICE_MESSAGES, type VoiceCapturePorts, type VoiceCa
 export const WEB_VOICE_MESSAGES: Record<VoiceCaptureCode, string> = { ...VOICE_MESSAGES,
   unsupported: 'Voz local indisponível neste navegador. Use HTTPS/localhost ou o registro manual.',
   'language-unverified': 'Não foi possível verificar pt-BR local neste navegador. Use o registro manual.',
-  'model-missing': 'Pacote pt-BR local não está pronto neste navegador. Use o registro manual; nenhum download será iniciado.',
+  'model-missing': 'Pacote pt-BR local não está pronto neste navegador. O download só começa por ação explícita, quando oferecido. Você também pode usar o registro manual.',
   'cleanup-failed': 'Liberação da voz não confirmada. Use o manual e feche esta página antes de tentar voz novamente.',
 };
 export interface LocalWebSpeech {
@@ -14,10 +14,34 @@ export interface LocalWebSpeech {
   onresult: ((event: unknown) => void) | null; onerror: ((event: unknown) => void) | null; onend: (() => void) | null;
   start(): void; stop(): void; abort(): void;
 }
+export const WEB_VOICE_MODEL_MESSAGES = {
+  installing: 'Instalando o pacote local de português (Brasil)…',
+  installed: 'Pacote pt-BR local pronto. Toque para verificar e começar a fala.',
+  'install-failed': 'Não foi possível preparar o pacote pt-BR local. Verifique novamente ou use o registro manual.',
+  'install-timeout': 'O tempo de instalação do pacote pt-BR expirou. Verifique novamente ou use o registro manual.',
+  'install-cancelled': 'Espera pela instalação cancelada. O navegador pode continuar baixando o pacote.',
+} as const;
+export type WebVoiceModelState = keyof typeof WEB_VOICE_MODEL_MESSAGES;
+type WebVoiceModelOutcome = Exclude<WebVoiceModelState, 'installing'>;
+
+interface LocalModelOptions { langs: ['pt-BR']; processLocally: true }
+const localModelOptions = (): LocalModelOptions => ({ langs: ['pt-BR'], processLocally: true });
+const MODEL_INSTALL_TIMEOUT_MS = 120_000;
+
 export interface LocalWebSpeechConstructor {
   new(): LocalWebSpeech;
-  available?: (options: { langs: ['pt-BR']; processLocally: true }) => Promise<unknown>;
+  available?: (options: LocalModelOptions) => Promise<unknown>;
+  install?: (options: LocalModelOptions) => Promise<boolean>;
 }
+interface WebVoicePorts extends VoiceCapturePorts {
+  canInstallModel(): boolean;
+  installModel(): Promise<WebVoiceModelOutcome> | null;
+  cancelModelInstallation(): void;
+}
+
+// O navegador não expõe abort para install(). Não repetir um download ainda pendente.
+const pendingModelInstalls = new WeakSet<LocalWebSpeechConstructor>();
+
 export interface WebVoiceEnvironment {
   secure(): boolean;
   constructorForSpeech(): LocalWebSpeechConstructor | undefined;
@@ -41,8 +65,10 @@ interface Scope {
 }
 
 /** Base TASK-05: nunca chama start sem API local + modelo pronto. Sem gravador/getUserMedia paralelo. */
-export function createWebVoicePorts(environment: WebVoiceEnvironment = browser): VoiceCapturePorts {
+export function createWebVoicePorts(environment: WebVoiceEnvironment = browser): WebVoicePorts {
   let scope: Scope | null = null;
+  let installOffer: LocalWebSpeechConstructor | null = null;
+  let installation: AbortController | null = null;
   let listener: ((event: unknown) => void) | null = null;
   function settle(run: Scope, value: unknown) { const resolve = run.resolve; run.resolve = null; resolve?.(value); }
   function status(run: Scope, value: string) { if (scope === run && !run.closing && !run.ended) listener?.({ attemptId: run.id, status: value }); }
@@ -92,8 +118,9 @@ export function createWebVoicePorts(environment: WebVoiceEnvironment = browser):
   }
   async function availability(): Promise<unknown> {
     try {
+      if (scope || installation) return fail('resource-busy');
+      installOffer = null;
       if (!environment.secure()) return fail('unsupported');
-      if (scope) return fail('resource-busy');
       const Speech = environment.constructorForSpeech();
       if (!Speech || typeof Speech.available !== 'function') return fail('local-unavailable');
       const speech = new Speech();
@@ -110,17 +137,57 @@ export function createWebVoicePorts(environment: WebVoiceEnvironment = browser):
   }
   async function prepare(id: number): Promise<unknown> {
     const run = scope;
-    if (!run || run.closing || run.started) return fail('language-unverified');
+    if (!run || run.closing || run.started || run.query) return fail('language-unverified');
     run.id = id;
     try {
-      run.query = Promise.resolve().then(() => run.Speech.available!({ langs: ['pt-BR'], processLocally: true }));
+      run.query = Promise.resolve().then(() => run.Speech.available!(localModelOptions()));
       const available = await run.query;
       if (scope !== run || run.closing) return fail('cancelled');
+      if (!validLocal(run)) return fail('local-unavailable');
+      if (available === 'downloadable' && typeof run.Speech.install === 'function') installOffer = run.Speech;
       if (available !== 'available') return fail(available === 'downloadable' || available === 'downloading' ? 'model-missing'
         : available === 'unavailable' ? 'local-unavailable' : 'language-unverified');
-      if (!validLocal(run)) return fail('local-unavailable');
       run.verified = true; return { code: 'ready' };
     } catch { return fail('language-unverified'); }
+  }
+  function canInstallModel(): boolean {
+    return installOffer !== null && !scope && !installation && !pendingModelInstalls.has(installOffer);
+  }
+  function installModel(): Promise<WebVoiceModelOutcome> | null {
+    const Speech = installOffer;
+    if (!Speech || !canInstallModel()) return null;
+    installOffer = null;
+    const attempt = new AbortController();
+    const signal = attempt.signal;
+    installation = attempt;
+    pendingModelInstalls.add(Speech);
+
+    const installAndVerify = async (): Promise<WebVoiceModelOutcome> => {
+      try {
+        if (!environment.secure() || environment.constructorForSpeech() !== Speech || !Speech.install || !Speech.available) {
+          return 'install-failed';
+        }
+        // Executa na pilha do toque, antes de qualquer await, para preservar a ativação do usuário.
+        if (await Speech.install(localModelOptions()) !== true) return 'install-failed';
+        if (installation !== attempt || signal.aborted) return 'install-cancelled';
+        return await Speech.available(localModelOptions()) === 'available' ? 'installed' : 'install-failed';
+      } catch { return 'install-failed'; }
+      finally { pendingModelInstalls.delete(Speech); }
+    };
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stop = new Promise<WebVoiceModelOutcome>(resolve => {
+      signal.addEventListener('abort', () => resolve('install-cancelled'), { once: true });
+      timer = setTimeout(() => resolve('install-timeout'), MODEL_INSTALL_TIMEOUT_MS);
+    });
+    return Promise.race([stop, installAndVerify()]).finally(() => {
+      clearTimeout(timer);
+      if (installation === attempt) installation = null;
+    });
+  }
+  function cancelModelInstallation() {
+    installOffer = null;
+    installation?.abort();
   }
   async function start(id: number): Promise<unknown> {
     const run = scope;
@@ -184,7 +251,7 @@ export function createWebVoicePorts(environment: WebVoiceEnvironment = browser):
     })();
     return run.close;
   }
-  return { availability, prepare, start, finish, close,
+  return { availability, prepare, start, finish, close, canInstallModel, installModel, cancelModelInstallation,
     requestPermission: async () => true, // Permissão é solicitada pelo próprio SpeechRecognition.start, sem captura paralela.
     listen: callback => { listener = callback; return () => { if (listener === callback) listener = null; }; } };
 }

@@ -7,7 +7,7 @@ import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useWebVoiceReview } from '@/features/assisted-entry/useWebVoiceReview.web';
 import type { VoicePhase } from '@/services/recognition/voice-session';
-import { WEB_VOICE_MESSAGES } from '@/services/recognition/web-voice.web';
+import { WEB_VOICE_MESSAGES, WEB_VOICE_MODEL_MESSAGES } from '@/services/recognition/web-voice.web';
 
 const PHASES: Record<VoicePhase, string> = {
   idle: 'Nenhuma captura iniciada. Suporte local ainda não verificado.', checking: 'Verificando API local do navegador…',
@@ -18,18 +18,21 @@ const PHASES: Record<VoicePhase, string> = {
   blocked: 'Liberação não confirmada. Use o registro manual.',
 };
 export function WebVoiceCaptureScreen({ onManual }: { onManual: (release: Promise<boolean>) => void }) {
-  const { state, busy, start, finish, review, leaveForManual } = useWebVoiceReview();
+  const { state, busy, start, finish, review, leaveForManual, modelState, canInstallModel, installModel } = useWebVoiceReview();
   return <Screen><View className="mx-auto w-full max-w-xl gap-5">
     <Card className="gap-4">
       <Text variant="title" accessibilityRole="header">Voz Web · avaliação local</Text>
       <Text>Exige processLocally verificável e pt-BR disponível localmente. Sem suporte, a voz fica indisponível; não há reconhecimento remoto ou substituição por simulação.</Text>
       <Text>Use apenas frases sintéticas: “doze por oito” ou “cento e vinte por oitenta, pulso setenta e dois”. Confira os campos; este cliente não salva medições clínicas.</Text>
       <Button label="Verificar e começar fala local" disabled={busy} onPress={start} />
+      {canInstallModel ? <Button label="Instalar pacote pt-BR local" variant="secondary" onPress={installModel} /> : null}
       <Button label="Terminar fala (não salva)" disabled={state.phase !== 'listening'} onPress={finish} />
-      <Button label="Cancelar voz" variant="ghost" onPress={review.cancel} />
+      <Button label={modelState === 'installing' ? 'Cancelar instalação' : 'Cancelar voz'} variant="ghost" onPress={review.cancel} />
       <Button label="Ir para registro manual" variant="secondary" onPress={() => onManual(leaveForManual())} />
-      <Text accessibilityLiveRegion="polite">{PHASES[state.phase]}</Text>
-      {state.issue ? <Text accessibilityRole="alert">{WEB_VOICE_MESSAGES[state.issue]}</Text> : null}
+      {modelState ? <Text accessibilityLiveRegion="polite">{WEB_VOICE_MODEL_MESSAGES[modelState]}</Text> : <>
+        <Text accessibilityLiveRegion="polite">{PHASES[state.phase]}</Text>
+        {state.issue ? <Text accessibilityRole="alert">{WEB_VOICE_MESSAGES[state.issue]}</Text> : null}
+      </>}
     </Card>
     <VoiceReadingReview review={review} />
   </View></Screen>;
