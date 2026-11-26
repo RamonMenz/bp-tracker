@@ -258,3 +258,56 @@ reconsultar por Inspect antes de qualquer recuperação. Não abrir a demo após
 instalar: Metro/bundle/revisões e avaliação offline são fases posteriores.
 Etapa3 continua parcial nesta entrega; nenhuma execução física da atualização
 é alegada. TASK-04/06/07/09/18 e habilitação clínica continuam pendentes.
+
+## Instalação confirmada pelo autor; abertura sem captura
+
+Recebidos os JSONs Inspect/Install: versionCode1→1 e versionName0.1.0; inspeção
+sem mutação sobre259, instalação executada e hash posterior exatamente591.
+Estado ADB/modelo conferidos. Scripts não solicitaram abertura/captura e mantêm
+habilitação clínica false. Isso não observa a tela nem garante que o SO não
+inicialize componentes. Não inferir conformidade global SDK/SO ou eficácia OCR.
+
+Fonte do Metro permanece45f7376; bundle2191/fontea649 e ferramentas antigas
+fixadas em259 não servem para esta abertura. Ferramentas Metro agora fixadas em
+`e3d480cc43127497dfde1673ec1c174ba69ecd24`, numa worktree nova
+`aferi-task09-roi591-metro-tools`. Nenhum rebuild/reinstall é necessário.
+
+Terminal A: iniciar da raiz da cópia original. Criar essa worktree pelo commit
+fixado após fetch de fix/task-09-guards-roi591, preservando pastas existentes.
+Verificar fonte45 limpa e hash591 no build; recusar porta8097 já ocupada, sem
+matar processos ou aceitar porta alternativa. Iniciar Metro dentro da demo:
+
+```powershell
+node --dns-result-order=ipv4first ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8097
+```
+
+ANDROID_HOME do SDK existente e EXPO_NO_TELEMETRY=1 somente nesse terminal.
+Manter aberto e ainda não pressionar a. Terminal B: executar das ferramentas
+fixadas, passando o caminho da worktree de build45:
+
+```powershell
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$tools\tools\task09\Prepare-AferiRoi591Metro.ps1" -BuildPath $build
+```
+
+Preparo vincula /status de loopback8097 ao caminho real da demo (header raiz
+esperada e packager-status:running). Não lê corpo de outro servidor. Reconfere
+fonte/hash local e instalado591/SM-S731B, valida formato/conflitos de reverse,
+configura somente tcp8097→tcp8097 se ausente, preserva outras linhas e reconfere.
+Saída roi591-metro-1 só tem hashes/booleans/contagens; sem serial, caminho ou
+conteúdo bruto. Não instala, abre ou captura. Testes de guards/HTTP/ADB simulados
+aprovados, além de lint/TypeScript/832 testes em71 suítes. Não é conexão física.
+
+Só depois de FonteEsperada/MetroPronto=true, Reverse8097Conhecido=1 e instalado591,
+no Terminal A pressionar a uma vez. Se pedir instalação/build/Expo Go/login,
+seleção de outro projeto ou houver erro, parar. Só Samsung conectado, sem
+emuladores. Se carregar sozinho, não repetir abertura. Verificar header captura5,
+conteúdo montado, App active/Fase idle, botão de comparação disponível e ausência
+percebida de preview/revisão anterior/indicador de câmera. Nativo nao-carregado
+é esperado antes de carregar o binding; não iniciar câmera para mudar isso.
+Fast Refresh desligado no menu de desenvolvimento, depois fechar o menu.
+
+Retorno: JSON de preparo e somente categorias visuais acima, sem screenshots,
+URLs, valores ou logs completos. Não iniciar câmera, capturar, reconhecer ou
+confirmar. Identificação do bundle, preparo offline e experimento controlado
+serão fases posteriores. Etapa3/aceites físicos continuam parciais; nenhuma
+leitura foi validada, TASK-04/06/07/09/18 abertas, habilitação clínica bloqueada.
