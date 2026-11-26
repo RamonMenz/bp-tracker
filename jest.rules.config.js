@@ -13,4 +13,7 @@ module.exports = {
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   transform: { '^.+\\.[jt]sx?$': ['babel-jest', { presets: ['babel-preset-expo'] }] },
   transformIgnorePatterns: ['/node_modules/(?!(firebase|@firebase)/)'],
+  // Alias `@/` do tsconfig: tests/report-readings.rules.test.ts exercita o repositório real
+  // (getReadingsForReport) contra o emulador, e o repositório importa por `@/`.
+  moduleNameMapper: { '^@/(.*)$': '<rootDir>/src/$1' },
 };
