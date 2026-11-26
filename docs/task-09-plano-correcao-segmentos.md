@@ -216,3 +216,22 @@ concluída nesse escopo técnico; redes desligadas são declaração do autor se
 do script, não prova independente de tráfego. Sem nova leitura ou eficácia do
 candidato. Etapa1 física e TASK-04/06/07/09/18 continuam parciais; etapas4–6 e
 habilitação clínica permanecem pendentes. Não iniciar captura neste fechamento.
+
+## Etapa 4 preparada — coleta ainda pendente
+
+[Protocolo congelado do candidato ROI591](task-09-etapa-4-ab-roi591.md): cartões
+existentes A/B, até duas capturas e quatro passagens sequenciais, resultado separado
+por cartão/passagem, paradas, descarte, encerramento/restauração e formulário
+sanitizado. Nenhuma coleta nova recebida. Segunda variante não justificada ainda;
+decisão condicionada ao retorno, sem ampliar o experimento indefinidamente.
+
+## Etapa 4 analisada — candidato não avança
+
+[Resultado ROI591](task-09-etapa-4-resultado-roi591.md): A original/processado
+exatos; B original ausente e processado incerto nos três campos. B processado
+recuperou rótulos, mas não ASCII em Text/Block/Line; descartes investigados não
+sinalizados. Sem regressão percebida de encerramento, sem medida de heap/SDK.
+Critério numérico falhou. Sem justificativa concreta para normalização de
+luminância; encerrar ROI/orientação/escala como ineficaz para B nessa rodada.
+Nenhuma repetição ou segunda variante automática. Etapa6 deve formalizar o limite
+e eventual governança de escopo; não mudar motor/stack ou habilitar clínica.
