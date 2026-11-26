@@ -10,7 +10,10 @@
  * O que verifica (falha com código 1 se algo não bater):
  *   - PDF-01: nenhum chunk do relatório (pipeline/jsPDF) é requisitado na abertura do app;
  *   - PDF-11: durante a geração, só há requisições ao próprio servidor local (chunks do
- *     relatório); qualquer host externo tentado é listado por fase (abertura × geração).
+ *     relatório); qualquer host externo tentado é listado por fase (abertura × geração);
+ *   - PDF-17 (Web): a geração não grava nada no navegador (IndexedDB, Cache Storage, OPFS,
+ *     localStorage, sessionStorage, service workers) e toda URL de objeto criada é revogada
+ *     depois do atraso de consumo — o relógio da página é avançado em 61 s para conferir.
  *
  * Como chama o relatório sem login: localiza no `entry` o módulo do adaptador Web (pela
  * assinatura `openPreview:<x>}},<id>,`) e o executa pelo `__r` do runtime do Metro.
@@ -59,6 +62,57 @@ function serve() {
   });
 
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
+}
+
+/** Fotografia do armazenamento persistente do navegador (onde um temporário poderia ficar). */
+async function storageSnapshot(page) {
+  return page.evaluate(async () => {
+    let opfsEntries = 0;
+
+    if (navigator.storage?.getDirectory) {
+      const directory = await navigator.storage.getDirectory();
+      for await (const entry of directory.keys()) {
+        void entry;
+        opfsEntries += 1;
+      }
+    }
+
+    return {
+      indexedDb: (await indexedDB.databases()).map((database) => database.name).sort(),
+      cacheStorage: (await caches.keys()).sort(),
+      opfsEntries,
+      localStorageKeys: Object.keys(localStorage).sort(),
+      sessionStorageKeys: Object.keys(sessionStorage).sort(),
+      serviceWorkers: (await navigator.serviceWorker.getRegistrations()).length,
+    };
+  });
+}
+
+/** Conta URLs de objeto criadas e revogadas na página (instalado antes da geração). */
+async function trackObjectUrls(page) {
+  await page.evaluate(() => {
+    const created = [];
+    const revoked = [];
+    const originalCreate = URL.createObjectURL.bind(URL);
+    const originalRevoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (object) => {
+      const url = originalCreate(object);
+      created.push(url);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      revoked.push(url);
+      originalRevoke(url);
+    };
+    globalThis.__aferiObjectUrls = { created, revoked };
+  });
+}
+
+async function objectUrlCounts(page) {
+  return page.evaluate(() => {
+    const { created, revoked } = globalThis.__aferiObjectUrls;
+    return { criadas: created.length, revogadas: revoked.length, pendentes: created.filter((url) => !revoked.includes(url)).length };
+  });
 }
 
 /** Gera um relatório sintético pelo adaptador Web real, dentro da página. */
@@ -119,14 +173,24 @@ async function main() {
     });
 
     const page = await context.newPage();
+    // Relógio controlável: o tempo corre normalmente, mas pode ser adiantado para conferir a
+    // revogação que acontece 60 s depois do consumo.
+    await page.clock.install();
     await page.goto(`${origin}/`, { waitUntil: 'networkidle' });
 
+    const storageBefore = await storageSnapshot(page);
+    await trackObjectUrls(page);
     phase = 'geracao';
     const downloadPromise = page.waitForEvent('download');
     const generated = await generateInPage(page, platformModuleId);
     const download = await downloadPromise;
     const saved = path.join(outDir, download.suggestedFilename());
     await download.saveAs(saved);
+
+    const urlsRightAfter = await objectUrlCounts(page);
+    await page.clock.fastForward('01:01');
+    const urlsAfterDelay = await objectUrlCounts(page);
+    const storageAfter = await storageSnapshot(page);
 
     const reportChunks = /report-pdf-pipeline|jspdf/;
     const openingReportRequests = requests.abertura.filter((url) => reportChunks.test(url));
@@ -137,6 +201,9 @@ async function main() {
     if (generationNonLocal.length > 0) failures.push(`PDF-11: host externo durante a geração: ${generationNonLocal.join(', ')}`);
     if (generated.type !== 'application/pdf') failures.push(`MIME inesperado: ${generated.type}`);
     if (download.suggestedFilename() !== generated.fileName) failures.push(`nome do download: ${download.suggestedFilename()}`);
+    if (JSON.stringify(storageBefore) !== JSON.stringify(storageAfter)) failures.push('PDF-17: armazenamento do navegador mudou');
+    if (urlsRightAfter.revogadas !== 0) failures.push('PDF-17: URL revogada antes do atraso de consumo');
+    if (urlsAfterDelay.criadas === 0 || urlsAfterDelay.pendentes !== 0) failures.push('PDF-17: URL de objeto não revogada');
 
     const result = {
       platformModuleId,
@@ -151,6 +218,12 @@ async function main() {
         hostsExternosBloqueados: [...new Set(generationNonLocal)],
       },
       gerado: { ...generated, salvoEm: saved },
+      temporariosWeb: {
+        armazenamentoAntes: storageBefore,
+        armazenamentoDepois: storageAfter,
+        urlsLogoAposSalvar: urlsRightAfter,
+        urlsApos61s: urlsAfterDelay,
+      },
       falhas: failures,
     };
 
