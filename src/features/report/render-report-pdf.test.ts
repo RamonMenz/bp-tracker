@@ -133,7 +133,8 @@ describe('renderReportPdf — estrutura (sempre)', () => {
     const { raw, pageCount } = await renderToFile('estrutura', model(SPEC_READINGS(), { kind: 'last7' }));
 
     expect(raw.startsWith('%PDF-')).toBe(true);
-    expect(pageCount).toBe(1);
+    // Cabeçalho, médias e gráfico na 1ª página; tabela e notas na 2ª.
+    expect(pageCount).toBe(2);
     // A4 retrato em pontos.
     expect(raw).toMatch(/\/MediaBox \[0 0 595\.2799\d* 841\.8899\d*\]/);
     expect(raw).not.toMatch(/\/Author/);
@@ -145,7 +146,7 @@ describe('renderReportPdf — estrutura (sempre)', () => {
 
 describeWithPoppler('renderReportPdf — conteúdo conferido com pdftotext', () => {
   it('exemplo da spec: médias, N, acentos, observação literal e ordem cronológica', async () => {
-    const { path } = await renderToFile('exemplo-spec', model(SPEC_READINGS(), { kind: 'last7' }));
+    const { path, pageCount } = await renderToFile('exemplo-spec', model(SPEC_READINGS(), { kind: 'last7' }));
     const text = pdfText(path);
 
     expect(text).toContain('Aferi — Relatório de pressão arterial');
@@ -159,7 +160,8 @@ describeWithPoppler('renderReportPdf — conteúdo conferido com pdftotext', () 
     expect(text).toContain('Pulso médio: 70,0 bpm (N = 2 de 3 registros com pulso informado)');
     expect(text).toContain('Notas metodológicas');
     expect(text).toContain('não substitui avaliação médica');
-    expect(text).toContain('Página 1 de 1');
+    expect(text).toContain(`Página 1 de ${pageCount}`);
+    expect(text).toContain(`Página ${pageCount} de ${pageCount}`);
 
     // Observação literal: tags e URL aparecem como texto; o emoji vira "?" e a troca é declarada.
     const flat = text.replace(/\s+/g, ' ');
@@ -250,5 +252,110 @@ describeWithPoppler('renderReportPdf — conteúdo conferido com pdftotext', () 
       execFileSync('pdftoppm', ['-png', '-r', '80', '-f', String(page), '-l', String(page), path, join(EVIDENCE_DIR, `muitos-registros-p${page}`)]);
     }
     execFileSync('pdftoppm', ['-png', '-r', '80', '-f', '1', '-l', '1', join(EVIDENCE_DIR, 'exemplo-spec.pdf'), join(EVIDENCE_DIR, 'exemplo-spec-p1')]);
+  });
+});
+
+describeWithPoppler('renderReportPdf — gráfico de tendência e continuidade (P2)', () => {
+  function rasterize(path: string, page: number, name: string): void {
+    execFileSync('pdftoppm', ['-png', '-r', '90', '-f', String(page), '-l', String(page), path, join(EVIDENCE_DIR, name)]);
+    execFileSync('pdftoppm', ['-png', '-gray', '-r', '90', '-f', String(page), '-l', String(page), path, join(EVIDENCE_DIR, `${name}-cinza`)]);
+  }
+
+  it('gráfico com legenda, escala em mmHg, datas reais e lacunas, antes da tabela', async () => {
+    const readings = [
+      reading({ systolic: 128, diastolic: 84, measuredAt: new Date('2026-11-20T11:00:00.000Z') }),
+      reading({ systolic: 132, diastolic: 86, measuredAt: new Date('2026-11-20T22:00:00.000Z') }),
+      reading({ systolic: 125, diastolic: 82, measuredAt: new Date('2026-11-21T12:00:00.000Z') }),
+      // 22 e 23/11 sem medição
+      reading({ systolic: 141, diastolic: 92, measuredAt: new Date('2026-11-24T12:00:00.000Z') }),
+      reading({ systolic: 138, diastolic: 90, measuredAt: new Date('2026-11-25T12:00:00.000Z') }),
+    ];
+    const { path } = await renderToFile('grafico-7-dias', model(readings, { kind: 'last7' }));
+    const flat = pdfText(path).replace(/\s+/g, ' ');
+
+    expect(flat).toContain('Tendência (médias diárias)');
+    expect(flat).toContain('Sistólica (média diária)');
+    expect(flat).toContain('Diastólica (média diária)');
+    expect(flat).toContain('mmHg');
+    expect(flat).toContain('20/11/2026 a 26/11/2026');
+    expect(flat).toMatch(/20\/11 .*26\/11/);
+    expect(flat).toContain('não equivalem a pressão zero');
+    // Ordem do documento: médias → gráfico → tabela → notas.
+    expect(flat.indexOf('Médias do intervalo')).toBeLessThan(flat.indexOf('Tendência (médias diárias)'));
+    const tableStart = flat.search(/Registros Data Hora/);
+    expect(tableStart).toBeGreaterThan(-1);
+    expect(flat.indexOf('Tendência (médias diárias)')).toBeLessThan(tableStart);
+    expect(tableStart).toBeLessThan(flat.indexOf('Notas metodológicas'));
+    // Médias diárias não aparecem como texto (nada arredondado é reprocessado no gráfico).
+    expect(flat).not.toContain('130,0');
+
+    rasterize(path, 1, 'grafico-7-dias-p1');
+  });
+
+  it('um único dia: explicação e nenhum texto de tendência fabricada', async () => {
+    const { path } = await renderToFile(
+      'grafico-um-dia',
+      model([
+        reading({ systolic: 120, diastolic: 80, measuredAt: new Date('2026-11-20T11:00:00.000Z') }),
+        reading({ systolic: 130, diastolic: 90, measuredAt: new Date('2026-11-20T20:00:00.000Z') }),
+      ]),
+    );
+
+    expect(pdfText(path).replace(/\s+/g, ' ')).toContain(
+      'Há medições em apenas um dia: o gráfico mostra os pontos desse dia, sem linha de tendência.',
+    );
+    rasterize(path, 1, 'grafico-um-dia-p1');
+  });
+
+  it('período extenso: painéis com legenda única e nenhum registro perdido na tabela', async () => {
+    const readings: ReportSourceReading[] = [];
+    const start = new Date('2025-01-01T11:00:00.000Z').getTime();
+
+    for (let day = 0; day < 400; day += 1) {
+      if (day % 9 === 4) continue;
+      readings.push(
+        reading({ systolic: 115 + (day % 35), diastolic: 72 + (day % 18), measuredAt: new Date(start + day * 86_400_000) }),
+      );
+    }
+
+    const { path, pageCount } = await renderToFile('grafico-extenso', model(readings));
+    const flat = pdfText(path).replace(/\s+/g, ' ');
+
+    expect(flat).toMatch(/Painel 1 de \d+: 01\/01\/2025 a /);
+    expect((flat.match(/Painel \d+ de \d+/g) ?? []).length).toBeGreaterThan(1);
+
+    let rows = 0;
+    for (let page = 1; page <= pageCount; page += 1) {
+      rows += (pdfText(path, page).match(/^\s*\d{2}\/\d{2}\/\d{4}\s+\d{2}:\d{2}\s+\d+\s+\d+\s+(\d+|—)/gm) ?? []).length;
+    }
+    expect(rows).toBe(readings.length);
+
+    rasterize(path, 1, 'grafico-extenso-p1');
+    rasterize(path, 2, 'grafico-extenso-p2');
+  });
+
+  it('observação muito longa: quebra de linha, marcas de continuidade e nenhum trecho perdido', async () => {
+    const note = Array.from({ length: 60 }, (_, index) => `L${String(index + 1).padStart(2, '0')}`).join('\n');
+    const readings = [
+      reading({ systolic: 121, diastolic: 79, measuredAt: new Date('2026-11-20T11:00:00.000Z') }),
+      reading({ systolic: 133, diastolic: 88, measuredAt: new Date('2026-11-20T21:00:00.000Z'), note }),
+      reading({ systolic: 127, diastolic: 83, measuredAt: new Date('2026-11-21T12:00:00.000Z') }),
+    ];
+    const { path, pageCount } = await renderToFile('observacao-longa', model(readings));
+    const text = pdfText(path);
+
+    for (let index = 1; index <= 60; index += 1) {
+      expect(text).toContain(`L${String(index).padStart(2, '0')}`);
+    }
+    expect(text).toContain('(continua)');
+    expect(text).toContain('(continuação)');
+    // Ordem preservada: L01 antes de L60 e o registro seguinte depois da observação inteira.
+    expect(text.indexOf('L01')).toBeLessThan(text.indexOf('L60'));
+    expect(text.indexOf('L60')).toBeLessThan(text.search(/21\/11\/2026\s+09:00\s+127/));
+    // A continuação repete data e hora do registro, sem repetir valores.
+    expect((text.match(/20\/11\/2026\s+18:00/g) ?? []).length).toBeGreaterThan(1);
+    expect((text.match(/20\/11\/2026\s+18:00\s+133/g) ?? []).length).toBe(1);
+
+    rasterize(path, pageCount > 1 ? 2 : 1, 'observacao-longa-p2');
   });
 });
