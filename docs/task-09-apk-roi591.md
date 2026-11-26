@@ -52,8 +52,9 @@ Usa somente apkanalyzer já instalado no SDK para duas consultas privadas ao APK
 
 Essa inspeção dirigida testa o ponto que o plugin Expo instrumenta. Mesmo um
 resultado favorável não significa ausência global de interceptores, DevTools,
-telemetria, rede ou logs. Streams do analisador ficam em RAM, sem dumps em disco
-ou reprodução de texto bruto. Não há download automático de ferramentas.
+telemetria, rede ou logs. O wrapper PowerShell mantém a saída do analisador em
+RAM e não grava dumps nem reproduz texto bruto. Isso não audita caches internos
+da ferramenta SDK. Não há download automático de ferramentas.
 
 ADB usa helper de streams privados, USB `-d` e somente start-server/get-state,
 getprop do modelo, pm path do pacote e run-as/sha256sum do base.apk. Exige
