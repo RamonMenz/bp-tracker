@@ -122,57 +122,100 @@ Nenhuma fala/áudio real, download de modelo, Firebase, publicação de rules,
 commit, push, deploy ou contratação. Custo novo contratado R$ 0; despesas acumuladas,
 horas reais e saldo global do teto R$ 300 não informados.
 
-## Executar no computador e demonstrar no aparelho
+## Windows — gerar e identificar o APK local
 
-Use a cópia completa deste workspace, inclusive arquivos **não commitados** de
-`src/`, `native-modules/` e `demos/`. Instale Node 24, Android Studio/SDK e JDK
-compatível com Expo SDK 57/RN 0.86/Gradle 9.3.1. A configuração da PoC observou
-SDK 36, Build-Tools 36.0.0 e NDK 27.1.12297006; confira o requerido pelo Gradle
-gerado antes de mudar versões. O primeiro build exige downloads de Gradle/Maven/RN.
-Sem esses pré-requisitos não há compilação nativa; não use Expo Go ou EAS Build.
+Comece na raiz do repositório com a branch `feat/voz-capacidade` disponível
+localmente e selecionada. O ambiente de referência usa Node 24.22.0, npm 11.19.1,
+JVM 17.0.21, wrapper Gradle 9.3.1 e SDK em `%LOCALAPPDATA%\Android\Sdk` com
+Build-Tools 36.0.0. O destino `C:\dev\aferi-voz-build` deve estar livre. Preserve
+worktrees e APKs anteriores.
 
-```bash
-# Raiz; instalar a partir do lock existente:
-npm ci --ignore-scripts
-cd demos/android-voice
-../../node_modules/.bin/expo prebuild --platform android --no-install
-../../node_modules/.bin/expo run:android --device --port 8099
+```powershell
+$aferiBuild = 'C:\dev\aferi-voz-build'
+$aferiCommit = git rev-parse HEAD
+if ($LASTEXITCODE -ne 0) { throw 'voice-source-unavailable' }
+$aferiBuildJson = pwsh -NoLogo -NoProfile -File .\tools\task12\Build-AferiVoiceEvaluation.ps1 -Commit $aferiCommit -BuildPath $aferiBuild
+if ($LASTEXITCODE -ne 0) { throw 'voice-build-failed' }
+$aferiBuildJson
 ```
 
-No Windows, use o executável equivalente em `node_modules/.bin`/Android Studio.
-Ative depuração USB no telefone e aceite a autorização. Com Dev Client já
-instalado, inicie Metro nessa pasta com `expo start --dev-client --localhost
---port 8099`, usando o executável local acima; `adb reverse tcp:8099 tcp:8099`
-permite conexão USB. Não atualiza o aplicativo clínico, pacote diferente.
+O build cria uma worktree destacada, confere commit e árvore limpa, instala pelo
+lock com `npm ci --ignore-scripts`, executa os checks da demo e roda o prebuild
+sem instalação. Compila `assembleDebug` para arm64-v8a com inspector desativado.
+A assinatura de debug é a padrão do Gradle. O script não invoca um assinador
+separado nem acessa ADB. O JSON só sai após conferir SHA-256, pacote, permissões,
+`allowBackup=false` e referências e conteúdo dos XML empacotados. Se uma etapa
+falhar, devolva o código fixo que o script mostrou e, se disponível, a mensagem
+curta sanitizada do compilador.
 
-1. Abra **Aferi — voz local em avaliação**. Antes de iniciar, o microfone fica
-   desligado. Teste o manual de avaliação sem conceder microfone.
-2. Volte e toque **Começar a falar (avaliação local)**. API/serviço, permissão e
-   pt-BR instalado são checados antes de escutar. Se indisponível, use manual.
-   Prepare modelo somente nas configurações do fabricante se necessário; o app
-   não baixa automaticamente. Se a permissão gerar background, a tentativa pode
-   ser cancelada: depois de conceder, use uma **nova ação explícita** para tentar.
-3. Diga “doze por oito” e termine fala. Confira 120/80 mmHg, pulso vazio; repita
-   com “cento e vinte por oitenta, pulso setenta e dois”. Isso só comprova o caso
-   se o serviço realmente devolver final e os candidatos estiverem corretos.
-4. Edite/cancele/fale novamente. Confirmar mostra estado final em memória; não
-   grava histórico. Voltar ao manual desmonta voz e inicia campos vazios.
+### Instalação explícita pelo autor
 
-Checks locais na raiz:
+Se o JSON confirmou o build, conecte apenas o aparelho de avaliação, autorize
+ADB via USB e mantenha a demo fechada até concluir a identificação. Execute no
+mesmo terminal. A instalação é separada e não concede permissões. Se já houver
+uma instalação, rode primeiro a consulta de identidade abaixo. Prossiga com ela
+se o hash coincide e o microfone ainda não foi concedido. Em caso de
+divergência, preserve a instalação e registre o impedimento.
 
-```bash
-npm test -- --runInBand
-npm run lint
-npm run typecheck
-node node_modules/typescript/bin/tsc --noEmit -p demos/android-voice/tsconfig.json
+```powershell
+$aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+$aferiApk = Join-Path $aferiBuild 'demos\android-voice\android\app\build\outputs\apk\debug\app-debug.apk'
+$aferiSha = ($aferiBuildJson | ConvertFrom-Json).Sha256Apk
+if ((Get-FileHash -LiteralPath $aferiApk -Algorithm SHA256).Hash -ine $aferiSha) { throw 'voice-apk-changed' }
+& $aferiAdb -d install -R $aferiApk
+if ($LASTEXITCODE -ne 0) { throw 'voice-install-failed' }
 ```
 
-Para repetir autolinking, rode o CLI local `expo-modules-autolinking resolve
---platform android --json` em cada projeto de avaliação e na raiz. Para compilar
-somente o módulo, no android gerado use `./gradlew
-:aferi-local-voice:compileDebugKotlin`; build/install real seguem pendentes aqui.
-Erros de compilação devem ser corrigidos pelo Codex a partir do trecho sanitizado;
-não é necessário você modificar Kotlin nem enviar logs completos.
+### Identidade instalada, antes da primeira ação no app
+
+```powershell
+$aferiSha = ($aferiBuildJson | ConvertFrom-Json).Sha256Apk
+pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceInstalled.ps1 -ExpectedSha256 $aferiSha
+```
+
+Esperado: `Pacote=com.ramonmenz.aferivoicetest`, `CoincideComBuild=true` e
+`RecordAudioConcedida=false`. `EstadoRecordAudio` distingue negativa explícita
+(`negada`) de instalação sem entrada de permissão em runtime
+(`sem-entrada-runtime`). O verificador lê o estado do usuário Android ativo.
+Permissão já concedida, hash diferente ou consulta inconclusiva são impedimentos
+a registrar antes de abrir a demo.
+
+### Metro da demo, na porta 8099
+
+No **terminal A**, execute:
+
+```powershell
+Set-Location -LiteralPath 'C:\dev\aferi-voz-build\demos\android-voice'
+$env:EXPO_NO_TELEMETRY = '1'
+node --dns-result-order=ipv4first ..\..\node_modules\expo\bin\cli start --dev-client --localhost --port 8099
+```
+
+Aguarde o Metro iniciar. Preserve a porta 8099 e deixe o terminal aberto. No
+**terminal B**, a partir da raiz da branch de trabalho, consulte:
+
+```powershell
+$aferiBuild = 'C:\dev\aferi-voz-build'
+pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
+```
+
+Se `EstadoAdb=device`, `Http.MetroPronto=true` e `Reverse=missing`, o autor
+cria o mapeamento separadamente:
+
+```powershell
+$aferiAdb = Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe'
+& $aferiAdb -d reverse --no-rebind tcp:8099 tcp:8099
+if ($LASTEXITCODE -ne 0) { throw 'voice-reverse-failed' }
+```
+
+```powershell
+pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
+```
+
+Espere `Pronto=true`: IPv4 HTTP 200, raiz esperada e `Reverse=ready`.
+Após reiniciar PC ou telefone, confirme autorização USB, Metro e reverse de
+novo. Registre conflito, erro ADB ou IPv4 indisponível como impedimento.
+Com identidade e Metro confirmados, abra **Aferi — voz local em avaliação**
+no aparelho. Comece por A–D e execute E–L onde a capacidade permitir.
 
 ## Roteiro específico de validação física pendente
 
@@ -185,7 +228,7 @@ procedimento da spec/TASK-17. Identificar cada resultado como teste de aparelho.
 |---|---|---|
 | A — build/isolamento | Compilar/instalar somente com.ramonmenz.aferivoicetest; abrir manual | Sem Firebase/configuração clínica; sem microfone, download de modelo ou reconhecimento no launch/manual |
 | B — capacidade | API <31, API 31/32 ou aparelho sem serviço local | Indisponibilidade explícita, sem factory genérica/escuta ou pedido repetido; manual acessível |
-| C — idioma | pt-BR ausente, só online/suportado/pendente, ou só pt-PT | Não inicia captura. Após instalar pt-BR nas configurações do SO e nova ação explícita, repetir consulta; não interpretar idioma genérico como pt-BR comprovado |
+| C — idioma | pt-BR ausente, só online/suportado/pendente, ou só pt-PT | Não inicia captura. Registrar o estado encontrado. Se o SO já oferecer configuração de pt-BR local, anotar qualquer mudança feita pelo autor e tratá-la como rodada separada |
 | D — permissão | Negar, conceder, revogar e cancelar durante diálogo | Erro seguro e manual. Concessão tardia nunca abre microfone; não repetir solicitação automaticamente. Background do diálogo pode exigir nova tentativa |
 | E — positivos | Duas frases básicas acima; decimal “treze vírgula cinco por oito vírgula cinco” | Final real chega à revisão; 120/80 ou 135/85, pulso só identificado; data/hora do início. Registrar separadamente falha STT e falha parser, sem chamar o acerto de um caso de acurácia |
 | F — negativos | Silêncio, ruído, “salvar”, escala mista, dois pares/autocorreção, pulso isolado | Sem confirmação automática; campos ausentes/incertos. Observar alucinações do STT em ruído; se aparecer medição estruturada inventada, registrar reprovação/limitação do motor |
@@ -203,14 +246,64 @@ privados do serviço sem acesso/evidência correspondente. Se essa comprovação
 for viável, **produto continua com voz indisponível**, mesmo que o teste de frase
 funcione. Indicador de microfone apagado também não comprova não persistência.
 
-Retorno útil: casos A–L aprovados/reprovados/não verificados, códigos fixos exibidos,
-versões gerais e erros de build sanitizados. Não enviar áudio, dados pessoais,
-transcrição de paciente ou dumps completos. Correções técnicas ficam com o Codex.
+## Taxonomia do veredito
 
-## Próximas dependências
+Cada indisponibilidade confirmada representa um **limite de capacidade no
+ambiente observado**. Registre a fase e se a tentativa abriu o microfone.
+Uma divergência do fluxo esperado, como iniciar sem `ready` da preparação,
+é um resultado distinto.
 
-TASK-05/06, compilação/aparelho e inspeção de privacidade acima antes de habilitar
-voz clínica. TASK-13 permanece pendente e não foi implementada nesta tarefa.
-TASK-11/15 continuam dependentes de emulador/regras/sessão/isolamento entre contas e
-integração clínica segura. Recomenda-se executar primeiro A–D e depois E–L no
-aparelho disponível, mantendo a prioridade global de fotografia definida na spec.
+| Código ou estado | Significado |
+|---|---|
+| `unsupported` | Binding Android ausente no cliente executado. |
+| `local-unavailable` | API anterior à 31, serviço local não identificado ou indisponível na criação/abertura. Manual disponível. |
+| `language-unverified` | Sem consulta de idioma (API 31–32) ou a consulta falhou. Inclui `ERROR_CANNOT_CHECK_SUPPORT`. Não autoriza escuta. |
+| `model-missing` | A consulta não listou pt-BR instalado, ou o serviço recusou o idioma em captura. Registre a fase. pt genérico, pt-PT, suporte online e download pendente não contam como pronto. |
+| `permission-denied` | O microfone não foi concedido ou ficou indisponível por permissão. Nova tentativa depende de ação do usuário. |
+| `ready` | No probe inicial, API/serviço permitem prosseguir. Na preparação, o reconhecedor local verificou pt-BR instalado. Só este segundo estado habilita a captura; ainda não demonstra uma fala reconhecida. |
+| `resource-busy`, `interrupted`, `timeout` | Reconhecedor ocupado, sessão interrompida ou tempo excedido. Registre fase e liberação observável. |
+| `no-result`, `ambiguous-result`, `engine-failed` | Resultado final ausente, hipóteses diferentes ou falha do motor. Registre apenas o código e a mensagem fixa. |
+| `cancelled`, `cleanup-failed` | Sessão cancelada ou liberação não confirmada. A segunda condição deixa a voz bloqueada e o manual acessível. |
+
+## Devolução sanitizada da rodada
+
+Preencha uma linha por caso ou variante exercitada com `passou`, `falhou`,
+`limite` ou `não verificado`. Para Android, use o modelo genérico
+(exemplo `Samsung Galaxy`), a versão Android/API e o SHA-256 completo do APK.
+Devolva os JSONs de build, identidade e Metro da mesma rodada. O build e a
+identidade vinculam o APK pelo hash. O Metro identifica a fonte e a porta. Informe o código conhecido ou
+`—` e copie apenas a mensagem fixa da tela. Para perguntas sobre o motor,
+informe se os campos sintéticos bateram e se o indicador de microfone encerrou.
+Amostras que dependam de outra API, outro idioma ou serviço ausente podem ficar
+`não verificado` quando a condição não ocorrer no aparelho. Se A–D bloquear
+a captura, marque E–L dependentes com o impedimento observado.
+
+```text
+APK SHA-256=<64 hex> | Modelo genérico=<modelo> | Android=<versão> | API=<número>
+A–D | Caso=<A/B/C/D + variante> | Estado=<passou/falhou/limite/não verificado> | Código=<código/—> | Mensagem fixa=<texto/—> | Microfone=<abriu/não abriu/não verificado> | Manual=<acessível/não verificado>
+E–L | Caso=<E/F/G/H/I/J/K/L + variante> | Estado=<passou/falhou/limite/não verificado> | Código=<código/—> | Mensagem fixa=<texto/—> | Candidatos=<conferem/divergem/ausentes/não verificado> | Liberação=<observada/não observada/não verificada> | Duração=<ms ou —>
+```
+
+Devolva somente os JSONs sanitizados de cada etapa executada e esse quadro.
+Em caso de falha de build, inclua etapa, código e um trecho curto sem caminhos
+pessoais. Áudio, transcrição, valores reais, serial, conta e logcat completo
+ficam fora do relato.
+
+## Registro para o relatório final
+
+- **Fatos.** O cliente isolado solicita somente a permissão de áudio entre
+  câmera/mídia/microfone, usa a factory Android local e exige pt-BR instalado.
+  O prebuild foi validado em host e os checks executam mods Expo reais ou
+  fixtures sintéticas. A [revisão estática](task-12-revisao-estatica.md) mapeia
+  APIs, erros e o ajuste de registro do listener.
+- **Decisões.** Registrar resultados por aparelho e condição. Manter o caminho
+  manual acessível e a confirmação da avaliação em memória. Vincular evidência
+  física ao APK verificado e usar Metro IPv4/USB na porta 8099.
+- **Limitações.** Faltam compilação Kotlin, manifesto de APK real, verificação
+  USB/Metro Windows, STT no Samsung e evidência do processo reconhecedor sobre
+  armazenamento e tráfego. Um resultado de fala positivo cobre aquele teste.
+- **Reprodução.** Executar os blocos Windows acima e registrar A–D antes de E–L.
+  Na raiz, usar `node tools/task07/AferiBackupRules.check.cjs --voice`,
+  `node tools/task07/AferiNetworkInspector.check.cjs --voice`,
+  `npm run lint`, `npm run typecheck` e `npm test`. Rodar cada
+  `tools/task12/*.check.ps1` com `pwsh -NoLogo -NoProfile -File`.
