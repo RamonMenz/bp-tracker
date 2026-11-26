@@ -68,16 +68,33 @@ const { useDeleteReading } = jest.requireMock('@/features/readings/useDeleteRead
 const { useReportPdf } = jest.requireMock('@/features/report/useReportPdf') as {
   useReportPdf: jest.Mock;
 };
-const generateReportMock = jest.fn<Promise<boolean>, [unknown]>();
+const prepareReportMock = jest.fn<Promise<boolean>, [unknown]>();
+const saveReportMock = jest.fn<boolean, []>();
 const cancelReportMock = jest.fn();
 
-function reportPdfAvailable(isAvailable: boolean): void {
+const REVIEW = {
+  fileName: 'aferi-relatorio-2026-10-28_a_2026-11-26.pdf',
+  previewUrl: 'blob:previa-sintetica',
+  requestedPeriod: 'Últimos 30 dias — 28/10/2026 a 26/11/2026',
+  coverageLines: ['Registros incluídos: 1'],
+  averages: [],
+  isCoverageConfirmed: true,
+  coverageStatement: 'Leitura confirmada pelo servidor no momento da geração; nenhum registro do período foi omitido.',
+  warnings: [],
+};
+
+function reportPdfAvailable(isAvailable: boolean, overrides: Record<string, unknown> = {}): void {
   useReportPdf.mockReturnValue({
     isAvailable,
-    generateReport: generateReportMock,
-    cancel: cancelReportMock,
-    isGenerating: false,
+    stage: 'idle',
+    review: null,
     error: null,
+    prepareReport: prepareReportMock,
+    retry: jest.fn(),
+    saveReport: saveReportMock,
+    changePeriod: jest.fn(),
+    cancel: cancelReportMock,
+    ...overrides,
   });
 }
 
@@ -101,7 +118,8 @@ beforeEach(() => {
   useReadingsTrend.mockReturnValue({ trend7d: [], trend30d: [], isLoading: false, error: null });
   useExportCsv.mockReturnValue({ exportCsv: jest.fn(), isExporting: false, error: null });
   useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: false, error: null });
-  generateReportMock.mockResolvedValue(true);
+  prepareReportMock.mockResolvedValue(true);
+  saveReportMock.mockReturnValue(true);
   reportPdfAvailable(true);
 });
 
@@ -288,7 +306,7 @@ describe('HistoryScreen — exportar CSV', () => {
 });
 
 /**
- * Relatório PDF (P1, só Web): o botão é independente do CSV e só aparece onde o adaptador da
+ * Relatório PDF (só Web nesta etapa): o botão é independente do CSV e só aparece onde o adaptador da
  * plataforma está disponível. A geração em si é coberta em useReportPdf.test.ts.
  */
 describe('HistoryScreen — relatório PDF', () => {
@@ -299,19 +317,30 @@ describe('HistoryScreen — relatório PDF', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
 
     expect(await screen.findByText('Período do relatório')).toBeTruthy();
-    expect(generateReportMock).not.toHaveBeenCalled();
+    expect(prepareReportMock).not.toHaveBeenCalled();
   });
 
-  it('gera com o período escolhido e cancelar invalida a geração', async () => {
+  it('prepara com o período escolhido e cancelar descarta a preparação', async () => {
     await render(<HistoryScreen />);
 
     await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
-    await fireEvent.press(screen.getByRole('button', { name: 'Gerar PDF' }));
-    expect(generateReportMock).toHaveBeenCalledWith({ kind: 'last30' });
+    await fireEvent.press(screen.getByRole('button', { name: 'Preparar relatório' }));
+    expect(prepareReportMock).toHaveBeenCalledWith({ kind: 'last30' });
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
     await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
     expect(cancelReportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('na revisão, só "Salvar PDF" entrega o arquivo', async () => {
+    reportPdfAvailable(true, { stage: 'review', review: REVIEW });
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    expect(screen.getByText('Revisar relatório')).toBeTruthy();
+    expect(saveReportMock).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar PDF' }));
+    expect(saveReportMock).toHaveBeenCalledTimes(1);
   });
 
   it('não mostra o botão onde o PDF não está disponível (Android nesta etapa)', async () => {
