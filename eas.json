@@ -8,6 +8,18 @@
       "developmentClient": true,
       "distribution": "internal"
     },
+    "standalone-teste": {
+      "extends": "development",
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "development",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_ANDROID_VOICE_ENABLED": "true"
+      }
+    },
     "preview": {
       "distribution": "internal"
     },
