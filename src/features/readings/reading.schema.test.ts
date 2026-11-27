@@ -65,3 +65,25 @@ describe('readingInputSchema — sessionReadings', () => {
     expect(parseReadingInput(input).sessionReadings).toBeNull();
   });
 });
+
+describe('TASK-11 — origens e superfície clínica', () => {
+  it.each(['manual', 'photo', 'voice'])('lê e valida origem %s com sessão preservada', source => {
+    const document = storedDocument({ source, sessionReadings: [FIRST, SECOND] });
+    const reading = parseReading(document);
+    const { createdAt: _createdAt, ...input } = document;
+    expect(parseReadingInput(input)).toMatchObject({ source, sessionReadings: [FIRST, SECOND] });
+    expect(reading.source).toBe(source);
+  });
+  it.each(['cloud', '', null, undefined])('rejeita origem desconhecida/ausente %s', source => {
+    expect(() => parseReading(storedDocument({ source }))).toThrow();
+  });
+  it.each(['image', 'audio', 'transcript', 'rawText', 'confidence', 'candidates', 'createdAt'])('não aceita %s no payload de escrita', key => {
+    const { createdAt: _createdAt, ...input } = storedDocument({ source: 'photo' });
+    expect(() => parseReadingInput({ ...input, [key]: 'SENTINELA-SINTETICA' })).toThrow();
+  });
+  it('rejeita mídia embutida em leitura da sessão', () => {
+    const { createdAt: _createdAt, ...input } = storedDocument({ source: 'voice',
+      sessionReadings: [FIRST, { ...SECOND, transcript: 'SENTINELA' }] });
+    expect(() => parseReadingInput(input)).toThrow();
+  });
+});

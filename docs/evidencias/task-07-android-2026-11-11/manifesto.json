@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "recorded_on_utc": "2026-11-11",
+  "scope": "Arquivo documental do chat TASK-07; nao aplica patches ao produto nem comprova validacao integral.",
+  "repository": "RamonMenz/bp-tracker",
+  "local_checkout": {
+    "branch": "work",
+    "head": "3f8220f7c89831f917081f4abd84c9b9cacb6bef"
+  },
+  "remote_base": {
+    "branch": "staging",
+    "commit": "d94e5f3c9fe0ad4e048542b47afdb822ff911153",
+    "verification": "GitHub connector read-only compare: identical; local origin/staging unavailable"
+  },
+  "expected_markers": {
+    "diagnostic": "captura-5",
+    "native_module": "preview-1",
+    "frame_diagnostic_format": "frame-1"
+  },
+  "device_evidence": "Samsung S25 FE / SM_S731B; foto sintetica 120/80/72 chegou a reviewing; tres repeticoes relatadas, sem medidas individuais.",
+  "windows_git_and_apk_identity": "Nao fornecidos: branch, HEAD, diff completo e hash do APK.",
+  "reconstruction": {
+    "base_files_git_blob_sha1": {
+      "demos/android-capture/index.tsx": "3e8275861ec9c317cc815f2c2514ea4ec6bf311b",
+      "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt": "3127aa2cbdedba1036a955d3b1b3e793ffa12760",
+      "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt": "51e54ff669d29315b252777ea75f6451808cac63",
+      "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java": "90c9215c1c8ad39c4807e974cb5a8cfc10e2e460",
+      "native-modules/aferi-photo-capture/checks/FrameBytesTest.java": "b2c79600907d72b192a03d59c64a1e895f98eb7f",
+      "src/features/assisted-entry/useAndroidPhotoReview.test.ts": "ed2807b00160496eadad995fa1042550c739265c",
+      "src/features/assisted-entry/useAndroidPhotoReview.ts": "705890a57c90dd5d0efc06f0f92c6446c3837dad",
+      "src/screens/AndroidPhotoCaptureScreen.tsx": "28864c3cda27eee81115ae0ef4069f7d3d303b7a",
+      "src/services/recognition/android-photo-session.ts": "64cea504ac8cb47819e9ad4b0dd0359ba4339a3f",
+      "src/services/recognition/photo-android.native.ts": "097816ee723287b6ff9d47dfe64b6997a381d10e",
+      "src/services/recognition/photo-capture-contract.ts": "cf4faab081f49c76f1485b47270cd7d73c5aa2c4"
+    },
+    "historical_sequence": [
+      "aferi-task07-index-diagnostico.tsx.txt -> demos/android-capture/index.tsx",
+      "aferi-task07-tailwind.config.js.txt -> demos/android-capture/tailwind.config.js",
+      "aferi-task07-ciclo-captura.patch",
+      "aferi-task07-diagnostico-captura-2.patch",
+      "aferi-task07-permissao-camera.patch",
+      "aferi-task07-quadro-camera.patch",
+      "aferi-task07-preview-camera.patch"
+    ],
+    "alternative_single_patch": "aferi-task07-consolidado.patch",
+    "checks": "Historical replay equals 15 final sources; consolidated LF and CRLF check/apply/content/reverse-check passed in temporary copies."
+  },
+  "artifacts": [
+    {
+      "path": "README.md",
+      "bytes": 4546,
+      "sha256": "e446b9d41ed26a4c8411b48b04ae145c09cf64e35b3358a8d565cca491b4d5b4"
+    },
+    {
+      "path": "aferi-task07-ciclo-captura.patch",
+      "bytes": 11781,
+      "sha256": "2b1f9f0de9ef06b4ba90d5beacfa60ff4f268e25549bf7d811e90b3b36b3ace7"
+    },
+    {
+      "path": "aferi-task07-consolidado.patch",
+      "bytes": 44858,
+      "sha256": "141fffe2a93407f46f0bde6c0ac8ed0fbeb2a18d68220c6287216abbe0357680"
+    },
+    {
+      "path": "aferi-task07-diagnostico-captura-2.patch",
+      "bytes": 11233,
+      "sha256": "d871b9a8931fa2167893e339a8822de67bac9c2cf814cfe6422e9687bf432f67"
+    },
+    {
+      "path": "aferi-task07-index-diagnostico.tsx.txt",
+      "bytes": 1829,
+      "sha256": "0d3f4443fb6efa8540262ca427283d9ac28d0e61f383000f2904f557d997f2b3"
+    },
+    {
+      "path": "aferi-task07-permissao-camera.patch",
+      "bytes": 8115,
+      "sha256": "7e8d3b235dce7df567029b025895c110b4a6dca57e83a116d850fa507bcb6de5"
+    },
+    {
+      "path": "aferi-task07-preview-camera.patch",
+      "bytes": 9007,
+      "sha256": "be5ece92779b18a9c4b4230838109d0be4ba7d1f0b9dc23cd113668fa1f2694f"
+    },
+    {
+      "path": "aferi-task07-quadro-camera.patch",
+      "bytes": 21555,
+      "sha256": "40c23242262726ce1157c80f7ee4e7e68e37daf01d8847c794879f4846297a59"
+    },
+    {
+      "path": "aferi-task07-tailwind.config.js.txt",
+      "bytes": 213,
+      "sha256": "e6d1995a4c7358d5fd34d2e16868395b387d33ac2fa70c87a4cce7c8debbc95d"
+    },
+    {
+      "path": "cartao-sintetico-sys120-dia80-pul72.png",
+      "bytes": 1059685,
+      "sha256": "a01bb646fbad2acbafce36b3150589b076043173bb3a7d61f51ccca5f25c792b"
+    },
+    {
+      "path": "terminal-sanitizado.md",
+      "bytes": 4810,
+      "sha256": "0f4d3337ad5627f949341c7d404c3699b440bef58fc18baa669e59029368dc1c"
+    }
+  ],
+  "reconstructed_final_sources": [
+    {
+      "path": "demos/android-capture/index.tsx",
+      "bytes": 1830,
+      "sha256_utf8_lf": "dfd3f20f3afd57f5bf7dea38674fbf485b5a4fa5749e779195457b809689e860"
+    },
+    {
+      "path": "demos/android-capture/tailwind.config.js",
+      "bytes": 213,
+      "sha256_utf8_lf": "e6d1995a4c7358d5fd34d2e16868395b387d33ac2fa70c87a4cce7c8debbc95d"
+    },
+    {
+      "path": "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoModule.kt",
+      "bytes": 1811,
+      "sha256_utf8_lf": "4e4ba6e0cebb9e3c519e576d7955595fad434019201cf8e45de2552543ddbc61"
+    },
+    {
+      "path": "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/AferiPhotoView.kt",
+      "bytes": 11792,
+      "sha256_utf8_lf": "b04c84ed12d9560c02ead0e521be34041a3cab5e5a4bd5200f89a2ad609a3990"
+    },
+    {
+      "path": "native-modules/aferi-photo-capture/android/src/main/java/expo/modules/aferiphoto/FrameBytes.java",
+      "bytes": 1695,
+      "sha256_utf8_lf": "531ff108ade78791df3773a8c82292e0382415bebc9091ecbb6901a6c1600c7c"
+    },
+    {
+      "path": "native-modules/aferi-photo-capture/checks/FrameBytesTest.java",
+      "bytes": 2484,
+      "sha256_utf8_lf": "6970bdb5997887a844cddc1011478ac97a251a4ff45fc8344b3e978c241612d4"
+    },
+    {
+      "path": "src/features/assisted-entry/useAndroidPhotoReview.test.ts",
+      "bytes": 12154,
+      "sha256_utf8_lf": "ca8eea3861b5f6675a8d446fb7b0c4eae719489a3f67eecfc737f8f4f539f2b3"
+    },
+    {
+      "path": "src/features/assisted-entry/useAndroidPhotoReview.ts",
+      "bytes": 8016,
+      "sha256_utf8_lf": "5ba415304b54ed5fd42d6781652e5a5a8f779836e27d87480a307605dfa40175"
+    },
+    {
+      "path": "src/screens/AndroidPhotoCaptureScreen.tsx",
+      "bytes": 3587,
+      "sha256_utf8_lf": "8549141cbd3a1843adf4cc93adcffadc1c356000fa2b6bfce121d6f696ffef73"
+    },
+    {
+      "path": "src/services/recognition/android-photo-session.ts",
+      "bytes": 4713,
+      "sha256_utf8_lf": "947d4398bbfc7736a6eb13089afdb17c4a69b0f8abf7f28814a2a11c657ff5c3"
+    },
+    {
+      "path": "src/services/recognition/frame-diagnostic.test.ts",
+      "bytes": 1415,
+      "sha256_utf8_lf": "360e0fb6eaa118a286f1d8403f5eea8652766ca7061fd30bbec80db4551fb718"
+    },
+    {
+      "path": "src/services/recognition/frame-diagnostic.ts",
+      "bytes": 1493,
+      "sha256_utf8_lf": "166c08a1d7377eaa19a7b31c280be598305f7094f1637b0702ed29b33704936a"
+    },
+    {
+      "path": "src/services/recognition/photo-android.native.test.ts",
+      "bytes": 3766,
+      "sha256_utf8_lf": "b4acbb437b52c5d137354a85ca1b0f9fd1b44a27dd31665247266f40c0eace8f"
+    },
+    {
+      "path": "src/services/recognition/photo-android.native.ts",
+      "bytes": 1808,
+      "sha256_utf8_lf": "a9736153b6c3d737c046b21287a577bbc6af15bcf0386bcbe49cea9f634c930f"
+    },
+    {
+      "path": "src/services/recognition/photo-capture-contract.ts",
+      "bytes": 1706,
+      "sha256_utf8_lf": "21ab283b87482eabde06d62fea230f96c85b11e557e6fc9d1c4485e27a238130"
+    }
+  ],
+  "limitations": [
+    "JPEG screenshots referenced from chat were not accessible as binary files and are not archived.",
+    "No native SDK/device execution by Codex; physical runtime evidence comes from the author.",
+    "No production access, clinical data, credentials, captured media, APK or node_modules archived.",
+    "At initial archival stage no acceptance closure, commit, push, merge or deploy was performed; later documentation publication is separately authorized in the main record."
+  ],
+  "documentation_delivery": {
+    "branch": "docs/task-07-validacao-android",
+    "base": "staging",
+    "base_commit": "d94e5f3c9fe0ad4e048542b47afdb822ff911153",
+    "scope": "Documentation and archived artifacts only; functional patch integration, acceptance, merge and deploy remain outside this delivery.",
+    "local_checks": {
+      "lint": "passed",
+      "typecheck": "passed",
+      "jest": {
+        "suites_passed": 64,
+        "tests_passed": 691,
+        "scope": "staging source plus documentation; archived functional patches not applied"
+      },
+      "functions_and_rules": "Not rerun locally for documentation; remote required checks belong to the PR workflow."
+    }
+  }
+}

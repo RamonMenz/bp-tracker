@@ -43,6 +43,10 @@ jest.mock('@/features/readings/useDeleteReading', () => ({
   useDeleteReading: jest.fn(),
 }));
 
+jest.mock('@/features/report/useReportPdf', () => ({
+  useReportPdf: jest.fn(),
+}));
+
 // TrendChart puxa react-native-gifted-charts, que publica ESM cru (mesmo problema do FlashList)
 // e não tem exceção no transformIgnorePatterns do projeto. O gráfico não é o alvo deste teste.
 jest.mock('@/components/bp/TrendChart', () => ({
@@ -61,6 +65,38 @@ const { useExportCsv } = jest.requireMock('@/features/export/useExportCsv') as {
 const { useDeleteReading } = jest.requireMock('@/features/readings/useDeleteReading') as {
   useDeleteReading: jest.Mock;
 };
+const { useReportPdf } = jest.requireMock('@/features/report/useReportPdf') as {
+  useReportPdf: jest.Mock;
+};
+const prepareReportMock = jest.fn<Promise<boolean>, [unknown]>();
+const saveReportMock = jest.fn<boolean, []>();
+const cancelReportMock = jest.fn();
+
+const REVIEW = {
+  fileName: 'aferi-relatorio-2026-10-28_a_2026-11-26.pdf',
+  previewUrl: 'blob:previa-sintetica',
+  requestedPeriod: 'Últimos 30 dias — 28/10/2026 a 26/11/2026',
+  coverageLines: ['Registros incluídos: 1'],
+  averages: [],
+  isCoverageConfirmed: true,
+  coverageStatement: 'Leitura confirmada pelo servidor no momento da geração; nenhum registro do período foi omitido.',
+  warnings: [],
+};
+
+function reportPdfAvailable(isAvailable: boolean, overrides: Record<string, unknown> = {}): void {
+  useReportPdf.mockReturnValue({
+    isAvailable,
+    stage: 'idle',
+    review: null,
+    error: null,
+    prepareReport: prepareReportMock,
+    retry: jest.fn(),
+    saveReport: saveReportMock,
+    changePeriod: jest.fn(),
+    cancel: cancelReportMock,
+    ...overrides,
+  });
+}
 
 const READING: ReadingListItem = {
   id: 'reading-1',
@@ -82,6 +118,9 @@ beforeEach(() => {
   useReadingsTrend.mockReturnValue({ trend7d: [], trend30d: [], isLoading: false, error: null });
   useExportCsv.mockReturnValue({ exportCsv: jest.fn(), isExporting: false, error: null });
   useDeleteReading.mockReturnValue({ deleteReading: deleteReadingMock, isDeleting: false, error: null });
+  prepareReportMock.mockResolvedValue(true);
+  saveReportMock.mockReturnValue(true);
+  reportPdfAvailable(true);
 });
 
 /**
@@ -263,5 +302,74 @@ describe('HistoryScreen — exportar CSV', () => {
     fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(exportCsvMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Relatório PDF (Web e Android): o botão é independente do CSV e só aparece onde o adaptador da
+ * plataforma está disponível. A geração em si é coberta em useReportPdf.test.ts e
+ * useReportPdf.share.test.ts.
+ */
+describe('HistoryScreen — relatório PDF', () => {
+  it('mostra "Gerar relatório PDF" ao lado do CSV e abre o diálogo de período sem gerar nada', async () => {
+    await render(<HistoryScreen />);
+
+    expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+
+    expect(await screen.findByText('Período do relatório')).toBeTruthy();
+    expect(prepareReportMock).not.toHaveBeenCalled();
+  });
+
+  it('prepara com o período escolhido e cancelar descarta a preparação', async () => {
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Preparar relatório' }));
+    expect(prepareReportMock).toHaveBeenCalledWith({ kind: 'last30' });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(cancelReportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('na revisão, só "Salvar PDF" entrega o arquivo', async () => {
+    reportPdfAvailable(true, { stage: 'review', review: REVIEW });
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    expect(screen.getByText('Revisar relatório')).toBeTruthy();
+    expect(saveReportMock).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar PDF' }));
+    expect(saveReportMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('não mostra o botão onde não há adaptador de PDF', async () => {
+    reportPdfAvailable(false);
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Gerar relatório PDF' })).toBeNull();
+  });
+
+  it('Android: a revisão oferece "Salvar ou compartilhar PDF" e o diálogo fecha ao entregar', async () => {
+    reportPdfAvailable(true, { stage: 'review', review: { ...REVIEW, previewUrl: '' }, deliveryMode: 'share' });
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar ou compartilhar PDF' }));
+
+    expect(saveReportMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Revisar relatório')).toBeNull();
+  });
+
+  it('erro do relatório com o diálogo fechado (compartilhamento que falhou) aparece no Histórico', async () => {
+    const message = 'Não foi possível abrir o compartilhamento do relatório. Gere o relatório novamente.';
+    reportPdfAvailable(true, { error: message, deliveryMode: 'share' });
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByText(message)).toBeTruthy();
   });
 });

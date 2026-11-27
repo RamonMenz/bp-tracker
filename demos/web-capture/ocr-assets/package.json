@@ -1,0 +1,6 @@
+{
+  "name": "aferi-static-ocr-assets",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": { "tesseract.js": "7.0.0", "@tesseract.js-data/eng": "1.0.0" }
+}

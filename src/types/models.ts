@@ -11,6 +11,9 @@ export type SessionReadingValues = SessionReading;
 
 export type SessionReadings = [SessionReadingValues, SessionReadingValues];
 
+/** Caminho da criação confirmada; preservado em edições e sessões posteriores. */
+export type ReadingSource = 'manual' | 'photo' | 'voice';
+
 /**
  * A categoria (normal/elevada/estágio…) NÃO faz parte do modelo: é derivada de
  * (systolic, diastolic) por `domain/bp-classification.ts` e nunca persistida.
@@ -25,7 +28,7 @@ export interface Reading {
   measuredAt: Date;
   createdAt: Date;
   note: string | null;
-  source: 'manual';
+  source: ReadingSource;
   /**
    * null = medição única. Quando presente, systolic/diastolic/pulse do documento são a média
    * (`computeSessionAverage`) destas duas leituras.

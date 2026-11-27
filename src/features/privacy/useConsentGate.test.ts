@@ -25,7 +25,7 @@ const mockUnsubscribe = jest.fn();
 const USER = { uid: 'user-1' } as User;
 const CURRENT_CONSENT: AcceptedPrivacyConsent = { version: PRIVACY_POLICY_VERSION, acceptedAt: new Date() };
 
-type Props = { user: User | null; isLoading: boolean };
+type Props = { user: User | null; isLoading: boolean; sessionEpoch?: object };
 
 /** Entrega uma resposta do "servidor" ao listener que o hook registrou. */
 async function emitConsent(consent: AcceptedPrivacyConsent | null): Promise<void> {
@@ -39,7 +39,7 @@ async function emitError(): Promise<void> {
 }
 
 async function renderGate(initialProps: Props) {
-  return renderHook(({ user, isLoading }: Props) => useConsentGate(user, isLoading), { initialProps });
+  return renderHook(({ user, isLoading, sessionEpoch }: Props) => useConsentGate(user, isLoading, sessionEpoch), { initialProps });
 }
 
 beforeEach(() => {
@@ -148,5 +148,23 @@ describe('useConsentGate', () => {
     await unmount();
 
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
+  });
+
+  it('exige nova confirmação do servidor ao relogar com o mesmo UID e ignora o listener anterior', async () => {
+    const { rerender, result } = await renderGate({ user: USER, isLoading: false, sessionEpoch: {} });
+    await emitConsent(CURRENT_CONSENT);
+    const old = result.current;
+    const late = mockSubscribe.mock.calls[0][1];
+    expect(old.getHasConsent()).toBe(true);
+
+    await rerender({ user: USER, isLoading: false, sessionEpoch: {} });
+    await act(() => late(CURRENT_CONSENT));
+    expect(old.getHasConsent()).toBe(false);
+    expect(result.current.hasConsent).toBe(false);
+    expect(result.current.getHasConsent()).toBe(false);
+
+    await emitConsent(CURRENT_CONSENT);
+    expect(result.current.hasConsent).toBe(true);
+    expect(result.current.getHasConsent()).toBe(true);
   });
 });

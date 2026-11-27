@@ -1,0 +1,47 @@
+package expo.modules.aferiphoto;
+
+import java.nio.ByteBuffer;
+
+/** Cópia YUV_420_888 -> NV21 em RAM. Independente de Android para testar strides reais. */
+public final class FrameBytes {
+  public static final int MAX_FRAME_PIXELS = 1920000;
+  private FrameBytes() {}
+  public static boolean acceptsDimensions(int width, int height) {
+    return width > 0 && height > 0 && (width & 1) == 0 && (height & 1) == 0
+        && (long) width * height <= MAX_FRAME_PIXELS;
+  }
+  public static byte[] nv21(int width, int height,
+      ByteBuffer y, int yRow, int yPixel, ByteBuffer u, int uRow, int uPixel,
+      ByteBuffer v, int vRow, int vPixel) {
+    if (!acceptsDimensions(width, height)) throw new IllegalArgumentException("frame-size");
+    if (yRow <= 0 || yPixel <= 0 || uRow <= 0 || uPixel <= 0 || vRow <= 0 || vPixel <= 0)
+      throw new IllegalArgumentException("frame-stride");
+    validatePlane(y, width, height, yRow, yPixel);
+    validatePlane(u, width / 2, height / 2, uRow, uPixel);
+    validatePlane(v, width / 2, height / 2, vRow, vPixel);
+    byte[] bytes = new byte[width * height * 3 / 2];
+    int offset = 0;
+    for (int row = 0; row < height; row++) {
+      for (int col = 0; col < width; col++) bytes[offset++] = sample(y, row, col, yRow, yPixel);
+    }
+    for (int row = 0; row < height / 2; row++) {
+      for (int col = 0; col < width / 2; col++) {
+        bytes[offset++] = sample(v, row, col, vRow, vPixel);
+        bytes[offset++] = sample(u, row, col, uRow, uPixel);
+      }
+    }
+    return bytes;
+  }
+  private static void validatePlane(ByteBuffer buffer, int columns, int rows, int rowStride, int pixelStride) {
+    if (buffer == null) throw new IllegalArgumentException("frame-plane");
+    long span = (long) (columns - 1) * pixelStride + 1;
+    if (span > rowStride) throw new IllegalArgumentException("frame-stride");
+    long end = (long) buffer.position() + (long) (rows - 1) * rowStride + span;
+    if (end > buffer.limit()) throw new IllegalArgumentException("frame-plane");
+  }
+  private static byte sample(ByteBuffer buffer, int row, int col, int rowStride, int pixelStride) {
+    long index = (long) buffer.position() + (long) row * rowStride + (long) col * pixelStride;
+    if (index < 0 || index >= buffer.limit()) throw new IllegalArgumentException("frame-plane");
+    return buffer.get((int) index);
+  }
+}

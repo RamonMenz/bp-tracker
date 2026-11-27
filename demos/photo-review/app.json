@@ -1,0 +1,9 @@
+{
+  "expo": {
+    "name": "Aferi — revisão sintética",
+    "slug": "aferi-photo-review-demo",
+    "platforms": ["web"],
+    "userInterfaceStyle": "automatic",
+    "web": { "bundler": "metro", "output": "single" }
+  }
+}

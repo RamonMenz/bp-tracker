@@ -44,6 +44,7 @@ jest.mock('@/features/onboarding/useOnboardingGate', () => ({
 }));
 
 jest.mock('@/features/privacy/useConsentGate', () => ({
+  ConsentGateContext: jest.requireActual<typeof import('react')>('react').createContext(null),
   useConsentGate: (...args: unknown[]) => mockUseConsentGate(...args),
 }));
 
@@ -86,13 +87,14 @@ describe('RootLayout — gate de onboarding', () => {
 });
 
 describe('RootLayout — consentimento antes do onboarding', () => {
-  it('chama useConsentGate com o user e o isLoading da sessão', async () => {
+  it('chama useConsentGate com o user, o isLoading e o epoch da sessão', async () => {
     const user = { uid: 'user-1' };
-    mockUseSession.mockReturnValue({ user, isLoading: false });
+    const sessionEpoch = { id: 1 };
+    mockUseSession.mockReturnValue({ user, isLoading: false, sessionEpoch });
 
     await render(<RootLayout />);
 
-    expect(mockUseConsentGate).toHaveBeenCalledWith(user, false);
+    expect(mockUseConsentGate).toHaveBeenCalledWith(user, false, sessionEpoch);
   });
 
   it('segura o onboarding (isLoading = true) enquanto não há aceite da versão vigente', async () => {

@@ -1,0 +1,1 @@
+{ "expo": { "name": "Aferi — voz Web local em avaliação", "slug": "aferi-web-local-voice-evaluation", "platforms": ["web"], "web": { "bundler": "metro", "output": "single" } } }

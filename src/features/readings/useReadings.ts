@@ -45,22 +45,16 @@ function mapFirestoreError(firestoreError: FirestoreError): string {
 
 export function useReadings(): UseReadingsResult {
   const { user } = useSession();
-  const [readings, setReadings] = useState<ReadingListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [state, setState] = useState<UseReadingsResult & { owner: typeof user }>({
+    owner: null, readings: [], isLoading: true, error: null,
+  });
 
   useEffect(() => {
-    if (user === null) {
-      // Reset ao encerrar a sessão que assina o onSnapshot abaixo — não deriva estado do render,
-      // sincroniza com o desligamento do listener externo (react-hooks/set-state-in-effect não
-      // distingue esse caso do de deriving-state-from-props).
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setReadings([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
+    // Sincronização do listener externo, inclusive limpeza na troca/logout.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({ owner: user, readings: [], isLoading: user !== null, error: null });
+    if (user === null) return;
+    let active = true;
 
     const readingsQuery = query(
       collection(firestore, readingsCollectionPath(user.uid)),
@@ -71,6 +65,7 @@ export function useReadings(): UseReadingsResult {
       readingsQuery,
       { includeMetadataChanges: true },
       (snapshot) => {
+        if (!active) return;
         const parsed: ReadingListItem[] = [];
 
         for (const docSnapshot of snapshot.docs) {
@@ -81,26 +76,26 @@ export function useReadings(): UseReadingsResult {
               id: docSnapshot.id,
               hasPendingWrites: docSnapshot.metadata.hasPendingWrites,
             });
-          } catch (parseError) {
+          } catch {
             // Um documento fora do formato esperado não derruba a lista inteira —
             // só esse item some do histórico até o dado ser corrigido.
-            logError('readings.parse', parseError, { uid: user.uid, docId: docSnapshot.id });
+            logError('readings.parse', new Error('reading-parse-failed'), { uid: user.uid, docId: docSnapshot.id });
           }
         }
 
-        setReadings(parsed);
-        setError(null);
-        setIsLoading(false);
+        setState({ owner: user, readings: parsed, error: null, isLoading: false });
       },
       (snapshotError) => {
-        logError('readings.snapshot', snapshotError, { uid: user.uid });
-        setError(mapFirestoreError(snapshotError));
-        setIsLoading(false);
+        if (!active) return;
+        logError('readings.snapshot', new Error('reading-snapshot-failed'), { uid: user.uid });
+        setState(previous => ({ ...previous, error: mapFirestoreError(snapshotError), isLoading: false }));
       },
     );
 
-    return unsubscribe;
+    return () => { active = false; unsubscribe(); };
   }, [user]);
 
-  return { readings, isLoading, error };
+  // Também protege o primeiro render da nova conta, antes do cleanup do effect.
+  if (state.owner !== user) return { readings: [], isLoading: user !== null, error: null };
+  return { readings: state.readings, isLoading: state.isLoading, error: state.error };
 }

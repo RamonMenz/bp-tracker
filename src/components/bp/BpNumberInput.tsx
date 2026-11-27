@@ -17,6 +17,8 @@ export interface BpNumberInputProps {
   errorMessage?: string;
   returnKeyType?: TextInputProps['returnKeyType'];
   onSubmitEditing?: TextInputProps['onSubmitEditing'];
+  editable?: boolean;
+  autoComplete?: TextInputProps['autoComplete'];
 }
 
 /**
@@ -27,7 +29,7 @@ export interface BpNumberInputProps {
  * a borda vermelha sozinha não comunicaria nada a quem não distingue a cor (CLAUDE.md §4.7).
  */
 export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function BpNumberInput(
-  { label, value, onChangeText, maxLength, unit, onDigitsComplete, errorMessage, returnKeyType, onSubmitEditing },
+  { label, value, onChangeText, maxLength, unit, onDigitsComplete, errorMessage, returnKeyType, onSubmitEditing, editable = true, autoComplete },
   ref,
 ) {
   const scheme = useColorScheme();
@@ -64,6 +66,8 @@ export const BpNumberInput = forwardRef<TextInput, BpNumberInputProps>(function 
           maxLength={maxLength}
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
+          editable={editable}
+          autoComplete={autoComplete}
           placeholder="—"
           // slate-300 e não a cor da borda: no tom da borda o traço sumia contra o fundo e a
           // caixa lia como quebrada em vez de vazia. Aqui ele aparece como marca d'água sem

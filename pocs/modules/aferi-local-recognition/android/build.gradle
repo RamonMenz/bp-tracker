@@ -1,0 +1,17 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'expo.modules.aferilocal'
+version = '0.1.0'
+android {
+  namespace 'expo.modules.aferilocal'
+  defaultConfig { versionCode 1; versionName '0.1.0' }
+}
+dependencies {
+  implementation 'androidx.camera:camera-camera2:1.5.1'
+  implementation 'androidx.camera:camera-lifecycle:1.5.1'
+  implementation 'androidx.camera:camera-view:1.5.1'
+  // Variante embarcada. Não usar play-services-mlkit-text-recognition.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+}

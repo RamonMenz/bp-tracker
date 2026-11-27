@@ -1,0 +1,225 @@
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.ts b/src/features/assisted-entry/useAndroidPhotoReview.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.ts
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from 'react';
++import { useCallback, useEffect, useRef, useState } from 'react';
+ import { AppState } from 'react-native';
+ 
+ import { createAndroidPhotoSession, type PhotoCaptureState } from '@/services/recognition/android-photo-session';
+@@ -8,6 +8,15 @@
+ import { useCandidateReview } from './useCandidateReview';
+ 
+ type PhotoSession = ReturnType<typeof createAndroidPhotoSession>;
++
++function safeAppState(value: unknown): string {
++  return value === 'active' || value === 'background' || value === 'inactive'
++    || value === 'unknown' || value === 'extension' ? value : 'indefinido';
++}
++function safeNativeStatus(value: unknown): string {
++  return value === 'ready' || value === 'resource-busy' || value === 'permission-denied'
++    || value === 'camera-failed' || value === 'cleanup-failed' ? value : 'outro';
++}
+ 
+ // Recursos opacos em closures privadas; apenas fases/candidatos vão ao estado de UI.
+ function createViewAccess() {
+@@ -28,20 +37,50 @@
+   const [access] = useState(createViewAccess);
+   const [sessions] = useState(() => ({ current: null as PhotoSession | null,
+     retirement: null as Promise<boolean> | null }));
++  // Somente codigos de controle limitados a 18 entradas em memoria. Nunca incluir
++  // observacoes, candidatos, texto OCR, valores clinicos ou excecoes de SDK.
++  const [diagnostics, setDiagnostics] = useState<readonly string[]>([]);
++  const diagnosticMounted = useRef(true);
++  const record = useCallback((code: string) => {
++    if (diagnosticMounted.current) setDiagnostics(previous => [...previous.slice(-17), code]);
++  }, []);
++  useEffect(() => {
++    diagnosticMounted.current = true;
++    return () => { diagnosticMounted.current = false; };
++  }, []);
++  const attachCamera = useCallback((value: AndroidCameraHandle | null) => {
++    access.attachCamera(value);
++    record(value ? 'view:referencia-presente' : 'view:referencia-removida');
++  }, [access, record]);
+   useEffect(() => {
+     // Recursos pertencem ao efeito. Strict Effects/Fast Refresh preservam estado,
+     // mas executam cleanup/setup: nao reutilizar uma sessao ja descartada.
+     const session = createAndroidPhotoSession({
+-      requestPermission: () => access.binding()!.requestPermission(),
+-      open: () => { /* A fase opening monta/ativa a view com attemptId. */ },
++      requestPermission: async () => {
++        record('permissao:solicitada');
++        try {
++          const allowed = await access.binding()!.requestPermission();
++          record(allowed ? 'permissao:concedida' : 'permissao:negada');
++          return allowed;
++        } catch {
++          record('permissao:falha');
++          throw new Error('camera-permission-failed');
++        }
++      },
++      open: () => { record('view:montagem-solicitada'); },
+       recognize: () => access.camera()?.recognize() ?? Promise.reject(new Error('camera-unavailable')),
+       close: () => access.camera()?.cancelCapture() ?? Promise.resolve(true),
+     }, next => {
+-      if (sessions.current === session) setCaptureState(next);
++      if (sessions.current === session) {
++        record(`fase:${next.phase}`);
++        if (next.issue) record(`falha:${next.issue}`);
++        setCaptureState(next);
++      }
+     }, (_attemptId, candidates) => {
+       if (sessions.current === session) review.receive(access.attempt(), candidates);
+     });
+     sessions.current = session;
++    record('sessao:criada');
+     const retirement = sessions.retirement;
+     if (retirement) {
+       // Nao abrir nova camera enquanto a sessao anterior ainda libera recursos.
+@@ -58,7 +97,11 @@
+       });
+     }
+     const listener = AppState.addEventListener('change', state => {
+-      if (state !== 'active') { review.cancel(); void session.cancel(); }
++      record(`app:${safeAppState(state)}`);
++      if (state !== 'active') {
++        record('cancelamento:mudanca-do-app');
++        review.cancel(); void session.cancel();
++      }
+     });
+     return () => {
+       listener.remove();
+@@ -71,23 +114,38 @@
+     };
+     // Métodos da revisão acessam refs síncronas; identidade fixa por montagem.
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+-  }, [access, sessions]);
++  }, [access, sessions, record]);
+   function start(): number {
++    record('toque:iniciar');
++    record(`app-no-toque:${safeAppState(AppState.currentState)}`);
+     const session = sessions.current;
+-    if (!session || sessions.retirement || AppState.currentState !== 'active') return access.attempt();
++    if (!session) { record('bloqueio:sem-sessao'); return access.attempt(); }
++    if (sessions.retirement) { record('bloqueio:limpeza-pendente'); return access.attempt(); }
++    if (AppState.currentState !== 'active') { record('bloqueio:app-nao-ativo'); return access.attempt(); }
+     try {
+       if (!access.binding()) {
+         const loaded = loadAndroidPhotoBinding();
+         access.setBinding(loaded); setBinding(loaded);
++        record('modulo:carregado');
+       }
+-      if (session.start()) access.setAttempt(review.recapture());
+-    } catch { setCaptureState({ phase: 'failed', attemptId: 0, issue: 'unsupported' }); }
++      const accepted = session.start();
++      record(accepted ? 'inicio:aceito' : 'inicio:recusado');
++      if (accepted) access.setAttempt(review.recapture());
++    } catch {
++      record('modulo:falha');
++      setCaptureState({ phase: 'failed', attemptId: 0, issue: 'unsupported' });
++    }
+     return access.attempt();
+   }
+-  function cancel() { review.cancel(); void sessions.current?.cancel(); }
++  function cancel() { record('toque:cancelar'); review.cancel(); void sessions.current?.cancel(); }
++  const onStatus = useCallback((attemptId: number, code: string) => {
++    record(`nativo:${safeNativeStatus(code)}`);
++    sessions.current?.status(attemptId, code);
++  }, [record, sessions]);
+   const busy = ['permission', 'opening', 'ready', 'recognizing', 'closing', 'blocked'].includes(captureState.phase);
+   return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+-    binding, attachCamera: access.attachCamera, start,
+-    capture: () => sessions.current?.capture() ?? false,
+-    onStatus: (attemptId: number, code: string) => sessions.current?.status(attemptId, code), busy };
++    binding, attachCamera, start,
++    capture: () => { record('toque:capturar'); return sessions.current?.capture() ?? false; },
++    onStatus, busy, diagnostics, diagnosticVersion: 'captura-2' as const,
++    diagnosticAppState: safeAppState(AppState.currentState) };
+ }
+diff --git a/src/screens/AndroidPhotoCaptureScreen.tsx b/src/screens/AndroidPhotoCaptureScreen.tsx
+--- a/src/screens/AndroidPhotoCaptureScreen.tsx
++++ b/src/screens/AndroidPhotoCaptureScreen.tsx
+@@ -1,3 +1,5 @@
++import { Text as NativeText, View } from 'react-native';
++
+ import { CandidateReadingReview } from '@/components/bp/CandidateReadingReview';
+ import { Button } from '@/components/ui/Button';
+ import { Card } from '@/components/ui/Card';
+@@ -13,7 +15,8 @@
+   cancelled: 'Captura cancelada.', failed: 'Tentativa encerrada.', blocked: 'Recursos ainda não liberados; saia do fluxo.',
+ };
+ export function AndroidPhotoCaptureScreen() {
+-  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy } = useAndroidPhotoReview();
++  const { review, captureState, binding, attachCamera, start, capture, onStatus, busy,
++    diagnostics, diagnosticVersion, diagnosticAppState } = useAndroidPhotoReview();
+   const Camera = binding?.Camera;
+   const active = ['opening', 'ready', 'recognizing'].includes(captureState.phase);
+   return (
+@@ -31,6 +34,17 @@
+         <Button label="Cancelar captura" variant="ghost" onPress={review.cancel} />
+         <Text accessibilityLiveRegion="polite">{PHASES[captureState.phase]}</Text>
+         {captureState.issue ? <Text accessibilityRole="alert">{PHOTO_MESSAGES[captureState.issue]}</Text> : null}
++        <View style={{ padding: 12, borderWidth: 1, borderColor: '#94a3b8', backgroundColor: '#f8fafc' }}>
++          <NativeText style={{ fontSize: 16, fontWeight: '700', color: '#0f172a' }}>
++            Diagnostico da captura: {diagnosticVersion}
++          </NativeText>
++          <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
++            App: {diagnosticAppState} | Fase: {captureState.phase}
++          </NativeText>
++          <NativeText selectable style={{ fontSize: 14, color: '#0f172a' }}>
++            {diagnostics.length ? diagnostics.join('\n') : 'Aguardando eventos.'}
++          </NativeText>
++        </View>
+       </Card>
+       <CandidateReadingReview review={review} />
+     </Screen>
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.test.ts b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.test.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+@@ -190,3 +190,33 @@
+   await act(async () => { t.result.current.start(); await flush(); });
+   expect(t.permission).toHaveBeenCalledTimes(1);
+ });
++
++test('diagnostico identifica toque recusado pelo estado do app', async () => {
++  const t = await setup();
++  setCurrentState('background');
++  await act(async () => { t.result.current.start(); await flush(); });
++  expect(t.result.current.diagnosticVersion).toBe('captura-2');
++  expect(t.result.current.diagnostics).toEqual(expect.arrayContaining([
++    'toque:iniciar', 'app-no-toque:background', 'bloqueio:app-nao-ativo',
++  ]));
++  expect(t.permission).not.toHaveBeenCalled();
++});
++
++test('diagnostico e limitado e nao inclui saida OCR ou status nativo desconhecido', async () => {
++  const t = await setup();
++  await ready(t);
++  await act(async () => {
++    t.result.current.onStatus(t.result.current.captureState.attemptId, 'SENTINELA 120/80');
++    t.result.current.capture();
++    await flush();
++  });
++  expect(t.result.current.review.state.draft).toMatchObject({ systolic: '120', diastolic: '80', pulse: '72' });
++  const output = JSON.stringify(t.result.current.diagnostics);
++  expect(output).not.toContain('SENTINELA');
++  expect(output).not.toMatch(/120|80|72/);
++  await act(async () => {
++    for (let i = 0; i < 30; i++) t.result.current.review.cancel();
++    await flush();
++  });
++  expect(t.result.current.diagnostics.length).toBeLessThanOrEqual(18);
++});
+diff --git a/demos/android-capture/index.tsx b/demos/android-capture/index.tsx
+--- a/demos/android-capture/index.tsx
++++ b/demos/android-capture/index.tsx
+@@ -21,7 +21,7 @@
+     <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+       <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
+         <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
+-          Aferi: diagnostico de abertura
++          Aferi: diagnostico de captura 2
+         </NativeText>
+         <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+           JavaScript iniciou.

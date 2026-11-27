@@ -1,0 +1,157 @@
+diff --git a/src/services/recognition/photo-android.native.ts b/src/services/recognition/photo-android.native.ts
+--- a/src/services/recognition/photo-android.native.ts
++++ b/src/services/recognition/photo-android.native.ts
+@@ -1,6 +1,6 @@
+ import { requireNativeView, requireOptionalNativeModule } from 'expo';
+ import type { ComponentType, Ref } from 'react';
+-import type { NativeSyntheticEvent, ViewProps } from 'react-native';
++import { PermissionsAndroid, type NativeSyntheticEvent, type ViewProps } from 'react-native';
+ 
+ import { PhotoCaptureError, type AndroidCameraHandle } from './photo-capture-contract';
+ 
+@@ -15,9 +15,18 @@
+   Camera: ComponentType<CameraPreviewProps>;
+ }
+ /** Executar somente ao entrar explicitamente na modalidade Android. */
+-export function loadAndroidPhotoBinding(): AndroidPhotoBinding {
++export function loadAndroidPhotoBinding(onPermissionRoute?: (route: 'already-granted' | 'request-required') => void): AndroidPhotoBinding {
+   const native = requireOptionalNativeModule<{ requestCameraPermission(): Promise<boolean> }>('AferiPhotoCapture');
+   if (!native) throw new PhotoCaptureError('unsupported');
+-  return { requestPermission: () => native.requestCameraPermission(),
++  return { requestPermission: async () => {
++      // Consultar nao abre Activity/dialogo nem inicia camera. Reutilizar o aceite
++      // atual evita pedir novamente e interromper a tentativa por AppState.
++      if (await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.CAMERA)) {
++        onPermissionRoute?.('already-granted');
++        return true;
++      }
++      onPermissionRoute?.('request-required');
++      return native.requestCameraPermission();
++    },
+     Camera: requireNativeView<CameraPreviewProps>('AferiPhotoCapture') };
+ }
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.ts b/src/features/assisted-entry/useAndroidPhotoReview.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.ts
+@@ -57,7 +57,7 @@
+     // mas executam cleanup/setup: nao reutilizar uma sessao ja descartada.
+     const session = createAndroidPhotoSession({
+       requestPermission: async () => {
+-        record('permissao:solicitada');
++        record('permissao:verificando');
+         try {
+           const allowed = await access.binding()!.requestPermission();
+           record(allowed ? 'permissao:concedida' : 'permissao:negada');
+@@ -124,7 +124,8 @@
+     if (AppState.currentState !== 'active') { record('bloqueio:app-nao-ativo'); return access.attempt(); }
+     try {
+       if (!access.binding()) {
+-        const loaded = loadAndroidPhotoBinding();
++        const loaded = loadAndroidPhotoBinding(route => record(route === 'already-granted'
++          ? 'permissao:ja-concedida-sem-dialogo' : 'permissao:dialogo-necessario'));
+         access.setBinding(loaded); setBinding(loaded);
+         record('modulo:carregado');
+       }
+@@ -146,6 +147,6 @@
+   return { review: { ...review, recapture: start, cancel, recaptureDisabled: busy }, captureState,
+     binding, attachCamera, start,
+     capture: () => { record('toque:capturar'); return sessions.current?.capture() ?? false; },
+-    onStatus, busy, diagnostics, diagnosticVersion: 'captura-2' as const,
++    onStatus, busy, diagnostics, diagnosticVersion: 'captura-3' as const,
+     diagnosticAppState: safeAppState(AppState.currentState) };
+ }
+diff --git a/src/features/assisted-entry/useAndroidPhotoReview.test.ts b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+--- a/src/features/assisted-entry/useAndroidPhotoReview.test.ts
++++ b/src/features/assisted-entry/useAndroidPhotoReview.test.ts
+@@ -195,7 +195,7 @@
+   const t = await setup();
+   setCurrentState('background');
+   await act(async () => { t.result.current.start(); await flush(); });
+-  expect(t.result.current.diagnosticVersion).toBe('captura-2');
++  expect(t.result.current.diagnosticVersion).toBe('captura-3');
+   expect(t.result.current.diagnostics).toEqual(expect.arrayContaining([
+     'toque:iniciar', 'app-no-toque:background', 'bloqueio:app-nao-ativo',
+   ]));
+diff --git a/demos/android-capture/index.tsx b/demos/android-capture/index.tsx
+--- a/demos/android-capture/index.tsx
++++ b/demos/android-capture/index.tsx
+@@ -21,7 +21,7 @@
+     <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+       <View style={{ paddingTop: 56, paddingBottom: 16, paddingHorizontal: 16, backgroundColor: '#dbeafe' }}>
+         <NativeText style={{ fontSize: 18, fontWeight: '700', color: '#0f172a' }}>
+-          Aferi: diagnostico de captura 2
++          Aferi: diagnostico de captura 3
+         </NativeText>
+         <NativeText style={{ fontSize: 16, color: '#0f172a' }}>
+           JavaScript iniciou.
+diff --git a/src/services/recognition/photo-android.native.test.ts b/src/services/recognition/photo-android.native.test.ts
+new file mode 100644
+--- /dev/null
++++ b/src/services/recognition/photo-android.native.test.ts
+@@ -0,0 +1,66 @@
++import { requireNativeView, requireOptionalNativeModule } from 'expo';
++import { PermissionsAndroid } from 'react-native';
++
++import { loadAndroidPhotoBinding } from './photo-android.native';
++
++jest.mock('expo', () => ({
++  requireNativeView: jest.fn(() => () => null),
++  requireOptionalNativeModule: jest.fn(),
++}), { virtual: true });
++jest.mock('react-native', () => ({ PermissionsAndroid: {
++  PERMISSIONS: { CAMERA: 'android.permission.CAMERA' }, check: jest.fn(),
++} }));
++
++beforeEach(() => jest.clearAllMocks());
++function setup() {
++  const requestCameraPermission = jest.fn(async () => true);
++  jest.mocked(requireOptionalNativeModule).mockReturnValue({ requestCameraPermission });
++  const route = jest.fn();
++  const binding = loadAndroidPhotoBinding(route);
++  return { binding, route, requestCameraPermission };
++}
++
++test('carregar binding nao verifica nem solicita permissao ou abre captura', () => {
++  const t = setup();
++  expect(PermissionsAndroid.check).not.toHaveBeenCalled();
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++  expect(requireNativeView).toHaveBeenCalledWith('AferiPhotoCapture');
++});
++
++test('permissao ja concedida evita a solicitacao nativa e outro dialogo', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(true);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(PermissionsAndroid.check).toHaveBeenCalledWith('android.permission.CAMERA');
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++  expect(t.route).toHaveBeenCalledWith('already-granted');
++});
++
++test('sem permissao solicita uma vez e retorna o resultado real', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++  expect(t.route).toHaveBeenCalledWith('request-required');
++});
++
++test('recusa continua falsa sem retry automatico', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockResolvedValue(false);
++  t.requestCameraPermission.mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(false);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++});
++
++test('falha na consulta nao inicia dialogo como fallback', async () => {
++  const t = setup(); jest.mocked(PermissionsAndroid.check).mockRejectedValue(new Error('query-failed'));
++  await expect(t.binding.requestPermission()).rejects.toThrow('query-failed');
++  expect(t.requestCameraPermission).not.toHaveBeenCalled();
++});
++
++test('aceite anterior nao e cacheado: revogacao entre tentativas volta a ser verificada', async () => {
++  const t = setup();
++  jest.mocked(PermissionsAndroid.check).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
++  t.requestCameraPermission.mockResolvedValue(false);
++  expect(await t.binding.requestPermission()).toBe(true);
++  expect(await t.binding.requestPermission()).toBe(false);
++  expect(PermissionsAndroid.check).toHaveBeenCalledTimes(2);
++  expect(t.requestCameraPermission).toHaveBeenCalledTimes(1);
++});
