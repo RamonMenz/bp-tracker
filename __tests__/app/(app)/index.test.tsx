@@ -10,6 +10,9 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({}),
 }));
 
+// Jest não aplica a guarda do Metro. Use a entrada vazia do bundle padrão neste teste do manual.
+jest.mock('@/screens/VoiceEntry', () => jest.requireActual('@/screens/VoiceEntry.tsx'));
+
 jest.mock('@/features/readings/useLastReading', () => ({
   useLastReading: jest.fn(),
 }));

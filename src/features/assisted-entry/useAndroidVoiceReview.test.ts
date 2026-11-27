@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { createAssistedConfirmation } from '@/features/readings/confirmed-assisted-reading';
 import { loadAndroidVoiceBinding } from '@/services/recognition/voice-android';
 import { VoiceCaptureError, type AndroidVoicePorts } from '@/services/recognition/voice-capture-contract';
 
@@ -18,7 +19,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 async function flush() { for (let i = 0; i < 45; i++) await Promise.resolve(); }
-async function setup() {
+async function setup(options?: Parameters<typeof useAndroidVoiceReview>[0]) {
   let status: (event: unknown) => void = () => {};
   let deliver!: (value: unknown) => void;
   const unsubscribe = jest.fn();
@@ -26,7 +27,8 @@ async function setup() {
     prepare: jest.fn(async () => ({ code: 'ready' })), start: jest.fn(() => new Promise(resolve => { deliver = resolve; })),
     finish: jest.fn(async () => true), close: jest.fn(async () => true), listen: jest.fn(listener => { status = listener; return unsubscribe; }) };
   jest.mocked(loadAndroidVoiceBinding).mockReturnValue(ports);
-  return { ...await renderHook(useAndroidVoiceReview), ports, unsubscribe, event: (event: unknown) => status(event), deliver: (value: unknown = final) => deliver(value) };
+  return { ...await renderHook(() => useAndroidVoiceReview(options)), ports, unsubscribe,
+    event: (event: unknown) => status(event), deliver: (value: unknown = final) => deliver(value) };
 }
 async function start(t: Awaited<ReturnType<typeof setup>>) {
   await act(async () => { t.result.current.start(); await flush(); });
@@ -91,6 +93,26 @@ test('desmontagem remove listener, fecha mic e ignora retorno final', async () =
   const t = await setup(); await start(t); await t.unmount(); await flush(); t.deliver(); await flush();
   expect(t.unsubscribe).toHaveBeenCalledTimes(1); expect(t.ports.close).toHaveBeenCalledTimes(1);
 });
+test('modo recognition com reconhecedor SIMULADO descarta final quando o contexto perde validade durante a escuta', async () => {
+  let active = true;
+  const writer = jest.fn(async () => 'leitura-sintetica');
+  const onSaved = jest.fn();
+  const epoch = {};
+  const confirmation = createAssistedConfirmation({
+    currentContext: () => ({ uid: active ? 'alice-sintetica' : null, epoch, hasConsent: active, persistenceEnabled: true }),
+    loadWriter: async () => writer,
+  });
+  const t = await setup({ mode: 'recognition', confirmation, isCurrent: () => active, isDatePickerOpen: () => false, onSaved });
+  await start(t);
+  active = false;
+  await act(async () => { t.deliver(); await flush(); });
+  expect(t.ports.close).toHaveBeenCalledTimes(1);
+  expect(t.result.current.review.state.draft).toBeNull();
+  expect(writer).not.toHaveBeenCalled();
+  expect(onSaved).not.toHaveBeenCalled();
+});
+
+// A falha de liberação preserva a exclusão global até o processo terminar.
 test('sair para manual só informa liberação depois do ACK, inclusive após desmontar voz', async () => {
   const t = await setup(); await start(t);
   let acknowledge!: (value: boolean) => void;

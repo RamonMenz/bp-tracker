@@ -20,6 +20,10 @@ class AferiVoiceModule : Module() {
     Name("AferiLocalVoice")
     Events("onVoiceStatus")
     AsyncFunction("availability") { promise: Promise -> promise.resolve(mapOf("code" to (engine()?.availability() ?: "local-unavailable"))) }.runOnQueue(Queues.MAIN)
+    AsyncFunction("checkLocalLanguage") { id: Int, promise: Promise ->
+      val local = engine()
+      if (local == null) promise.resolve(mapOf("code" to "local-unavailable")) else local.checkLocalLanguage(id, promise)
+    }.runOnQueue(Queues.MAIN)
     AsyncFunction("requestMicrophonePermission") { promise: Promise ->
       val context = appContext.reactContext
       val permissions = appContext.permissions

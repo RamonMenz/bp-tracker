@@ -11,7 +11,11 @@ export function isWebVoiceEnabled(): boolean {
   return Constants.expoConfig?.extra?.webVoiceEnabled === true;
 }
 
-export function useAssistedWriteContext() {
+export function isAndroidVoiceEnabled(): boolean {
+  return Constants.expoConfig?.extra?.androidVoiceEnabled === true;
+}
+
+export function useAssistedWriteContext(isVoiceEnabled = isWebVoiceEnabled) {
   const { user, sessionEpoch, getSessionEpoch, isLoading } = useSession();
   const { hasConsent, getHasConsent } = useContext(ConsentGateContext);
   const uid = user?.uid ?? null;
@@ -22,13 +26,13 @@ export function useAssistedWriteContext() {
       uid: isCurrent ? uid : null,
       epoch: isCurrent ? sessionEpoch : NO_SESSION,
       hasConsent: isCurrent && !isLoading && getHasConsent(),
-      persistenceEnabled: isWebVoiceEnabled(),
+      persistenceEnabled: isVoiceEnabled(),
     };
   }
 
   return {
     sessionEpoch,
-    canUseVoice: sessionEpoch !== null && uid !== null && !isLoading && hasConsent && isWebVoiceEnabled(),
+    canUseVoice: sessionEpoch !== null && uid !== null && !isLoading && hasConsent && isVoiceEnabled(),
     getCurrentContext,
   };
 }
