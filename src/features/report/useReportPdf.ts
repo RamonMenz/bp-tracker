@@ -54,8 +54,9 @@ const TIMEOUT_MESSAGE =
   'A preparação do relatório demorou demais. Verifique sua conexão ou escolha um período menor e tente novamente.';
 
 /**
- * Prazo das etapas ASSÍNCRONAS da preparação (carregar o módulo do PDF e ler o Firestore). A
- * renderização em si é síncrona na thread principal e não pode ser interrompida: quem a limita é
+ * Prazo único das etapas ASSÍNCRONAS da preparação: carregar o módulo do relatório, ler o Firestore
+ * e carregar jsPDF/AutoTable (o `import()` que `pipeline.render` faz antes de desenhar). O desenho
+ * em si é síncrono na thread principal e não pode ser interrompido: quem o limita é
  * `MAX_REPORT_READINGS` (ver docs/pdf-relatorio.md).
  */
 export const REPORT_PREPARATION_TIMEOUT_MS = 30_000;
@@ -235,7 +236,9 @@ export function useReportPdf(): UseReportPdfResult {
         return false;
       }
 
-      const pdf = await pipeline.render(built.model);
+      // O prazo cobre o import de jsPDF/AutoTable dentro de `render`. Um desenho que termina resolve
+      // num microtask, antes do timer: só o carregamento travado é descartado.
+      const pdf = await withDeadline(pipeline.render(built.model), deadline);
 
       if (!isCurrent()) {
         return false;
