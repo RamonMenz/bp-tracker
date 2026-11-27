@@ -5,6 +5,13 @@ avaliação de 08/12 e 19 dias de 15/12. Base verificada: `staging` em `2afb60d`
 [PR #85](https://github.com/RamonMenz/bp-tracker/pull/85)), árvore limpa. Decisões e
 evidências em formato de registro corrido: [decisões e evidências](relatorio/decisoes-e-evidencias.md).
 
+> **Nota de 27/11/2026 (o corpo abaixo não foi reescrito):** a diferença
+> `origin/main..origin/staging` passou de 139 para **186** commits (`staging @ 1140197`,
+> histórico completo; `main @ 3f8220f` continua ancestral). Onde este documento cita 139 (§2 e
+> §7), vale o valor da data. O valor atual e as evidências posteriores (PDF Web, Sentry, V1 de voz)
+> estão no [registro de decisões e evidências](relatorio/decisoes-e-evidencias.md), a partir de
+> E-026 (contagem em E-030).
+
 Este documento **não conclui nenhuma funcionalidade**. Ele registra prioridades, dependências
 verificadas e o plano de entregas. Os critérios de aceite continuam sendo os das specs e da
 [constituição](../constitution.md); estado de cada TASK continua em [tasks.md](../tasks.md).
