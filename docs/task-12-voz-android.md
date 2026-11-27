@@ -1,9 +1,9 @@
 # TASK-12 — STT Android local conectado à revisão, em avaliação
 
-27/10/2026. Branch `feature/task-12-android-local-voice`, base staging `7d72cb3`,
-preservando as frentes locais anteriores. **TASK-12 permanece aberta:** integração
-local implementada/testada por portas isoladas, sem Kotlin/APK compilado ou STT
-executado em aparelho. Não há comprovação de privacidade interna do serviço do SO.
+Registro inicial de 27/10/2026 na branch `feature/task-12-android-local-voice`,
+base staging `7d72cb3`. Naquele momento, a integração local tinha testes por
+portas isoladas. O ensaio físico posterior está na seção de resultados da V1.
+**TASK-12 permanece aberta** quanto à privacidade interna do serviço do SO.
 
 ## Implementação e alcance
 
@@ -104,7 +104,7 @@ porque o tipo de `ReadingForm` referencia tipos do formulário clínico; isso é
 resolução de tipos, sem importar o hook/SDK no runtime. Testes proíbem esses imports.
 Não há mudança de schema, rules, índices, origem ou persistência nesta tarefa.
 
-## Verificações efetivas
+## Verificações do registro inicial
 
 | Verificação | Resultado e limite |
 |---|---|
@@ -128,14 +128,16 @@ Comece na raiz do repositório com a branch `feat/voz-capacidade` disponível
 localmente e selecionada. O ambiente de referência usa Node 24.22.0, npm 11.19.1,
 JVM 17.0.21, wrapper Gradle 9.3.1 e SDK em `%LOCALAPPDATA%\Android\Sdk` com
 Build-Tools 36.0.0. O destino `C:\dev\aferi-voz-build` deve estar livre. Preserve
-worktrees e APKs anteriores.
+worktrees e APKs anteriores. Os comandos abaixo usam `powershell.exe`,
+validado na rodada Windows do autor, onde `pwsh` não estava disponível.
+Os checks do CI usam PowerShell 7.
 
 ```powershell
 $aferiBuild = 'C:\dev\aferi-voz-build'
 $aferiCommit = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'voice-source-unavailable' }
-$aferiBuildJson = pwsh -NoLogo -NoProfile -File .\tools\task12\Build-AferiVoiceEvaluation.ps1 -Commit $aferiCommit -BuildPath $aferiBuild
-if ($LASTEXITCODE -ne 0) { throw 'voice-build-failed' }
+$aferiBuildJson = powershell.exe -NoLogo -NoProfile -File .\tools\task12\Build-AferiVoiceEvaluation.ps1 -Commit $aferiCommit -BuildPath $aferiBuild
+if ($LASTEXITCODE -ne 0 -or -not $aferiBuildJson) { throw 'voice-build-failed' }
 $aferiBuildJson
 ```
 
@@ -170,7 +172,7 @@ if ($LASTEXITCODE -ne 0) { throw 'voice-install-failed' }
 
 ```powershell
 $aferiSha = ($aferiBuildJson | ConvertFrom-Json).Sha256Apk
-pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceInstalled.ps1 -ExpectedSha256 $aferiSha
+powershell.exe -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceInstalled.ps1 -ExpectedSha256 $aferiSha
 ```
 
 Esperado: `Pacote=com.ramonmenz.aferivoicetest`, `CoincideComBuild=true` e
@@ -195,7 +197,7 @@ Aguarde o Metro iniciar. Preserve a porta 8099 e deixe o terminal aberto. No
 
 ```powershell
 $aferiBuild = 'C:\dev\aferi-voz-build'
-pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
+powershell.exe -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
 ```
 
 Se `EstadoAdb=device`, `Http.MetroPronto=true` e `Reverse=missing`, o autor
@@ -208,7 +210,7 @@ if ($LASTEXITCODE -ne 0) { throw 'voice-reverse-failed' }
 ```
 
 ```powershell
-pwsh -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
+powershell.exe -NoLogo -NoProfile -File .\tools\task12\Test-AferiVoiceMetro.ps1 -BuildPath $aferiBuild
 ```
 
 Espere `Pronto=true`: IPv4 HTTP 200, raiz esperada e `Reverse=ready`.
@@ -245,6 +247,67 @@ conter mídia/dados de uso. Não é possível afirmar ausência de retenção em
 privados do serviço sem acesso/evidência correspondente. Se essa comprovação não
 for viável, **produto continua com voz indisponível**, mesmo que o teste de frase
 funcione. Indicador de microfone apagado também não comprova não persistência.
+
+## Resultado da V1 no Samsung
+
+**Veredito de capacidade.** O Samsung Galaxy com Android 17/API 37 produziu
+candidatos corretos em pt-BR, inclusive em modo avião com Wi-Fi e dados móveis
+desligados. O Metro permaneceu disponível por USB na porta 8099. A repetição
+teve resultados variáveis nas formas curtas e completas.
+
+O autor compilou em Windows o commit local `66cc97c5159adca175a4c9122b52d3406290d949`,
+criado pela aplicação do patch cumulativo sobre `3c5a078`. O build retornou
+fonte limpa e SHA-256 do APK
+`ddf7cb774473015108e6c98aec9dc747ca17db83ca026b5483cc42f1196693f9`.
+O manifesto final conferiu pacote, permissão de microfone, ausência de
+câmera/mídia e regras de backup. A configuração do build registrou inspector
+desativado. A consulta do Metro retornou IPv4 HTTP 200, fonte esperada e reverse
+ativo. O hash acima é do JSON de build do autor.
+
+### Diagnóstico e correções da rodada
+
+- **Transporte para Windows.** O `fetch` de `staging` trouxe a base do Git.
+  Os commits locais foram transferidos por `git bundle`. O autor salvou e
+  extraiu o ZIP, verificou o bundle com `git bundle verify` e então importou a
+  branch usando o caminho local do arquivo.
+- **Gradle e árvore limpa.** A primeira saída sem JSON deixou um APK no disco.
+  O Git confirmou o commit esperado e os arquivos rastreados intactos. Os 188
+  arquivos não rastreados pertenciam ao `android/build/` do módulo de voz. A
+  inspeção do APK existente passou depois de verificar esse escopo. A regra
+  de Git agora ignora apenas `build/` nesse módulo. O build seguinte passou
+  pela guarda de árvore limpa e retornou o JSON completo.
+- **Tela cinza.** A `MainActivity` abriu e o menu Expo mostrou o runtime e o
+  Metro local corretos. A abertura a frio não resolveu a tela em branco. O
+  export Android no host reproduziu a ausência de `flex-1` no CSS gerado. A
+  configuração Tailwind própria da demo restaurou os estilos. Reiniciar o
+  Metro com `--clear` e recarregar o mesmo APK tornou a tela e o manual
+  acessíveis no Samsung.
+- **Permissão após o diálogo.** O autor observou cancelamentos na concessão e
+  na nova tentativa. O módulo chamava a API de solicitação mesmo com
+  `RECORD_AUDIO` concedida. A correção lê o estado concedido diretamente no
+  Android. O APK recompilado chegou à escuta após ação explícita. A rodada
+  não isolou a causa exata dos cancelamentos anteriores. O teste automatizado
+  cobre cancelamento no diálogo e avanço apenas após um novo toque.
+- **Identidade e conexão no reteste.** `voice-microphone-already-granted` é
+  emitido após a validação do pacote e do hash. Esse estado é esperado num
+  reteste de permissão já concedida. Para atualizar a demo, o autor verificou
+  o APK anterior e inspecionou o novo antes da instalação. O Metro precisa usar
+  a mesma worktree do novo build. Com `Reverse=missing`, o autor restaurou
+  apenas o mapeamento 8099 e confirmou `Pronto=true` antes de abrir a demo.
+
+| Caso | Resultado sanitizado |
+|---|---|
+| A | O autor abriu a interface após corrigir a configuração de estilos da demo e acessou o manual antes de conceder microfone. |
+| B–C | A demo chegou à escuta após as verificações de serviço local e pt-BR instalado neste aparelho. Variantes sem serviço, com API inferior ou sem pt-BR não foram exercitadas. |
+| D | A recusa do microfone manteve o manual acessível. Na primeira rodada, a concessão e um novo toque encerraram em cancelamento. Depois da correção que reutiliza a concessão existente, o autor chegou à escuta. |
+| E | Pares sintéticos completos conferiram com e sem pulso. Também houve `ambiguous-result`, tentativas sem candidato e revisão com todos os campos vazios. A expressão coloquial com pulso conferiu em uma tentativa offline. O cenário decimal ficou sem verificação. |
+| F | No silêncio, apareceu “Voz indisponível nesta tentativa”. Nenhum candidato foi exibido e o indicador de microfone apagou. O código específico do motor não foi identificado. |
+| G | O fim automático produziu os candidatos esperados e o indicador apagou. A revisão foi cancelada. |
+| H | Cancelar em escuta apagou o indicador e manteve a revisão fechada. |
+| I | Pressionar Home durante a escuta apagou o indicador. Ao voltar, a escuta permaneceu encerrada e a revisão fechada. |
+| J | Sem verificação. |
+| K | Em modo avião, uma tentativa abriu revisão vazia e outra produziu os três candidatos esperados. O ensaio cobre capacidade offline nas condições descritas. Tráfego e retenção interna do serviço permanecem sem inspeção. |
+| L | Após confirmar candidatos sintéticos, sair para o manual e retornar, a revisão e a confirmação anteriores haviam desaparecido. Evidência de comportamento visível da demo. |
 
 ## Taxonomia do veredito
 
@@ -299,11 +362,19 @@ ficam fora do relato.
 - **Decisões.** Registrar resultados por aparelho e condição. Manter o caminho
   manual acessível e a confirmação da avaliação em memória. Vincular evidência
   física ao APK verificado e usar Metro IPv4/USB na porta 8099.
-- **Limitações.** Faltam compilação Kotlin, manifesto de APK real, verificação
-  USB/Metro Windows, STT no Samsung e evidência do processo reconhecedor sobre
-  armazenamento e tráfego. Um resultado de fala positivo cobre aquele teste.
+- **Limitações.** A V1 confirmou compilação, manifesto, ligação USB/Metro no
+  Windows e capacidade offline no Samsung da rodada. A repetibilidade, os
+  cenários ainda não exercitados e a evidência do processo reconhecedor sobre
+  armazenamento e tráfego permanecem pendentes. O resultado vale para o
+  aparelho e as condições registradas.
 - **Reprodução.** Executar os blocos Windows acima e registrar A–D antes de E–L.
   Na raiz, usar `node tools/task07/AferiBackupRules.check.cjs --voice`,
   `node tools/task07/AferiNetworkInspector.check.cjs --voice`,
   `npm run lint`, `npm run typecheck` e `npm test`. Rodar cada
   `tools/task12/*.check.ps1` com `pwsh -NoLogo -NoProfile -File`.
+- **Continuidade.** A capacidade offline também foi observada no
+  [Chrome do autor](task-13-voz-web.md#resultado-da-v1-no-chrome). O
+  [plano de 26/11](reavaliacao-2026-11-26.md)
+  prevê V2 Web atrás de flag desligada por padrão e V3 Android com rebuild do
+  Dev Client. A verificação de privacidade do serviço e os aceites de
+  confirmação, cancelamento e troca de conta ainda condicionam a habilitação.

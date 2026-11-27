@@ -50,13 +50,43 @@ Caso=<probe/instalação/cancelamento/fala/silêncio/repetição sem rede/manual
 Compartilhe apenas esse quadro. Áudio, transcrição, dados clínicos, conta,
 caminhos pessoais e logs completos ficam fora do relato.
 
+## Resultado da V1 no Chrome
+
+**Veredito de capacidade.** A demo reconheceu fala em pt-BR no modo local
+explícito do Chrome `158.0.8127.89` oficial, 64 bits, no Windows do autor, em
+`http://127.0.0.1:8100`. O reconhecimento também funcionou após desconectar
+o PC da rede externa, mantendo o servidor da demo no loopback. O indicador
+de microfone apagou após a escuta nas duas condições.
+
+| Etapa | Resultado sanitizado |
+|---|---|
+| Manual | Acessível antes da primeira ação de voz. |
+| Disponibilidade | A demo ofereceu **Instalar pacote pt-BR local**, condição do estado `downloadable`. |
+| Instalação explícita | Um toque iniciou a instalação. A mensagem “Pacote pt-BR local pronto. Toque para verificar e começar a fala.” confirmou a nova consulta com estado `available`. |
+| Fala após a instalação | Uma nova ação explícita produziu os candidatos sintéticos esperados, 120/80 mmHg e pulso 72. O indicador de microfone apagou. |
+| Fala offline | Com o modelo já instalado, o PC desconectado da rede externa e a mesma página servida por loopback, a demo entrou em **Ouvindo**, os candidatos conferiram e o indicador apagou. |
+| Tentativas adicionais | O autor percebeu mais consistência que no Samsung e relatou candidatos fiéis também para valores sintéticos rejeitados pela validação da medição. O total de tentativas e os resultados por frase não foram tabulados. |
+| Ensaios pendentes | Cancelamento no Chrome real e inspeção de rede e retenção pelo navegador. |
+
+A comparação com o [ensaio Android](task-12-voz-android.md#resultado-da-v1-no-samsung)
+é qualitativa. Sistemas, microfones e condições variaram. Para comparar taxas
+de acerto, seria necessário usar o mesmo conjunto de frases, controlar as
+condições e registrar separadamente par correto, pulso correto, ambiguidade
+e ausência de candidato. O reconhecimento de candidatos e a validação para
+confirmar a revisão são etapas distintas. Por exemplo, um par sintético
+40/50 pode aparecer como candidato. O schema exige sistólica mínima de 50
+e maior que a diastólica, e a revisão desabilita a confirmação de valores
+inválidos. Esse bloqueio foi conferido no código e por testes de validação.
+
 ## Registro para o relatório final
 
 - **Fatos e decisões.** O download do modelo depende de ação explícita após
   `downloadable`. A captura só começa com disponibilidade local confirmada.
   A revisão e a confirmação são demonstrações voláteis.
-- **Limitações.** Os testes de instalação/cancelamento usam construtor falso.
-  Capacidade, download, fala local e comportamento interno do Chrome do autor
-  aguardam teste real. O resultado vale para o ambiente e a rodada observados.
+- **Limitações.** O autor observou a instalação e a fala real com e sem rede
+  externa. Cancelamento, timeout e resultados tardios têm cobertura por
+  construtor falso. A privacidade interna do Chrome e a taxa comparativa de
+  acerto permanecem sem verificação. O resultado vale para o ambiente e a
+  rodada observados.
 - **Reprodução.** Use os comandos de exportação e servidor acima. Para repetir
   as simulações, rode `npm test -- --runInBand src/services/recognition/web-voice.test.ts`.
