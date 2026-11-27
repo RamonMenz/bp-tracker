@@ -140,6 +140,19 @@ jobs:
     # A fila do plano gratuito pode demorar; se o job estourar, o build segue na EAS e pode ser
     # acompanhado depois com o input build_id (sem gastar cota).
     timeout-minutes: 180
+    # Valores FICTÍCIOS, só para o eas-cli conseguir avaliar o app.config.ts (que exige estas
+    # variáveis) antes de saber o projectId — sem eles, `env:pull`/`build`/`build:view` falham em 1 s
+    # com "expo config --json exited with non-zero code: 1". O eas-cli roda `expo config` com
+    # EXPO_NO_DOTENV=1 e env = { ...process.env, ...variáveis do ambiente EAS }: na avaliação final
+    # os valores reais da EAS sobrescrevem estes. O builder da EAS nunca os recebe (usa só o
+    # ambiente "development" + o env do perfil). Ver docs/eas-standalone.md §1.5.
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.invalid
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+      EXPO_PUBLIC_FIREBASE_APP_ID: ci-placeholder
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ci-placeholder
+      EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ci-placeholder
     steps:
       - name: Checkout do repositório
         uses: actions/checkout@v4

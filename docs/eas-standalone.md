@@ -23,6 +23,11 @@
 5. **`eas env:pull` no job standalone.** O passo existe por três motivos: falhar cedo se o token estiver errado, listar os **nomes** das variáveis e mascarar os valores. A config dinâmica não depende dele: com `environment` no perfil, o próprio eas-cli carrega as variáveis "Plain text" e "Sensitive" para avaliar o `app.config.ts`. O eas-cli não lê `.env`, e o builder recebe as variáveis no servidor.
    - O arquivo vai para `$RUNNER_TEMP`, fora do repositório, e nunca é impresso.
    - `.eas/.env`, onde o `env:pull` grava a variável de arquivo `GOOGLE_SERVICES_JSON`, é apagado antes do build, porque não está no `.gitignore` e não deve subir com o projeto.
+   - **Valores fictícios para resolver o projectId.** Antes de saber o projectId, o eas-cli avalia o `app.config.ts` com `expo config --json`, sempre com `EXPO_NO_DOTENV=1` (`src/project/expoConfig.ts`). Como o `app.config.ts` exige seis `EXPO_PUBLIC_*` (`requireEnv`), num runner vazio `env:pull`, `build` e `build:view` falham em cerca de 1 s com `expo config --json exited with non-zero code: 1`.
+     - O job standalone define essas seis com o valor `ci-placeholder`.
+     - O env passado ao `expo config` é `{ ...process.env, ...variáveis da EAS }`, então, na avaliação final do `eas build`, os valores reais do ambiente `development` sobrescrevem os fictícios.
+     - O builder da EAS nunca recebe esses valores: ele usa só o ambiente da EAS e o `env` do perfil.
+     - **Esta é a causa reproduzida da falha em 1 s**. Ela também afeta o job `development`, que foi mantido como estava a pedido e continuará falhando no `env:pull` até receber o mesmo bloco `env`.
 6. **Segurança do log.**
    - `EXPO_TOKEN` vem só de `secrets.EXPO_TOKEN` e entra só nos passos que falam com a EAS, nunca no `npm ci`.
    - `tools/eas/env-names.cjs` emite `::add-mask::` para cada valor com 6 ou mais caracteres e imprime só nomes. Nada usa `cat` ou `printenv` no arquivo.
@@ -72,7 +77,7 @@ Equivalente local, com o eas-cli logado:
 eas build --platform android --profile standalone-teste
 ```
 
-Pré-requisito: o secret **`EXPO_TOKEN`** em *Settings → Secrets and variables → Actions*, criado em expo.dev → *Account settings → Access tokens*. Sem ele, o passo "Conferir o secret EXPO_TOKEN" falha com mensagem explícita. Essa ausência é a causa provável da falha de agosto em 1 s no `eas env:pull`, mas o log daquela execução já expirou e não pôde ser lido.
+Pré-requisito: o secret **`EXPO_TOKEN`** em *Settings → Secrets and variables → Actions*, criado em expo.dev → *Account settings → Access tokens*. Sem ele, o passo "Conferir o secret EXPO_TOKEN" falha com mensagem explícita. O log da falha de agosto já expirou. Com o token presente, a 1ª tentativa desta branch falhou igual, em 1 s no `env:pull`, por causa do `requireEnv` (§1.5). A ausência do token, portanto, não era a única causa possível.
 
 ## 4. No celular (o que o autor faz)
 
@@ -106,4 +111,8 @@ O acesso a `docs.expo.dev` estava bloqueado neste ambiente. A doc foi lida no c�
 
 ## 6. Resultado das tentativas
 
-*(atualizado a cada execução)*
+*(atualizado a cada execução; cota EAS usada até aqui: 0 builds)*
+
+| # | Execução do GitHub | Pré-voo nativo | Build EAS | Causa e correção |
+|---|---|---|---|---|
+| 1 | [46079186932](https://github.com/RamonMenz/bp-tracker/actions/runs/46079186932) | ✅ passou: export com voz, prebuild e `:app:compileReleaseKotlin` em cerca de 5 min | **não criado** (0 de cota) | `eas env:pull` falhou em 1 s: `expo config --json exited with non-zero code: 1` (`requireEnv` sem variáveis no runner). Correção: `ci-placeholder` no job (§1.5), reproduzido no host. |
