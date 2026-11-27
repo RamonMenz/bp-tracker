@@ -215,7 +215,7 @@ describe('relatório PDF — rede e logs com dados sensíveis (PDF-11/13)', () =
 
     // O PDF entregue é do próprio usuário (pode conter a observação), mas não traz identificação.
     const [, pdf] = mockPlatform.deliver.mock.calls[0];
-    const raw = Buffer.from(await pdf.arrayBuffer()).toString('latin1');
+    const raw = Buffer.from(await (pdf as Blob).arrayBuffer()).toString('latin1');
     expect(raw).not.toContain(SENTINEL_EMAIL);
     expect(raw).not.toContain('Sentinela@');
     expect(raw).not.toMatch(/\/Author/);

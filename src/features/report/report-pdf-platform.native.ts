@@ -8,6 +8,7 @@ const UNAVAILABLE = 'report-pdf-unavailable';
 
 export const reportPdfPlatform: ReportPdfPlatform = {
   isAvailable: false,
+  deliveryMode: 'share',
   loadPipeline: () => Promise.reject(new Error(UNAVAILABLE)),
   deliver: () => {
     throw new Error(UNAVAILABLE);
