@@ -69,3 +69,26 @@ Para ver o vazamento original: remova `BREADCRUMBS_INTEGRATION_NAME`, `beforeBre
   `error.message` sem filtro ao Crashlytics — o mesmo vetor da mensagem de exceção que aqui foi
   fechado. Decidir se redige a mensagem também no nativo.
 - Não verificado: chegada ao Sentry real.
+
+## Nota de 2026-11-27 — lado nativo (Crashlytics)
+
+A pendência acima foi fechada em `src/services/crashReporter.native.ts`:
+
+- O adapter não repassa mais o erro original. Antes de `recordError`, ele monta um `Error` novo
+  com a mensagem fixa `[mensagem removida por privacidade]` (mesmo texto da web). Esse erro mantém
+  o protótipo e o `name` do original (o tipo) e a stack com a mensagem trocada no cabeçalho.
+  Ficam de fora a `cause` e as propriedades próprias extras (ex.: `customData` de um `FirebaseError`).
+- Preservados: `scope` como `jsErrorName`, que é o que agrupa os não-fatais; breadcrumb `api.log`
+  só com o contexto já sanitizado por `logError`; `require` tardio; `catch` que engole.
+- Teste: `src/services/crashReporter.native.test.ts`, bloco "mensagem de exceção redigida", com
+  sentinelas (pressão, observação, e-mail, nome) na mensagem e na `cause`, procuradas em tudo o
+  que é entregue a `recordError` e `log`. Falhava antes da correção e passa depois.
+- Perda aceita: o texto da mensagem some também do console do Crashlytics. O diagnóstico depende
+  do tipo, da stack e do `scope`, como na web.
+- Não verificado: a chegada a um Crashlytics real (não houve build nativo nem envio). O teste
+  cobre o objeto entregue ao SDK.
+- Pendência (não alterada, fora deste escopo): o próprio `@react-native-firebase/crashlytics`
+  instala, ao ser carregado, um handler global de erro JS fatal (`ErrorUtils.setGlobalHandler`) e
+  um de promise rejeitada sem tratamento (`lib/handlers.ts`). Os dois enviam `error.message` cru e
+  não passam por este adapter; o fatal ainda registra `Unknown Error: ${valor}` para valor não-Error.
+  Fechar isso pede outra decisão (desligar via `firebase.json` ou trocar o handler global).

@@ -47,6 +47,38 @@ function serializeContext(context: Record<string, unknown>): string | null {
   }
 }
 
+/** Mesmo texto fixo do lado web (`crashReporter.web.ts`), para os dois painéis lerem igual. */
+const REDACTED_MESSAGE = '[mensagem removida por privacidade]';
+
+/**
+ * Cópia do erro sem a mensagem: o Crashlytics envia `error.message` como está, e a mensagem nunca
+ * passou pelo sanitizador de `logError` (pode vir de SDK de terceiro com valor de campo, e-mail ou
+ * observação — constitution §2; CLAUDE.md §4.4). Ficam o protótipo e o `name` (o tipo) e a stack
+ * com o cabeçalho trocado, que é o que agrupa o relatório. A `cause` e as propriedades próprias
+ * extras (ex.: `customData` de um `FirebaseError`) não são copiadas. Ver `docs/sentry-privacidade.md`.
+ */
+function redactError(original: Error): Error {
+  const redacted = new Error(REDACTED_MESSAGE);
+  Object.setPrototypeOf(redacted, Object.getPrototypeOf(original) as object | null);
+  redacted.name = original.name;
+
+  const { message, stack } = original;
+
+  if (typeof stack === 'string') {
+    const header = message === '' ? original.name : `${original.name}: ${message}`;
+    redacted.stack = stack.startsWith(header)
+      ? `${original.name}: ${REDACTED_MESSAGE}${stack.slice(header.length)}`
+      : // Cabeçalho diferente (motor sem esse formato, ou `name` trocado depois de a stack ser
+        // capturada, como em subclasse): troca a mensagem onde ela aparecer. Pode
+        // estragar um frame que contenha o mesmo texto, mas a mensagem não sai do dispositivo.
+        message === ''
+        ? stack
+        : stack.split(message).join(REDACTED_MESSAGE);
+  }
+
+  return redacted;
+}
+
 export const crashReporter: CrashReporter = {
   recordError(scope, error, context) {
     try {
@@ -62,7 +94,7 @@ export const crashReporter: CrashReporter = {
 
       // `scope` como `jsErrorName`: é o que agrupa os não-fatais no console do Crashlytics por
       // origem ("readings.add", "appCheck.init") em vez de por mensagem, que varia demais.
-      api.recordError(instance, toError(error), scope);
+      api.recordError(instance, redactError(toError(error)), scope);
     } catch {
       // Engolir aqui é deliberado, e este é o único ponto do app onde isso se justifica apesar do
       // CLAUDE.md §4.5 ("todo catch faz algo"): as duas saídas normais estão fechadas — chamar
