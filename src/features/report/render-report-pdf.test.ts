@@ -30,7 +30,9 @@ const LIBRARIES: PdfLibraries = {
 /**
  * Gera o PDF de verdade (jsPDF no ambiente node do Jest) com dados SINTÉTICOS e confere o texto
  * extraído pelo poppler (`pdftotext`). Sem poppler-utils na máquina, as conferências de texto são
- * puladas e só a estrutura é verificada. `AFERI_PDF_EVIDENCE_DIR` guarda PDFs e PNGs (`pdftoppm`)
+ * puladas e só a estrutura é verificada — exceto no CI (variável `CI` definida), onde a ausência
+ * do poppler FALHA os testes: lá, pular faria o "verde" não cobrir os bytes do PDF.
+ * `AFERI_PDF_EVIDENCE_DIR` guarda PDFs e PNGs (`pdftoppm`)
  * para inspeção visual; por padrão vão para um diretório temporário.
  */
 
@@ -47,7 +49,25 @@ function hasCommand(command: string): boolean {
 }
 
 const HAS_POPPLER = hasCommand('pdftotext') && hasCommand('pdftoppm');
-const describeWithPoppler = HAS_POPPLER ? describe : describe.skip;
+const IS_CI = Boolean(process.env.CI);
+const POPPLER_MISSING_IN_CI =
+  'poppler-utils (pdftotext e pdftoppm) não encontrado no PATH com a variável CI definida. ' +
+  'No CI estes testes não podem ser pulados: instale poppler-utils no job antes do Jest.';
+
+function describeWithPoppler(name: string, fn: () => void): void {
+  if (HAS_POPPLER) {
+    describe(name, fn);
+  } else if (!IS_CI) {
+    describe.skip(name, fn);
+  } else {
+    describe(name, () => {
+      beforeAll(() => {
+        throw new Error(POPPLER_MISSING_IN_CI);
+      });
+      fn();
+    });
+  }
+}
 const EVIDENCE_DIR = process.env.AFERI_PDF_EVIDENCE_DIR ?? mkdtempSync(join(tmpdir(), 'aferi-pdf-'));
 mkdirSync(EVIDENCE_DIR, { recursive: true });
 
