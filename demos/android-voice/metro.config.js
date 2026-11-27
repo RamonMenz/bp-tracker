@@ -8,5 +8,5 @@ config.watchFolders = [root];
 config.resolver.nodeModulesPaths = [path.join(root, 'node_modules')];
 module.exports = withNativeWind(config, {
   input: path.join(root, 'global.css'),
-  configPath: path.join(__dirname, '../photo-review/tailwind.config.js'),
+  configPath: path.join(__dirname, 'tailwind.config.js'),
 });
