@@ -17,6 +17,8 @@ import {
 } from '@/lib/report/report-model';
 import { civilDateOf, resolveReportPeriod } from '@/lib/report/report-period';
 
+import { loadPdfLibraries, type PdfLibraries, renderReportPdf } from './render-report-pdf';
+import { reportPdfPipeline } from './report-pdf-pipeline';
 // `./report-pdf-platform` (mockado abaixo) e `./report-pdf-platform.web` (o adaptador real, usado
 // para provar a revogação das URLs) são módulos distintos no Jest; o resolvedor do ESLint os
 // confunde por causa do sufixo de plataforma.
@@ -43,6 +45,8 @@ jest.mock('@/features/readings/readings.repo', () => {
     getAllReadings: jest.fn(),
   };
 });
+// Só o teste do prazo do jsPDF usa o pipeline real; nele, o import das bibliotecas é simulado.
+jest.mock('./render-report-pdf', () => ({ loadPdfLibraries: jest.fn(), renderReportPdf: jest.fn() }));
 jest.mock('./report-pdf-platform', () => ({
   reportPdfPlatform: { isAvailable: true, loadPipeline: jest.fn(), deliver: jest.fn(), openPreview: jest.fn() },
 }));
@@ -798,5 +802,42 @@ describe('useReportPdf — repetição, ciclos, limite e prazo (PDF-14/22)', () 
       expect(await result.current.prepareReport({ kind: 'all' })).toBe(true);
     });
     expect(result.current.stage).toBe('review');
+  });
+
+  it('prazo no import do jsPDF/AutoTable (dentro de render): espera até 30 s, informa e permite nova tentativa', async () => {
+    // Pipeline REAL: o `import()` das bibliotecas acontece dentro de `render`, depois da leitura.
+    mockPlatform.loadPipeline.mockResolvedValue(reportPdfPipeline);
+    jest.mocked(loadPdfLibraries).mockReturnValueOnce(new Promise<PdfLibraries>(() => undefined));
+    jest.mocked(loadPdfLibraries).mockResolvedValue({} as PdfLibraries);
+    jest.mocked(renderReportPdf).mockReturnValue({ bytes: new ArrayBuffer(1), pageCount: 1 });
+    const { result } = await renderHook(() => useReportPdf());
+
+    let preparation: Promise<boolean> = Promise.resolve(true);
+    await act(async () => {
+      preparation = result.current.prepareReport({ kind: 'all' });
+    });
+    expect(loadPdfLibraries).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(REPORT_PREPARATION_TIMEOUT_MS - 1);
+    });
+    expect(result.current.stage).toBe('preparing');
+
+    await act(async () => {
+      jest.advanceTimersByTime(1);
+    });
+    // Sem prazo cobrindo o import, o diálogo ficaria em "Preparando…" até o usuário cancelar.
+    expect(result.current.stage).toBe('idle');
+    expect(result.current.error).toMatch(/demorou demais/);
+    expect(logError).toHaveBeenCalledWith('report.timeout', new Error('report-preparation-timeout'), { uid: 'user-a' });
+    expect(await preparation).toBe(false);
+    expect(created).toEqual([]);
+
+    await act(async () => {
+      expect(await result.current.retry()).toBe(true);
+    });
+    expect(result.current.stage).toBe('review');
+    expect(result.current.error).toBeNull();
+    expect(renderReportPdf).toHaveBeenCalledTimes(1);
   });
 });
