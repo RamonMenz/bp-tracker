@@ -36,7 +36,7 @@ describe('crashReporter (nativo) — entrega ao Crashlytics', () => {
     loadAdapter().crashReporter.recordError('readings.add', error, {});
 
     expect(mockRecordError).toHaveBeenCalledTimes(1);
-    expect(mockRecordError).toHaveBeenCalledWith(INSTANCE, error, 'readings.add');
+    expect(mockRecordError).toHaveBeenCalledWith(INSTANCE, expect.any(Error), 'readings.add');
   });
 
   it('manda o contexto como breadcrumb antes do erro', () => {
@@ -81,6 +81,93 @@ describe('crashReporter (nativo) — valor não-Error', () => {
 
     const [, reported] = mockRecordError.mock.calls[0];
     expect((reported as Error).message).not.toContain('alguem@exemplo.com');
+  });
+});
+
+/**
+ * A mensagem de um `Error` nunca passa pelo sanitizador de `logError` e pode vir de SDK de terceiro
+ * com valor de campo, observação ou e-mail dentro (constitution §2; CLAUDE.md §4.4/§4.5). Mesma
+ * regra já aplicada na web (`docs/sentry-privacidade.md`): a mensagem não sai do dispositivo.
+ */
+describe('crashReporter (nativo) — mensagem de exceção redigida', () => {
+  const PRESSURE = '187 por 113';
+  const NOTE = 'tontura-ao-levantar-7Q';
+  const EMAIL = 'sentinela.paciente@exemplo.com';
+  const NAME = 'Zuleika Sentinela';
+  const SENTINELS = [PRESSURE, NOTE, EMAIL, NAME];
+
+  class ReadingSaveError extends Error {
+    constructor(message: string, options?: { cause?: unknown }) {
+      super(message, options);
+      this.name = 'ReadingSaveError';
+    }
+  }
+
+  function buildSensitiveError(): ReadingSaveError {
+    return new ReadingSaveError(`falha ao salvar ${PRESSURE} de ${NAME}`, {
+      cause: new RangeError(`obs ${NOTE} de ${EMAIL}`),
+    });
+  }
+
+  /** Tudo o que o adapter entrega ao Crashlytics, em texto, incluindo campos não enumeráveis. */
+  function everythingSent(): string {
+    const parts: string[] = [];
+
+    for (const [, ...args] of [...mockRecordError.mock.calls, ...mockLog.mock.calls]) {
+      for (const arg of args) {
+        if (arg instanceof Error) {
+          parts.push(arg.message, String(arg.stack), String(arg.name), String(arg.cause));
+          parts.push(JSON.stringify(arg, Object.getOwnPropertyNames(arg)));
+        } else {
+          parts.push(String(arg));
+        }
+      }
+    }
+
+    return parts.join('\n');
+  }
+
+  it('não envia nenhuma sentinela na mensagem, na stack nem na causa', () => {
+    loadAdapter().crashReporter.recordError('readings.add', buildSensitiveError(), { uid: 'user-1' });
+
+    expect(mockRecordError).toHaveBeenCalledTimes(1);
+
+    const sent = everythingSent();
+    for (const sentinel of SENTINELS) {
+      expect(sent).not.toContain(sentinel);
+    }
+  });
+
+  it('troca a mensagem por um texto fixo, preservando tipo, stack e scope', () => {
+    const original = buildSensitiveError();
+    const originalFrames = String(original.stack).split('\n').slice(1).join('\n');
+
+    loadAdapter().crashReporter.recordError('readings.add', original, {});
+
+    const [instance, reported, jsErrorName] = mockRecordError.mock.calls[0];
+    expect(instance).toBe(INSTANCE);
+    expect(jsErrorName).toBe('readings.add');
+    expect(reported).toBeInstanceOf(ReadingSaveError);
+    expect((reported as Error).name).toBe('ReadingSaveError');
+    expect((reported as Error).message).toBe('[mensagem removida por privacidade]');
+    expect((reported as Error).cause).toBeUndefined();
+    expect(String((reported as Error).stack)).toContain(originalFrames);
+  });
+
+  it('redige também mensagem de várias linhas, inclusive na stack', () => {
+    const original = new Error(`linha 1\n${PRESSURE}\n${EMAIL}`);
+
+    loadAdapter().crashReporter.recordError('readings.add', original, {});
+
+    const sent = everythingSent();
+    expect(sent).not.toContain(PRESSURE);
+    expect(sent).not.toContain(EMAIL);
+  });
+
+  it('mantém o contexto sanitizado como breadcrumb', () => {
+    loadAdapter().crashReporter.recordError('readings.add', buildSensitiveError(), { uid: 'user-1' });
+
+    expect(mockLog).toHaveBeenCalledWith(INSTANCE, '[readings.add] {"uid":"user-1"}');
   });
 });
 
