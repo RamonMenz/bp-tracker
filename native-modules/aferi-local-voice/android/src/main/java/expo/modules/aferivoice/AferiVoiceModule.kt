@@ -23,10 +23,15 @@ class AferiVoiceModule : Module() {
     AsyncFunction("requestMicrophonePermission") { promise: Promise ->
       val context = appContext.reactContext
       val permissions = appContext.permissions
-      if (context == null || permissions == null) promise.resolve(false)
-      else permissions.askForPermissions({
-        promise.resolve(ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)
-      }, Manifest.permission.RECORD_AUDIO)
+      val microphone = Manifest.permission.RECORD_AUDIO
+      when {
+        context == null -> promise.resolve(false)
+        ContextCompat.checkSelfPermission(context, microphone) == PackageManager.PERMISSION_GRANTED -> promise.resolve(true)
+        permissions == null -> promise.resolve(false)
+        else -> permissions.askForPermissions({
+          promise.resolve(ContextCompat.checkSelfPermission(context, microphone) == PackageManager.PERMISSION_GRANTED)
+        }, microphone)
+      }
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("prepare") { id: Int, promise: Promise ->
       val local = engine()
