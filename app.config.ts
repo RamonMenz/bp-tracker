@@ -93,6 +93,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     // Não pode mudar depois de publicado na Play Store.
     package: 'com.ramonmenz.bptracker',
+    // Também declarada pelo módulo de voz. O pedido em runtime só ocorre ao iniciar uma fala.
+    permissions: ['android.permission.RECORD_AUDIO'],
     // Caminho, não credencial: o arquivo em si é gitignored (CLAUDE.md §4.4) e precisa ser baixado
     // do Firebase Console antes do primeiro build. Sem ele o prebuild falha com mensagem explícita
     // — preferível a gerar um build sem Crashlytics configurado, em silêncio.
@@ -122,6 +124,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     appCheck,
     sentry,
     webVoiceEnabled: process.env.EXPO_PUBLIC_WEB_VOICE_ENABLED === 'true',
+    androidVoiceEnabled: process.env.EXPO_PUBLIC_ANDROID_VOICE_ENABLED === 'true',
     // Gerado por `eas build:configure` (config dinâmica não aceita escrita automática do eas-cli
     // — precisa entrar aqui manualmente). Liga este projeto ao projeto EAS
     // @ramoncode/bp-tracker; sem isso `eas build`/`eas init` não sabem para onde enviar o build.

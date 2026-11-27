@@ -1,9 +1,7 @@
 import type { ComponentType } from 'react';
 
-import type { FirstMeasurement } from '@/features/readings/useSecondMeasurementFlow';
+import type { VoiceEntryProps } from './VoiceEntry.types';
 
-export interface VoiceEntryProps {
-  onSaved: (reading: FirstMeasurement) => void;
-}
+export type { VoiceEntryProps } from './VoiceEntry.types';
 
 export const VoiceEntry: ComponentType<VoiceEntryProps> = () => null;

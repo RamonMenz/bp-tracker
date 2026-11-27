@@ -1,4 +1,4 @@
-import { CONTINUATION_MARK, CONTINUES_MARK, splitDetailLines } from './report-table';
+import { CONTINUATION_MARK, CONTINUES_MARK, splitDetailLines, wrapTextByChars } from './report-table';
 
 function lines(count: number): string[] {
   return Array.from({ length: count }, (_, index) => `linha ${index + 1}`);
@@ -30,5 +30,27 @@ describe('splitDetailLines', () => {
 
   it('recusa limite que não comporta as marcas', () => {
     expect(() => splitDetailLines(lines(10), 2)).toThrow();
+  });
+});
+
+describe('wrapTextByChars', () => {
+  it('quebra nos espaços sem passar do limite e preserva os parágrafos', () => {
+    expect(wrapTextByChars('uma duas três quatro\ncinco', 9)).toEqual(['uma duas', 'três', 'quatro', 'cinco']);
+  });
+
+  it('corta palavra maior que a linha (ex.: URL) sem perder caracteres', () => {
+    const url = 'https://exemplo.invalido/caminho-muito-longo';
+    const wrapped = wrapTextByChars(`ver ${url}`, 10);
+
+    expect(wrapped.every((line) => line.length <= 10)).toBe(true);
+    expect(wrapped.join('')).toBe(`ver${url}`);
+  });
+
+  it('parágrafo vazio continua ocupando uma linha', () => {
+    expect(wrapTextByChars('a\n\nb', 5)).toEqual(['a', '', 'b']);
+  });
+
+  it('recusa limite não positivo', () => {
+    expect(() => wrapTextByChars('a', 0)).toThrow();
   });
 });

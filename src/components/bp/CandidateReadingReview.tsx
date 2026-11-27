@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { BpNumberInput } from '@/components/bp/BpNumberInput';
@@ -10,7 +10,7 @@ import { Text } from '@/components/ui/Text';
 import type { CandidateField } from '@/domain/assisted-entry';
 import type { CandidateReviewView } from '@/features/assisted-entry/useCandidateReview';
 import { NOTE_MAX_LENGTH } from '@/features/readings/reading.schema';
-import { formatShortDateTime } from '@/lib/datetime';
+import { formatShortDate, formatShortDateTime, formatTime } from '@/lib/datetime';
 
 const REASONS: Record<Extract<CandidateField, { status: 'uncertain' }>['reason'], string> = {
   'ambiguous-label': 'associação ambígua ao campo',
@@ -22,10 +22,21 @@ const REASONS: Record<Extract<CandidateField, { status: 'uncertain' }>['reason']
 const LABELS = { systolic: 'Sistólica', diastolic: 'Diastólica', pulse: 'Pulso' };
 const REVIEW_LABELS = { ...LABELS, note: 'Observação', measuredAt: 'Data e hora' };
 
-export function CandidateReadingReview({ review }: { review: CandidateReviewView }) {
-  const [pickerAttempt, setPickerAttempt] = useState<number | null>(null);
+export function CandidateReadingReview({ review, onDatePickerVisibilityChange, separateDateAndTime = false }: {
+  review: CandidateReviewView;
+  onDatePickerVisibilityChange?: (isOpen: boolean) => void;
+  separateDateAndTime?: boolean;
+}) {
+  const [picker, setPicker] = useState<{ attempt: number; mode: 'date' | 'time' | 'datetime' } | null>(null);
   const { state, errors } = review;
   const draft = state.draft;
+  const pickerMode = draft && picker?.attempt === state.attempt && state.phase !== 'confirming' ? picker.mode : null;
+  const isDatePickerOpen = pickerMode !== null;
+  useLayoutEffect(() => {
+    if (!isDatePickerOpen || !onDatePickerVisibilityChange) return;
+    onDatePickerVisibilityChange(true);
+    return () => onDatePickerVisibilityChange(false);
+  }, [isDatePickerOpen, onDatePickerVisibilityChange]);
   const isVoice = review.modality === 'voice';
   const issues = (['systolic', 'diastolic', 'pulse', 'note', 'measuredAt'] as const)
     .flatMap(key => errors[key] ? [`${REVIEW_LABELS[key]}: ${errors[key]}`] : []);
@@ -34,6 +45,9 @@ export function CandidateReadingReview({ review }: { review: CandidateReviewView
     : review.canConfirm
       ? 'Confirmação disponível. Confira os valores antes de confirmar.'
       : `Confirmação indisponível. ${issues.join(' ') || 'Revise os campos antes de confirmar.'}`;
+  function togglePicker(mode: 'date' | 'time' | 'datetime') {
+    setPicker(current => current?.attempt === state.attempt && current.mode === mode ? null : { attempt: state.attempt, mode });
+  }
   return (
     <Card className="gap-4">
       <Text variant="sectionHeader" accessibilityRole="header">{isVoice ? 'Revisar voz' : 'Revisar fotografia'}</Text>
@@ -70,17 +84,22 @@ export function CandidateReadingReview({ review }: { review: CandidateReviewView
           <Field label="Observação" value={draft.note} maxLength={NOTE_MAX_LENGTH}
             editable={state.phase !== 'confirming'} autoComplete="off" autoCorrect={false} spellCheck={false}
             onChangeText={value => review.edit('note', value, state.attempt)} errorMessage={errors.note} multiline />
-          <Button variant="secondary" label={`Data e hora: ${formatShortDateTime(draft.measuredAt)}`}
+          <Button variant="secondary"
+            label={separateDateAndTime ? `Data: ${formatShortDate(draft.measuredAt)}` : `Data e hora: ${formatShortDateTime(draft.measuredAt)}`}
             disabled={state.phase === 'confirming'}
-            onPress={() => setPickerAttempt(value => value === state.attempt ? null : state.attempt)} />
-          {pickerAttempt === state.attempt && state.phase !== 'confirming' ? <DateTimeField value={draft.measuredAt} mode="datetime" maximumDate={new Date()}
-            accessibilityLabel="Data e hora da medição" onChange={value => review.edit('measuredAt', value, state.attempt)}
-            onClose={() => setPickerAttempt(null)} /> : null}
+            onPress={() => togglePicker(separateDateAndTime ? 'date' : 'datetime')} />
+          {separateDateAndTime ? <Button variant="secondary" label={`Hora: ${formatTime(draft.measuredAt)}`}
+            disabled={state.phase === 'confirming'} onPress={() => togglePicker('time')} /> : null}
+          {pickerMode ? <DateTimeField value={draft.measuredAt} mode={pickerMode}
+            maximumDate={pickerMode === 'time' ? undefined : new Date()}
+            accessibilityLabel={`${pickerMode === 'date' ? 'Data' : pickerMode === 'time' ? 'Hora' : 'Data e hora'} da medição`}
+            onChange={value => review.edit('measuredAt', value, state.attempt)}
+            onClose={() => setPicker(null)} /> : null}
           {errors.measuredAt ? <Text accessibilityRole="alert">{errors.measuredAt}</Text> : null}
           <Text accessible accessibilityLiveRegion="polite">{confirmationStatus}</Text>
           <Button label={review.isSimulation ? "Confirmar simulação" : review.isPreviewOnly ? "Confirmar revisão em memória" : "Confirmar e salvar medição"} disabled={!review.canConfirm}
             accessibilityHint={review.canConfirm ? 'Confirma os valores revisados.' : confirmationStatus}
-            loading={state.phase === 'confirming'} onPress={() => { setPickerAttempt(null); void review.confirm(); }} />
+            loading={state.phase === 'confirming'} onPress={() => { setPicker(null); void review.confirm(); }} />
         </>
       ) : (
         <Text accessibilityLiveRegion="polite">{state.phase === 'cancelled'
@@ -89,10 +108,10 @@ export function CandidateReadingReview({ review }: { review: CandidateReviewView
       )}
       {review.confirmationError ? <Text accessibilityRole="alert">{review.confirmationError}</Text> : null}
       <Button label={isVoice ? (review.isSimulation ? "Falar novamente (simulação)" : "Falar novamente") : review.isSimulation ? "Tirar outra fotografia (simulação)" : "Tirar outra fotografia"} variant="secondary" disabled={review.recaptureDisabled} onPress={() => {
-        setPickerAttempt(null);
+        setPicker(null);
         review.recapture();
       }} />
-      <Button label="Cancelar" variant="ghost" disabled={review.cancelDisabled} onPress={() => { setPickerAttempt(null); review.cancel(); }} />
+      <Button label="Cancelar" variant="ghost" disabled={review.cancelDisabled} onPress={() => { setPicker(null); review.cancel(); }} />
     </Card>
   );
 }

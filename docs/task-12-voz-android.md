@@ -27,8 +27,8 @@ Fluxo por ação explícita:
 4. Solicitar foco de áudio transitório exclusivo e reconhecer uma única fala em
    pt-BR, sem parciais ou detecção automática de idioma. Não usa factory genérica,
    `EXTRA_PREFER_OFFLINE`, gravador paralelo, URI, WAV temporário ou fallback remoto.
-5. Somente `onResults` entrega ao JS as hipóteses finais em pt-BR e o instante
-   civil do início de `startListening`. São até cinco textos distintos, com até
+5. Na demo, somente `onResults` entrega ao JS as hipóteses finais em pt-BR e o
+   instante civil do início de `startListening`. São até cinco textos distintos, com até
    2.000 caracteres cada após `trim`. Parciais, buffer, volume/RMS e eventos
    genéricos são ignorados, sem transporte de áudio ao JS.
 6. Invalidar tentativa, cancelar/destruir reconhecedor e abandonar foco antes de
@@ -322,7 +322,7 @@ para o Android recusar o resultado antes do parser, mesmo com `EXTRA_MAX_RESULTS
 igual a 1. A equivalência das hipóteses recebidas nessas tentativas segue por
 verificar no aparelho.
 
-O Android agora solicita até cinco resultados e retorna somente as
+Na demo, o Android agora solicita até cinco resultados e retorna somente as
 hipóteses distintas de `onResults`. Remove espaços nas pontas e descarta
 entradas em branco. Uma lista sem texto útil, mais de cinco textos distintos ou
 qualquer texto com mais de 2.000 caracteres após `trim` produz `no-result`.
@@ -331,7 +331,8 @@ status, valores, bases de interpretação e motivos de incerteza. “12 por 8”
 “doze por oito” concordam. Um conjunto vazio e outro com candidatos geram
 `ambiguous-result`. Se todos produzirem campos vazios, a revisão continua vazia
 e exige correção antes de confirmar. A confirmação continua explícita e em memória
-na demo.
+na demo. O modo `recognition` do produto mantém a entrada nativa de transcrição
+única e o fluxo de confirmação existente.
 
 Somente a demo mostra a faixa de hipóteses distintas (`1`, `2` ou
 `3+`) e se houve concordância (`sim` ou `não`) na tentativa concluída. O painel

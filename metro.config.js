@@ -16,8 +16,11 @@ const upstreamResolveRequest = config.resolver.resolveRequest;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
   // O export padrão nem inclui a voz ou seu chunk assíncrono no grafo do produto.
-  if (platform === 'web' && moduleName === '@/screens/VoiceEntry'
-    && process.env.EXPO_PUBLIC_WEB_VOICE_ENABLED !== 'true') {
+  if (moduleName === '@/screens/VoiceEntry' && (
+    (platform === 'web' && process.env.EXPO_PUBLIC_WEB_VOICE_ENABLED !== 'true')
+    || (platform === 'android' && process.env.EXPO_PUBLIC_ANDROID_VOICE_ENABLED !== 'true')
+    || platform === 'ios'
+  )) {
     return { type: 'sourceFile', filePath: path.join(__dirname, 'src/screens/VoiceEntry.tsx') };
   }
   if (JSPDF_UNUSED_OPTIONAL_DEPENDENCIES.has(moduleName) && JSPDF_ORIGIN.test(context.originModulePath)) {

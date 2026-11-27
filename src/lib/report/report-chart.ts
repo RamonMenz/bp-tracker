@@ -207,3 +207,21 @@ export function buildReportChart(
       : null,
   };
 }
+
+/**
+ * Posição horizontal de um dia no painel, de 0 (borda esquerda da área de plotagem) a 1 (direita):
+ * cada dia ocupa uma faixa e o ponto fica no centro dela — datas reais, inclusive com um dia só.
+ * É a fórmula do desenho jsPDF (`xOf` em render-report-pdf.ts); o SVG do Android a usa daqui.
+ */
+export function chartDayRatio(panel: Pick<ChartPanel, 'firstDayIndex' | 'lastDayIndex'>, dayIndex: number): number {
+  const daySlots = panel.lastDayIndex - panel.firstDayIndex + 1;
+  return (dayIndex - panel.firstDayIndex + 0.5) / daySlots;
+}
+
+/**
+ * Posição vertical de um valor em mmHg, de 0 (topo, `yMax`) a 1 (base, `yMin`), na escala única de
+ * todos os painéis. Mesma fórmula do `yOf` do desenho jsPDF.
+ */
+export function chartValueRatio(chart: Pick<ReportChart, 'yMin' | 'yMax'>, value: number): number {
+  return (chart.yMax - value) / (chart.yMax - chart.yMin);
+}

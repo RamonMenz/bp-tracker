@@ -20,6 +20,10 @@ class AferiVoiceModule : Module() {
     Name("AferiLocalVoice")
     Events("onVoiceStatus")
     AsyncFunction("availability") { promise: Promise -> promise.resolve(mapOf("code" to (engine()?.availability() ?: "local-unavailable"))) }.runOnQueue(Queues.MAIN)
+    AsyncFunction("checkLocalLanguage") { id: Int, promise: Promise ->
+      val local = engine()
+      if (local == null) promise.resolve(mapOf("code" to "local-unavailable")) else local.checkLocalLanguage(id, promise)
+    }.runOnQueue(Queues.MAIN)
     AsyncFunction("requestMicrophonePermission") { promise: Promise ->
       val context = appContext.reactContext
       val permissions = appContext.permissions
@@ -40,6 +44,10 @@ class AferiVoiceModule : Module() {
     AsyncFunction("start") { id: Int, promise: Promise ->
       val local = speech
       if (local == null) promise.resolve(mapOf("code" to "language-unverified")) else local.start(id, promise)
+    }.runOnQueue(Queues.MAIN)
+    AsyncFunction("startWithHypotheses") { id: Int, promise: Promise ->
+      val local = speech
+      if (local == null) promise.resolve(mapOf("code" to "language-unverified")) else local.start(id, promise, withHypotheses = true)
     }.runOnQueue(Queues.MAIN)
     AsyncFunction("finish") { id: Int -> speech?.finish(id) ?: false }.runOnQueue(Queues.MAIN)
     AsyncFunction("cancel") { id: Int -> speech?.cancel(id) ?: true }.runOnQueue(Queues.MAIN)

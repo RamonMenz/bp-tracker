@@ -22,7 +22,7 @@ type Props = {
   children?: ReactNode;
 };
 export function AndroidVoiceCaptureScreen({ onManual, onDiagnostic, children }: Props) {
-  const { state, busy, start, finish, review, leaveForManual } = useAndroidVoiceReview(onDiagnostic);
+  const { state, busy, start, finish, review, leaveForManual } = useAndroidVoiceReview({ mode: 'preview', onDiagnostic });
   return <Screen>
     <Card className="gap-4">
       <Text variant="title" accessibilityRole="header">Voz Android · avaliação</Text>

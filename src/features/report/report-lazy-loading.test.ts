@@ -73,3 +73,49 @@ describe('carregamento sob demanda do relatório PDF (PDF-01)', () => {
     expect(native?.source).not.toMatch(/report-pdf-pipeline|render-report-pdf|jspdf/);
   });
 });
+
+describe('expo-print só no caminho Android, carregado sob demanda', () => {
+  const WEB_REACHABLE = [
+    'src/features/report/report-pdf-platform.web.ts',
+    'src/features/report/report-pdf-pipeline.ts',
+    'src/features/report/render-report-pdf.ts',
+  ];
+
+  it('expo-print é importado só pelo pipeline de impressão', () => {
+    expect(FILES.filter((file) => STATIC_IMPORT('expo-print').test(file.source)).map((file) => file.path)).toEqual([
+      'src/features/report/report-print-pipeline.ts',
+    ]);
+    expect(FILES.filter((file) => DYNAMIC_IMPORT('expo-print').test(file.source)).map((file) => file.path)).toEqual([]);
+  });
+
+  it('o pipeline de impressão só é alcançado por import() no adaptador nativo', () => {
+    const staticUsers = FILES.filter(
+      (file) =>
+        STATIC_IMPORT('./report-print-pipeline').test(file.source) ||
+        STATIC_IMPORT('@/features/report/report-print-pipeline').test(file.source),
+    );
+    const dynamicUsers = FILES.filter((file) => DYNAMIC_IMPORT('./report-print-pipeline').test(file.source));
+
+    expect(staticUsers.map((file) => file.path)).toEqual([]);
+    expect(dynamicUsers.map((file) => file.path)).toEqual(['src/features/report/report-pdf-platform.native.ts']);
+  });
+
+  it.each(WEB_REACHABLE)('%s (caminho Web) não referencia expo-print, o pipeline de impressão nem o template', (path) => {
+    const source = FILES.find((file) => file.path === path)?.source;
+
+    expect(source).toBeDefined();
+    expect(source).not.toMatch(/expo-print|report-print-pipeline|report-html|report-pdf-files/);
+  });
+
+  it.each([
+    'src/features/report/report-print-pipeline.ts',
+    'src/features/report/report-html.ts',
+    'src/features/report/report-pdf-files.ts',
+  ])('%s (caminho Android) não importa jsPDF, o pipeline Web nem o renderizador jsPDF', (path) => {
+    const source = FILES.find((file) => file.path === path)?.source ?? '';
+    const forbidden = ['jspdf', 'jspdf-autotable', './report-pdf-pipeline', './render-report-pdf'];
+
+    expect(source).not.toBe('');
+    expect(forbidden.filter((specifier) => STATIC_IMPORT(specifier).test(source) || DYNAMIC_IMPORT(specifier).test(source))).toEqual([]);
+  });
+});

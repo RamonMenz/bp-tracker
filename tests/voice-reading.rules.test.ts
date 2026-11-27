@@ -48,7 +48,7 @@ beforeEach(async () => {
   context = { uid: ALICE, epoch: {}, hasConsent: true, persistenceEnabled: true };
 });
 
-describe('V2 · reconhecimento SIMULADO, repositório e regras reais no emulador', () => {
+describe('Voz Web e Android · rascunho de reconhecimento SIMULADO, repositório e regras reais no emulador', () => {
   it('só cria um documento após confirmação e persiste apenas os campos revisados', async () => {
     const flow = prepareAssistedReadingWriter(() => context);
     const attempt = flow.begin('voice', 'recognition')!;

@@ -306,8 +306,9 @@ describe('HistoryScreen — exportar CSV', () => {
 });
 
 /**
- * Relatório PDF (só Web nesta etapa): o botão é independente do CSV e só aparece onde o adaptador da
- * plataforma está disponível. A geração em si é coberta em useReportPdf.test.ts.
+ * Relatório PDF (Web e Android): o botão é independente do CSV e só aparece onde o adaptador da
+ * plataforma está disponível. A geração em si é coberta em useReportPdf.test.ts e
+ * useReportPdf.share.test.ts.
  */
 describe('HistoryScreen — relatório PDF', () => {
   it('mostra "Gerar relatório PDF" ao lado do CSV e abre o diálogo de período sem gerar nada', async () => {
@@ -343,12 +344,32 @@ describe('HistoryScreen — relatório PDF', () => {
     expect(saveReportMock).toHaveBeenCalledTimes(1);
   });
 
-  it('não mostra o botão onde o PDF não está disponível (Android nesta etapa)', async () => {
+  it('não mostra o botão onde não há adaptador de PDF', async () => {
     reportPdfAvailable(false);
 
     await render(<HistoryScreen />);
 
     expect(screen.getByRole('button', { name: 'Exportar CSV' })).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Gerar relatório PDF' })).toBeNull();
+  });
+
+  it('Android: a revisão oferece "Salvar ou compartilhar PDF" e o diálogo fecha ao entregar', async () => {
+    reportPdfAvailable(true, { stage: 'review', review: { ...REVIEW, previewUrl: '' }, deliveryMode: 'share' });
+    await render(<HistoryScreen />);
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Gerar relatório PDF' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar ou compartilhar PDF' }));
+
+    expect(saveReportMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Revisar relatório')).toBeNull();
+  });
+
+  it('erro do relatório com o diálogo fechado (compartilhamento que falhou) aparece no Histórico', async () => {
+    const message = 'Não foi possível abrir o compartilhamento do relatório. Gere o relatório novamente.';
+    reportPdfAvailable(true, { error: message, deliveryMode: 'share' });
+
+    await render(<HistoryScreen />);
+
+    expect(screen.getByText(message)).toBeTruthy();
   });
 });

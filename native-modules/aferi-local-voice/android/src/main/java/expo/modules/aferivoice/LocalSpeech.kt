@@ -38,36 +38,42 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
   private var cleanupBlocked = false
   private var capturedAtMs = 0L
   private var finishRequested = false
+  private var collectHypotheses = false
 
   fun availability(): String = try {
     when {
       Build.VERSION.SDK_INT < 31 -> "local-unavailable"
       !SpeechRecognizer.isOnDeviceRecognitionAvailable(context) -> "local-unavailable"
       Build.VERSION.SDK_INT < 33 -> "language-unverified"
-      else -> "ready" // Somente API local. Idioma instalado é checado em prepare.
+      else -> "ready" // Idioma instalado é checado com checkRecognitionSupport.
     }
   } catch (_: Exception) { "local-unavailable" }
 
-  private fun intent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+  private fun intent(maxResults: Int = 1) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, MAX_HYPOTHESES)
+    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxResults)
     // Não usa EXTRA_PREFER_OFFLINE nem factory genérica/remota.
   }
-  private fun current(id: Int) = activeId == id && id > 0 && !cleanupBlocked
+  private fun current(id: Int) = activeId == id && id != 0 && !cleanupBlocked
   private fun timeout(ms: Long) {
     deadline?.let { handler.removeCallbacks(it) }
     val id = activeId
     val task = Runnable { if (current(id)) complete(mapOf("code" to "timeout")) }
     deadline = task; handler.postDelayed(task, ms)
   }
-  fun prepare(id: Int, promise: Promise) {
+  // IDs negativos identificam consultas sem captura e não colidem com as sessões JS.
+  fun checkLocalLanguage(id: Int, promise: Promise) = checkSupport(id, promise, forCapture = false)
+  fun prepare(id: Int, promise: Promise) = checkSupport(id, promise, forCapture = true)
+
+  private fun checkSupport(id: Int, promise: Promise, forCapture: Boolean) {
     if (cleanupBlocked) { promise.resolve(mapOf("code" to "cleanup-failed")); return }
-    if (id <= 0 || owner != null || activeId != 0) { promise.resolve(mapOf("code" to "resource-busy")); return }
+    val validId = if (forCapture) id > 0 else id < 0
+    if (!validId || owner != null || activeId != 0) { promise.resolve(mapOf("code" to "resource-busy")); return }
     val available = availability()
     if (available != "ready") { promise.resolve(mapOf("code" to available)); return }
-    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    if (forCapture && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
       promise.resolve(mapOf("code" to "permission-denied")); return
     }
     owner = this; activeId = id; phase = "preparing"; pending = promise; verified = false
@@ -83,6 +89,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
           try {
             verified = support.installedOnDeviceLanguages.any { it.replace('_', '-').equals("pt-BR", ignoreCase = true) }
             if (!verified) { complete(mapOf("code" to "model-missing")); return }
+            if (!forCapture) { complete(mapOf("code" to "ready")); return }
             phase = "prepared"; timeout(5000)
             val target = pending; pending = null; target?.resolve(mapOf("code" to "ready"))
           } catch (_: Exception) { complete(mapOf("code" to "language-unverified")) }
@@ -120,8 +127,18 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       override fun onResults(results: Bundle?) {
         if (!capturing(id)) return
         try {
+          val resultsList = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+          if (!collectHypotheses) {
+            val texts = resultsList.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            val text = texts.singleOrNull()
+            if (texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
+            else if (text.isNullOrEmpty() || text.length > MAX_HYPOTHESIS_LENGTH) complete(mapOf("code" to "no-result"))
+            else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
+              "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
+            return
+          }
           val hypotheses = mutableSetOf<String>()
-          for (hypothesis in results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()) {
+          for (hypothesis in resultsList) {
             val text = hypothesis.trim()
             if (text.isNotEmpty()) hypotheses.add(text)
             if (text.length > MAX_HYPOTHESIS_LENGTH || hypotheses.size > MAX_HYPOTHESES) {
@@ -136,7 +153,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       }
     }
   }
-  fun start(id: Int, promise: Promise) {
+  fun start(id: Int, promise: Promise, withHypotheses: Boolean = false) {
     if (!current(id) || phase != "prepared" || !verified) { promise.resolve(mapOf("code" to "language-unverified")); return }
     pending = promise
     if (availability() != "ready") { complete(mapOf("code" to "local-unavailable")); return }
@@ -145,7 +162,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     }
     try {
       val local = recognizer ?: throw IllegalStateException()
-      phase = "opening"; finishRequested = false
+      phase = "opening"; finishRequested = false; collectHypotheses = withHypotheses
       val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
         .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT)
           .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
@@ -158,7 +175,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       }
       if (!current(id)) return
       capturedAtMs = System.currentTimeMillis(); timeout(30000)
-      local.startListening(intent())
+      local.startListening(intent(if (collectHypotheses) MAX_HYPOTHESES else 1))
     } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
   }
   fun finish(id: Int): Boolean {
@@ -181,7 +198,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
   }
   private fun complete(result: Map<String, Any>) {
     val target = pending; pending = null
-    activeId = 0; verified = false; capturedAtMs = 0L; finishRequested = false
+    activeId = 0; verified = false; capturedAtMs = 0L; finishRequested = false; collectHypotheses = false
     phase = "closing" // Invalida antes de cancel/destroy reentrantes.
     deadline?.let { handler.removeCallbacks(it) }; deadline = null
     val engine = recognizer; recognizer = null

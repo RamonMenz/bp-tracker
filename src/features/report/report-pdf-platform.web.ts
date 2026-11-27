@@ -1,4 +1,4 @@
-import type { PdfPreviewHandle, ReportPdfPlatform } from './report-pdf-platform.types';
+import { isPrintedReportPdf, type PdfPreviewHandle, type ReportPdfArtifact, type ReportPdfPlatform } from './report-pdf-platform.types';
 
 /**
  * Tempo até liberar a URL de objeto. O `click()` só AGENDA o download: revogar na mesma volta do
@@ -7,9 +7,18 @@ import type { PdfPreviewHandle, ReportPdfPlatform } from './report-pdf-platform.
  */
 export const OBJECT_URL_REVOKE_DELAY_MS = 60_000;
 
+/** O pipeline Web só produz `Blob`; um arquivo do Android aqui é erro de programação. */
+function asBlob(pdf: ReportPdfArtifact): Blob {
+  if (isPrintedReportPdf(pdf)) {
+    throw new Error('report-pdf-artifact-mismatch');
+  }
+
+  return pdf;
+}
+
 /** Baixa o PDF por Blob + URL de objeto, sem enviar nada a servidor. */
-export function downloadPdf(fileName: string, pdf: Blob): void {
-  const url = URL.createObjectURL(pdf);
+export function downloadPdf(fileName: string, pdf: ReportPdfArtifact): void {
+  const url = URL.createObjectURL(asBlob(pdf));
 
   try {
     const link = document.createElement('a');
@@ -30,8 +39,8 @@ export function downloadPdf(fileName: string, pdf: Blob): void {
  * idempotente e só AGENDA a revogação: uma aba aberta a partir da prévia ainda pode estar
  * carregando o documento quando o diálogo fecha.
  */
-export function openPdfPreview(pdf: Blob): PdfPreviewHandle {
-  const url = URL.createObjectURL(pdf);
+export function openPdfPreview(pdf: ReportPdfArtifact): PdfPreviewHandle {
+  const url = URL.createObjectURL(asBlob(pdf));
   let isReleased = false;
 
   return {
@@ -49,6 +58,7 @@ export function openPdfPreview(pdf: Blob): PdfPreviewHandle {
 
 export const reportPdfPlatform: ReportPdfPlatform = {
   isAvailable: true,
+  deliveryMode: 'download',
   loadPipeline: async () => (await import('./report-pdf-pipeline')).reportPdfPipeline,
   deliver: downloadPdf,
   openPreview: openPdfPreview,

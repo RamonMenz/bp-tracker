@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { createAssistedConfirmation } from '@/features/readings/confirmed-assisted-reading';
 import { loadAndroidVoiceBinding } from '@/services/recognition/voice-android';
 import { VoiceCaptureError, type AndroidVoicePorts } from '@/services/recognition/voice-capture-contract';
 
@@ -10,8 +11,9 @@ jest.mock('@/services/recognition/voice-android', () => ({ loadAndroidVoiceBindi
 jest.mock('@/features/readings/readings.repo', () => { throw new Error('Firebase proibido na avaliação'); });
 jest.mock('@/features/readings/assisted-reading-writer', () => { throw new Error('Writer proibido na avaliação'); });
 jest.mock('@/features/auth/useSession', () => { throw new Error('Auth proibida na avaliação'); });
-const final = { kind: 'transcript-hypotheses', final: true, locale: 'pt-BR', capturedAtMs: 1793001600000,
-  hypotheses: ['doze por oito, pulso setenta e dois'] };
+const clinicalFinal = { kind: 'transcript', final: true, locale: 'pt-BR', capturedAtMs: 1793001600000, text: 'doze por oito, pulso setenta e dois' };
+const final = { kind: 'transcript-hypotheses', final: true, locale: 'pt-BR',
+  capturedAtMs: clinicalFinal.capturedAtMs, hypotheses: [clinicalFinal.text] };
 let listeners: ((state: AppStateStatus) => void)[];
 beforeEach(() => {
   jest.clearAllMocks(); listeners = [];
@@ -19,7 +21,7 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 async function flush() { for (let i = 0; i < 45; i++) await Promise.resolve(); }
-async function setup(onDiagnostic?: Parameters<typeof useAndroidVoiceReview>[0]) {
+async function setup(options?: Parameters<typeof useAndroidVoiceReview>[0]) {
   let status: (event: unknown) => void = () => {};
   let deliver!: (value: unknown) => void;
   const unsubscribe = jest.fn();
@@ -27,7 +29,7 @@ async function setup(onDiagnostic?: Parameters<typeof useAndroidVoiceReview>[0])
     prepare: jest.fn(async () => ({ code: 'ready' })), start: jest.fn(() => new Promise(resolve => { deliver = resolve; })),
     finish: jest.fn(async () => true), close: jest.fn(async () => true), listen: jest.fn(listener => { status = listener; return unsubscribe; }) };
   jest.mocked(loadAndroidVoiceBinding).mockReturnValue(ports);
-  return { ...await renderHook(() => useAndroidVoiceReview(onDiagnostic)), ports, unsubscribe,
+  return { ...await renderHook(() => useAndroidVoiceReview(options)), ports, unsubscribe,
     event: (event: unknown) => status(event), deliver: (value: unknown = final) => deliver(value) };
 }
 async function start(t: Awaited<ReturnType<typeof setup>>) {
@@ -36,18 +38,19 @@ async function start(t: Awaited<ReturnType<typeof setup>>) {
 }
 test('porta final -> parser TASK-14 -> revisão TASK-15; só gesto explícito confirma em memória', async () => {
   const t = await setup(); expect(loadAndroidVoiceBinding).not.toHaveBeenCalled();
-  await start(t); expect(t.result.current.state.phase).toBe('listening'); expect(t.result.current.review.state.draft).toBeNull();
+  await start(t); expect(loadAndroidVoiceBinding).toHaveBeenCalledWith(true);
+  expect(t.result.current.state.phase).toBe('listening'); expect(t.result.current.review.state.draft).toBeNull();
   await act(() => { t.result.current.finish(); }); expect(t.result.current.review.state.confirmed).toBeNull();
   await act(async () => { t.deliver(); await flush(); });
   expect(t.result.current.review.state.draft).toMatchObject({ systolic: '120', diastolic: '80', pulse: '72', measuredAt: new Date(final.capturedAtMs) });
-  expect(JSON.stringify(t.result.current)).not.toContain(final.hypotheses[0]); expect(t.result.current.review.isPreviewOnly).toBe(true);
+  expect(JSON.stringify(t.result.current)).not.toContain(clinicalFinal.text); expect(t.result.current.review.isPreviewOnly).toBe(true);
   expect(t.result.current.review.state.confirmed).toBeNull(); expect(t.ports.close).toHaveBeenCalledTimes(1);
   await act(async () => { t.result.current.review.edit('systolic', '135'); await t.result.current.review.confirm(); });
   expect(t.result.current.review.state.confirmed?.systolic).toBe(135);
 });
 test('grafias diferentes com a mesma interpretação abrem revisão sem confirmar', async () => {
   const onDiagnostic = jest.fn();
-  const t = await setup(onDiagnostic); await start(t);
+  const t = await setup({ mode: 'preview', onDiagnostic }); await start(t);
   await act(async () => { t.deliver({ ...final, hypotheses: ['12 por 8', 'doze por oito'] }); await flush(); });
   expect(t.result.current.state).toMatchObject({ phase: 'reviewing', issue: null });
   expect(t.result.current.review.state.draft).toMatchObject({ systolic: '120', diastolic: '80', pulse: '', note: '' });
@@ -77,7 +80,7 @@ test('interpretações vazias que concordam preservam revisão vazia sem confirm
 test('diagnóstico de divergência contém só faixa e concordância; hipóteses e erro bruto ficam fora do estado e dos logs', async () => {
   const onDiagnostic = jest.fn();
   const logs = (['log', 'info', 'warn', 'error', 'debug'] as const).map(method => jest.spyOn(console, method));
-  const t = await setup(onDiagnostic); await start(t);
+  const t = await setup({ mode: 'preview', onDiagnostic }); await start(t);
   const hypotheses = ['SENTINELA-HIPOTESE-UM', 'SENTINELA-HIPOTESE-DOIS', 'doze por oito'];
   await act(async () => { t.deliver({ ...final, hypotheses, message: 'SENTINELA-ERRO-BRUTO' }); await flush(); });
   expect(t.result.current.state.issue).toBe('ambiguous-result');
@@ -86,7 +89,7 @@ test('diagnóstico de divergência contém só faixa e concordância; hipóteses
 });
 test('background fecha e descarta resultado tardio sem reinício ao retornar', async () => {
   const onDiagnostic = jest.fn();
-  const t = await setup(onDiagnostic); await start(t);
+  const t = await setup({ mode: 'preview', onDiagnostic }); await start(t);
   await act(async () => { listeners.forEach(listener => listener('background')); await flush(); });
   await act(async () => { t.deliver(); listeners.forEach(listener => listener('active')); await flush(); });
   expect(t.result.current.state.phase).toBe('cancelled'); expect(t.result.current.review.state.draft).toBeNull();
@@ -134,6 +137,32 @@ test('desmontagem remove listener, fecha mic e ignora retorno final', async () =
   const t = await setup(); await start(t); await t.unmount(); await flush(); t.deliver(); await flush();
   expect(t.unsubscribe).toHaveBeenCalledTimes(1); expect(t.ports.close).toHaveBeenCalledTimes(1);
 });
+test('modo recognition com reconhecedor SIMULADO descarta final quando o contexto perde validade durante a escuta', async () => {
+  let active = true;
+  const writer = jest.fn(async () => 'leitura-sintetica');
+  const onSaved = jest.fn();
+  const epoch = {};
+  const confirmation = createAssistedConfirmation({
+    currentContext: () => ({ uid: active ? 'alice-sintetica' : null, epoch, hasConsent: active, persistenceEnabled: true }),
+    loadWriter: async () => writer,
+  });
+  const t = await setup({ mode: 'recognition', confirmation, isCurrent: () => active, isDatePickerOpen: () => false, onSaved });
+  await start(t);
+  expect(loadAndroidVoiceBinding).toHaveBeenCalledWith(false);
+  await act(async () => { t.deliver(clinicalFinal); await flush(); });
+  expect(t.result.current.review.state.draft).toMatchObject({ systolic: '120', diastolic: '80', pulse: '72' });
+  expect(writer).not.toHaveBeenCalled();
+
+  await start(t);
+  active = false;
+  await act(async () => { t.deliver(clinicalFinal); await flush(); });
+  expect(t.ports.close).toHaveBeenCalledTimes(2);
+  expect(t.result.current.review.state.draft).toBeNull();
+  expect(writer).not.toHaveBeenCalled();
+  expect(onSaved).not.toHaveBeenCalled();
+});
+
+// A falha de liberação preserva a exclusão global até o processo terminar.
 test('sair para manual só informa liberação depois do ACK, inclusive após desmontar voz', async () => {
   const t = await setup(); await start(t);
   let acknowledge!: (value: boolean) => void;
