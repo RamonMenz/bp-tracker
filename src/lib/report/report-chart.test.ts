@@ -1,6 +1,13 @@
 import type { Reading } from '@/types/models';
 
-import { buildReportChart, CHART_MAX_PANELS, civilDayIndex, computeDailyChartPoints } from './report-chart';
+import {
+  buildReportChart,
+  CHART_MAX_PANELS,
+  chartDayRatio,
+  chartValueRatio,
+  civilDayIndex,
+  computeDailyChartPoints,
+} from './report-chart';
 
 // Fuso SEMPRE explícito.
 const TZ = 'America/Sao_Paulo';
@@ -159,5 +166,23 @@ describe('buildReportChart', () => {
 
   it('sem registros não há gráfico', () => {
     expect(buildReportChart([], range([2026, 11, 20], [2026, 11, 26]), TZ)).toBeNull();
+  });
+});
+
+describe('chartDayRatio / chartValueRatio (geometria compartilhada com o SVG do Android)', () => {
+  it('cada dia ocupa uma faixa e o ponto fica no centro dela', () => {
+    const panel = { firstDayIndex: 100, lastDayIndex: 103 };
+
+    expect(chartDayRatio(panel, 100)).toBeCloseTo(0.125);
+    expect(chartDayRatio(panel, 103)).toBeCloseTo(0.875);
+    expect(chartDayRatio({ firstDayIndex: 7, lastDayIndex: 7 }, 7)).toBeCloseTo(0.5);
+  });
+
+  it('valor em mmHg vai de 0 (yMax, topo) a 1 (yMin, base), sem arredondar', () => {
+    const chart = { yMin: 60, yMax: 160 };
+
+    expect(chartValueRatio(chart, 160)).toBe(0);
+    expect(chartValueRatio(chart, 60)).toBe(1);
+    expect(chartValueRatio(chart, 120.5)).toBeCloseTo(0.395);
   });
 });

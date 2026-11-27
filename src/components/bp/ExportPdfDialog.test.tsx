@@ -205,3 +205,41 @@ describe('ExportPdfDialog — revisão antes de salvar', () => {
     expect(screen.getByRole('radio', { name: 'Últimos 7 dias' }).props.accessibilityState).toMatchObject({ checked: true });
   });
 });
+
+describe('ExportPdfDialog — Android (deliveryMode "share")', () => {
+  const SHARE_REVIEW: ReportReview = { ...REVIEW, previewUrl: '' };
+
+  it('explica que o usuário confere o resumo antes de salvar ou compartilhar', async () => {
+    await renderDialog({ deliveryMode: 'share' });
+
+    expect(screen.getByText(/preparado neste aparelho.*confere o resumo antes de salvar ou compartilhar/)).toBeTruthy();
+    expect(screen.queryByText(/revisa a prévia/)).toBeNull();
+  });
+
+  it('revisão sem prévia embutida, declarada, e ação explícita "Salvar ou compartilhar PDF"', async () => {
+    await renderDialog({ stage: 'review', review: SHARE_REVIEW, deliveryMode: 'share' });
+
+    expect(screen.getByText(/não mostra a prévia do PDF dentro do Aferi/)).toBeTruthy();
+    expect(screen.getByText(/o destino escolhido pode manter uma cópia fora do controle do Aferi/)).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Salvar PDF' })).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar ou compartilhar PDF' }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('cobertura não confirmada: aviso antes e recorte parcial explícito na ação', async () => {
+    await renderDialog({ stage: 'review', review: { ...PARTIAL_REVIEW, previewUrl: '' }, deliveryMode: 'share' });
+
+    expect(screen.getByText('Cobertura não confirmada')).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Salvar ou compartilhar recorte parcial' }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it('durante uma nova preparação, salvar fica bloqueado e cancelar continua disponível', async () => {
+    await renderDialog({ stage: 'review', review: SHARE_REVIEW, deliveryMode: 'share' });
+
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});

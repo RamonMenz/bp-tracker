@@ -4,8 +4,9 @@ export interface PdfPreviewFrameProps {
 }
 
 /**
- * Nativo: sem pré-visualização nesta etapa (o relatório PDF só existe na Web; o Android usará
- * `expo-print`, ainda não implementado). Nunca é exibido porque o botão não aparece no nativo.
+ * Nativo: sem pré-visualização embutida. No Android o relatório sai pela folha de compartilhamento
+ * (`deliveryMode: 'share'`) e o `ReportReviewPanel` nem monta este componente; fica como reserva
+ * inerte do par `.web.tsx`.
  */
 export function PdfPreviewFrame(_props: PdfPreviewFrameProps) {
   return null;
