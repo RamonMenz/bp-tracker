@@ -340,9 +340,20 @@ A diferença da rodada 1 se inverte na rodada 2, quando a ordem é trocada. É e
 > Estado consolidado do PDF, tarefas e pendências:
 > [registro de decisões e evidências](relatorio/decisoes-e-evidencias.md).
 
+> **Atualização de 27/11/2026 (consolidação documental; a nota acima fica como está):** duas
+> linhas abaixo foram corrigidas no próprio texto porque descreviam um estado já superado, e a
+> redação original ficou registrada ao lado: "sem push" (a P4 foi enviada e mesclada pelo PR #89,
+> `a80250f`) e `git switch feat/pdf-relatorio-p4` (a branch já foi mesclada; para reproduzir, usar
+> `staging`, que nesta nota está em `1140197`). Fatos novos, sem mudança de código: no CI, os 8
+> testes de `render-report-pdf.test.ts` que conferem o texto com `pdftotext` ficam **pulados**,
+> porque o runner não tem poppler, e só rodam localmente (Q-015). O prazo de 30 s cobre o
+> carregamento do pipeline e a leitura, mas **não** o import do jsPDF/AutoTable, que ocorre na
+> renderização (Q-017). Ver E-032 e E-033 no
+> [registro](relatorio/decisoes-e-evidencias.md).
+
 **Fatos**
 - **P1 e P2:** mescladas em `staging` (PRs #87 e #88), com CI verde.
-- **P4:** 8 commits em `feat/pdf-relatorio-p4`, a partir de `d22a2e9`, sem push.
+- **P4:** 8 commits em `feat/pdf-relatorio-p4`, a partir de `d22a2e9`, mesclados em `staging` pelo PR #89 (`a80250f`). *Corrigido em 27/11/2026; a redação original dizia "sem push", estado anterior ao PR.*
 - **Testes:** `npm test` passa com 976 testes em 84 suítes (eram 953 em 82): 23 novos e 2 suítes novas (`report-privacy`, `report-lazy-loading`).
 - **Rules:** `npm run test:rules` passa com 86 testes em 2 suítes (79 + 7 novos no emulador), executado localmente duas vezes.
 - **Lint e typecheck** sem erros.
@@ -369,9 +380,10 @@ A diferença da rodada 1 se inverte na rodada 2, quando a ordem é trocada. É e
 - **Sentry real:** exige DSN de produção.
 - **Navegador móvel:** tempo e memória não medidos.
 
-**Comandos de reprodução**
+**Comandos de reprodução** (corrigido em 27/11/2026; o original fazia `git switch feat/pdf-relatorio-p4`, branch já mesclada pelo #89)
 ```bash
-git switch feat/pdf-relatorio-p4
+git fetch origin staging
+git switch --detach origin/staging
 npm ci
 npm run lint && npm run typecheck && npm test
 ```
