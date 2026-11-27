@@ -16,6 +16,7 @@ function rig() {
   const instances: FakeSpeech[] = [];
   class FakeSpeech implements LocalWebSpeech {
     static available = jest.fn(async (): Promise<unknown> => 'available');
+    static install = jest.fn(async (): Promise<boolean> => true);
     processLocally = false; lang = ''; continuous = true; interimResults = true; maxAlternatives = 4;
     onstart: LocalWebSpeech['onstart'] = null; onspeechend: LocalWebSpeech['onspeechend'] = null; onaudioend: LocalWebSpeech['onaudioend'] = null;
     onresult: LocalWebSpeech['onresult'] = null; onerror: LocalWebSpeech['onerror'] = null; onend: LocalWebSpeech['onend'] = null;
@@ -28,7 +29,7 @@ function rig() {
   const session = create(ports, next => { state = next; }, final);
   return { session, ports, env, final, Speech: FakeSpeech, instances, state: () => state,
     speech: () => instances[instances.length - 1],
-    listening: async () => { session.start(); await flush(); instances[0].onstart?.(); } };
+    listening: async () => { session.start(); await flush(); instances.at(-1)?.onstart?.(); } };
 }
 
 test('sem ação não consulta/cria/captura; apenas local disponível inicia, final aguarda onend e fecha handlers', async () => {
@@ -72,6 +73,8 @@ test.each(['missing','readback-false','setter-throws','lang-refused'])('capacida
 test.each(['unavailable','downloadable','downloading','unknown',null,false])('estado local %s não habilita nem instala modelo', async value => {
   const t = rig(); t.Speech.available.mockResolvedValue(value); t.session.start(); await t.session.settled();
   expect(t.speech().start).not.toHaveBeenCalled(); expect(t.final).not.toHaveBeenCalled();
+  expect(t.Speech.install).not.toHaveBeenCalled();
+  expect(t.ports.canInstallModel()).toBe(value === 'downloadable');
   expect(['local-unavailable','model-missing','language-unverified']).toContain(t.state().issue);
 });
 test('available rejeitado por policy/erro não propaga exceção nem começa remoto', async () => {
@@ -145,4 +148,128 @@ test('timeout de captura aborta e descarta final acumulado', async () => {
 test('desmontagem remove callbacks e ignora eventos antigos', async () => {
   const t = rig(); await t.listening(); const late = t.speech().onresult; t.session.dispose(); await t.session.settled();
   late?.(event('120 por 80')); expect(t.final).not.toHaveBeenCalled(); expect(t.speech().onstart).toBeNull();
+});
+
+async function offerModel(t: ReturnType<typeof rig>) {
+  t.Speech.available.mockResolvedValueOnce('downloadable');
+  t.session.start();
+  await t.session.settled();
+  expect(t.state().issue).toBe('model-missing');
+  expect(t.ports.canInstallModel()).toBe(true);
+}
+
+test('downloadable oferece instalação explícita; confirma available e só captura em nova ação', async () => {
+  const t = rig();
+  expect(t.ports.installModel()).toBeNull();
+  await offerModel(t);
+  expect(t.Speech.install).not.toHaveBeenCalled();
+
+  const installation = t.ports.installModel();
+  expect(t.Speech.install).toHaveBeenCalledWith({ langs: ['pt-BR'], processLocally: true });
+  await expect(installation).resolves.toBe('installed');
+  expect(t.Speech.available.mock.calls).toEqual([
+    [{ langs: ['pt-BR'], processLocally: true }],
+    [{ langs: ['pt-BR'], processLocally: true }],
+  ]);
+  expect(t.instances).toHaveLength(1);
+  expect(t.speech().start).not.toHaveBeenCalled();
+
+  await t.listening();
+  expect(t.Speech.available).toHaveBeenCalledTimes(3);
+  expect(t.speech().start).toHaveBeenCalledTimes(1);
+  expect(t.speech().processLocally).toBe(true);
+  await t.session.cancel();
+});
+
+test.each(['downloading','unavailable','available','unknown'])('um probe %s não autoriza instalar', async value => {
+  const t = rig();
+  t.Speech.available.mockResolvedValue(value);
+  t.session.start();
+  await flush();
+  await t.session.cancel();
+  expect(t.ports.canInstallModel()).toBe(false);
+  expect(t.ports.installModel()).toBeNull();
+  expect(t.Speech.install).not.toHaveBeenCalled();
+});
+
+test('downloadable sem API install conserva o limite e não oferece ação', async () => {
+  const t = rig();
+  class NoInstall extends t.Speech {}
+  Object.defineProperty(NoInstall, 'install', { value: undefined });
+  t.env.constructorForSpeech.mockReturnValue(NoInstall);
+  t.Speech.available.mockResolvedValue('downloadable');
+  t.session.start();
+  await t.session.settled();
+  expect(t.state().issue).toBe('model-missing');
+  expect(t.ports.canInstallModel()).toBe(false);
+  expect(t.ports.installModel()).toBeNull();
+  expect(t.speech().start).not.toHaveBeenCalled();
+});
+
+test.each(['rejeita','retorna falso','segue indisponível'])('a instalação %s produz código fixo e nenhuma captura', async failure => {
+  const t = rig();
+  await offerModel(t);
+  if (failure === 'rejeita') t.Speech.install.mockRejectedValue(new Error('SENTINELA'));
+  if (failure === 'retorna falso') t.Speech.install.mockResolvedValue(false);
+  if (failure === 'segue indisponível') t.Speech.available.mockResolvedValue('downloading');
+  await expect(t.ports.installModel()).resolves.toBe('install-failed');
+  expect(t.Speech.available).toHaveBeenCalledTimes(failure === 'segue indisponível' ? 2 : 1);
+  expect(t.speech().start).not.toHaveBeenCalled();
+});
+
+test('toques repetidos e nova instância não duplicam o download pendente', async () => {
+  const t = rig();
+  await offerModel(t);
+  let finish!: (installed: boolean) => void;
+  t.Speech.install.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const installation = t.ports.installModel();
+  expect(t.ports.installModel()).toBeNull();
+  expect(await t.ports.availability()).toEqual({ code: 'resource-busy' });
+
+  const next = createWebVoicePorts(t.env);
+  t.Speech.available.mockResolvedValueOnce('downloadable');
+  await next.availability();
+  await next.prepare(2);
+  await next.close(2);
+  expect(next.canInstallModel()).toBe(false);
+  expect(next.installModel()).toBeNull();
+  expect(t.Speech.install).toHaveBeenCalledTimes(1);
+  finish(true);
+  await expect(installation).resolves.toBe('installed');
+  expect(t.instances.every(speech => speech.start.mock.calls.length === 0)).toBe(true);
+});
+
+test.each(['cancelamento','timeout'])('%s invalida download e ignora conclusão tardia', async outcome => {
+  jest.useFakeTimers();
+  const t = rig();
+  await offerModel(t);
+  let finish!: (installed: boolean) => void;
+  t.Speech.install.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const installation = t.ports.installModel();
+  if (outcome === 'cancelamento') t.ports.cancelModelInstallation();
+  else await jest.advanceTimersByTimeAsync(120_000);
+  await expect(installation).resolves.toBe(outcome === 'cancelamento' ? 'install-cancelled' : 'install-timeout');
+  expect(t.ports.installModel()).toBeNull();
+
+  finish(true);
+  await flush();
+  expect(t.Speech.available).toHaveBeenCalledTimes(1);
+  expect(t.speech().start).not.toHaveBeenCalled();
+  expect(t.final).not.toHaveBeenCalled();
+});
+
+test('cancelamento durante a reverificação descarta available tardio', async () => {
+  const t = rig();
+  await offerModel(t);
+  let verify!: (value: unknown) => void;
+  t.Speech.available.mockImplementation(() => new Promise(resolve => { verify = resolve; }));
+  const installation = t.ports.installModel();
+  await flush();
+  expect(t.Speech.available).toHaveBeenCalledTimes(2);
+  t.ports.cancelModelInstallation();
+  await expect(installation).resolves.toBe('install-cancelled');
+  verify('available');
+  await flush();
+  expect(t.speech().start).not.toHaveBeenCalled();
+  expect(t.final).not.toHaveBeenCalled();
 });

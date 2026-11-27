@@ -12,11 +12,13 @@ function Convert-AferiManifestScalar([string] $Value) {
     return 'nao-interpretado'
 }
 
-function ConvertFrom-AferiManifestTree([object[]] $Lines) {
+function ConvertFrom-AferiManifestTree([object[]] $Lines, [string] $Project = 'capture') {
+    $package = 'com.ramonmenz.aferi' + $Project + 'test'
     if ($Lines.Count -gt 20000) { throw 'manifest-output-limit' }
     $wanted = @('CAMERA','INTERNET','RECORD_AUDIO','READ_EXTERNAL_STORAGE','WRITE_EXTERNAL_STORAGE',
-        'READ_MEDIA_IMAGES','READ_MEDIA_AUDIO','READ_MEDIA_VIDEO','READ_MEDIA_VISUAL_USER_SELECTED') |
-        ForEach-Object { 'android.permission.' + $_ }
+        'READ_MEDIA_IMAGES','READ_MEDIA_AUDIO','READ_MEDIA_VIDEO','READ_MEDIA_VISUAL_USER_SELECTED')
+    if ($Project -ceq 'voice') { $wanted += @('ACCESS_MEDIA_LOCATION','MANAGE_MEDIA','MANAGE_EXTERNAL_STORAGE') }
+    $wanted = $wanted | ForEach-Object { 'android.permission.' + $_ }
     $application = [ordered]@{ allowBackup = 'nao-declarado'; usesCleartextTraffic = 'nao-declarado';
         debuggable = 'nao-declarado'; fullBackupContent = 'nao-declarado';
         dataExtractionRules = 'nao-declarado'; networkSecurityConfig = 'nao-declarado' }
@@ -38,7 +40,7 @@ function ConvertFrom-AferiManifestTree([object[]] $Lines) {
         if ($line -notmatch '^(\s*)A:\s+(.+)$' -or $Matches[1].Length -ne $indent + 2) { continue }
         $attribute = $Matches[2]
         if ($node -eq 'manifest' -and $attribute -match '^package(?:\(0x[0-9a-fA-F]+\))?="([^"]+)"') {
-            $packageOk = $Matches[1] -ceq 'com.ramonmenz.afericapturetest'
+            $packageOk = $Matches[1] -ceq $package
         }
         if ($attribute -notmatch '^(?:android:|http://schemas\.android\.com/apk/res/android:)([A-Za-z]+)(?:\(0x[0-9a-fA-F]+\))?=(.*)$') { continue }
         $key = $Matches[1]; $value = $Matches[2]
@@ -58,7 +60,7 @@ function ConvertFrom-AferiManifestTree([object[]] $Lines) {
     }
     $declaredNames = @($permissions | ForEach-Object { $_.Permissao })
     [pscustomobject]@{
-        Pacote = 'com.ramonmenz.afericapturetest'
+        Pacote = $package
         Sdk = [pscustomobject]$sdk
         Aplicacao = [pscustomobject]$application
         PermissoesDeclaradas = @($permissions | Where-Object { $wanted -ccontains $_.Permissao })
@@ -93,7 +95,8 @@ function Get-AferiManifestMetadata {
     param(
         [Parameter(Mandatory)][string] $Aapt2Path,
         [Parameter(Mandatory)][string] $ApkPath,
-        [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{64}$')][string] $ExpectedSha256
+        [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{64}$')][string] $ExpectedSha256,
+        [ValidateSet('capture', 'voice')][string] $Project = 'capture'
     )
     if (-not (Test-Path -LiteralPath $Aapt2Path -PathType Leaf -ErrorAction SilentlyContinue) -or
         -not (Test-Path -LiteralPath $ApkPath -PathType Leaf -ErrorAction SilentlyContinue) -or
@@ -110,7 +113,7 @@ function Get-AferiManifestMetadata {
     $dump = Invoke-AferiAapt2 $Aapt2Path ('dump xmltree --file AndroidManifest.xml "' + $ApkPath + '"')
     if ($dump.Code -ne 0) { throw 'manifest-dump-unavailable' }
     $lines = $dump.Lines
-    $summary = ConvertFrom-AferiManifestTree $lines
+    $summary = ConvertFrom-AferiManifestTree $lines $Project.ToLowerInvariant()
     [pscustomobject]@{ Tool = 'manifesto-1'; Aapt2Version = $safeVersion; Sha256ApkLocal = $hash; Manifesto = $summary }
 }
 
@@ -127,9 +130,12 @@ function Get-AferiBackupReferenceIds([object[]] $Lines) {
     return $ids
 }
 
-function ConvertFrom-AferiBackupResources([object[]] $Lines, $Ids) {
+function ConvertFrom-AferiBackupResources([object[]] $Lines, $Ids, [string] $Project = 'capture') {
     if ($Lines.Count -gt 100000) { throw 'backup-resources-limit' }
-    $expected = @{ aferi_capture_backup_rules = 'fullBackupContent'; aferi_capture_data_extraction_rules = 'dataExtractionRules' }
+    $expected = @{
+        "aferi_${Project}_backup_rules" = 'fullBackupContent'
+        "aferi_${Project}_data_extraction_rules" = 'dataExtractionRules'
+    }
     $found = @{}; $current = ''; $files = @{}
     foreach ($line in $Lines) {
         if ($line -isnot [string] -or $line.Length -gt 16384 -or $line -match '[\x00-\x1f\x7f]') { throw 'backup-resources-invalid' }
@@ -207,19 +213,21 @@ function Get-AferiBackupMetadata {
     param(
         [Parameter(Mandatory)][string] $Aapt2Path,
         [Parameter(Mandatory)][string] $ApkPath,
-        [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{64}$')][string] $ExpectedSha256
+        [Parameter(Mandatory)][ValidatePattern('^[0-9a-fA-F]{64}$')][string] $ExpectedSha256,
+        [ValidateSet('capture', 'voice')][string] $Project = 'capture'
     )
-    $manifest = Get-AferiManifestMetadata -Aapt2Path $Aapt2Path -ApkPath $ApkPath -ExpectedSha256 $ExpectedSha256
+    $Project = $Project.ToLowerInvariant()
+    $manifest = Get-AferiManifestMetadata -Aapt2Path $Aapt2Path -ApkPath $ApkPath -ExpectedSha256 $ExpectedSha256 -Project $Project
     if ($manifest.Manifesto.Aplicacao.allowBackup -cne 'false') { throw 'backup-allow-backup-unexpected' }
     $dump = Invoke-AferiAapt2 $Aapt2Path ('dump xmltree --file AndroidManifest.xml "' + $ApkPath + '"')
     if ($dump.Code -ne 0) { throw 'backup-manifest-unavailable' }
-    $null = ConvertFrom-AferiManifestTree $dump.Lines
+    $null = ConvertFrom-AferiManifestTree $dump.Lines $Project
     $ids = Get-AferiBackupReferenceIds $dump.Lines
     $table = Invoke-AferiAapt2 $Aapt2Path ('dump resources "' + $ApkPath + '"')
     if ($table.Code -ne 0) { throw 'backup-resources-unavailable' }
-    ConvertFrom-AferiBackupResources $table.Lines $ids
+    ConvertFrom-AferiBackupResources $table.Lines $ids $Project
     $rules = @()
-    foreach ($entry in @(@{ File = 'aferi_capture_backup_rules'; Kind = 'legado' }, @{ File = 'aferi_capture_data_extraction_rules'; Kind = 'moderno' })) {
+    foreach ($entry in @(@{ File = "aferi_${Project}_backup_rules"; Kind = 'legado' }, @{ File = "aferi_${Project}_data_extraction_rules"; Kind = 'moderno' })) {
         $tree = Invoke-AferiAapt2 $Aapt2Path ('dump xmltree --file res/xml/' + $entry.File + '.xml "' + $ApkPath + '"')
         if ($tree.Code -ne 0) { throw 'backup-rule-unavailable' }
         $rules += @(ConvertFrom-AferiBackupRuleTree $tree.Lines $entry.Kind)

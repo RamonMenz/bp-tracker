@@ -10,6 +10,7 @@
     "userInterfaceStyle": "automatic",
     "android": {
       "package": "com.ramonmenz.aferivoicetest",
+      "allowBackup": false,
       "permissions": [
         "android.permission.RECORD_AUDIO"
       ],
@@ -23,7 +24,9 @@
       ]
     },
     "plugins": [
-      "expo-dev-client"
+      "expo-dev-client",
+      "./plugins/with-no-backup.js",
+      "./plugins/with-disabled-network-inspector.js"
     ]
   }
 }

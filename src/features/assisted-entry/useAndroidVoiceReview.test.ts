@@ -50,6 +50,25 @@ test('background fecha e descarta resultado tardio sem reinício ao retornar', a
   expect(t.result.current.state.phase).toBe('cancelled'); expect(t.result.current.review.state.draft).toBeNull();
   expect(t.ports.start).toHaveBeenCalledTimes(1); expect(t.ports.close).toHaveBeenCalledTimes(1);
 });
+test('concessão após o diálogo interrompido só permite preparar em uma nova ação', async () => {
+  const t = await setup();
+  let grant!: (value: boolean) => void;
+  jest.mocked(t.ports.requestPermission).mockImplementationOnce(() => new Promise(resolve => { grant = resolve; }));
+
+  await act(async () => { t.result.current.start(); await flush(); });
+  expect(t.result.current.state.phase).toBe('permission');
+  await act(async () => { listeners.forEach(listener => listener('background')); await flush(); });
+  await act(async () => { grant(true); listeners.forEach(listener => listener('active')); await flush(); });
+  expect(t.result.current.state).toMatchObject({ phase: 'cancelled', issue: 'cancelled' });
+  expect(t.ports.prepare).not.toHaveBeenCalled();
+  expect(t.ports.start).not.toHaveBeenCalled();
+
+  await start(t);
+  expect(t.result.current.state.phase).toBe('listening');
+  expect(t.ports.prepare).toHaveBeenCalledTimes(1);
+  expect(t.ports.start).toHaveBeenCalledTimes(1);
+  await act(async () => { t.result.current.review.cancel(); await flush(); });
+});
 test('módulo ausente mostra indisponibilidade segura sem solicitar microfone', async () => {
   const t = await setup(); jest.mocked(loadAndroidVoiceBinding).mockImplementation(() => { throw new VoiceCaptureError('unsupported'); });
   await act(async () => { t.result.current.start(); await flush(); });

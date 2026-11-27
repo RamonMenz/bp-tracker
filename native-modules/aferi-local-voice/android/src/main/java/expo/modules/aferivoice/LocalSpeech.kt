@@ -70,7 +70,9 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     try {
       if (Build.VERSION.SDK_INT < 33) { complete(mapOf("code" to "language-unverified")); return }
       val local = SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
-      recognizer = local; timeout(10000)
+      recognizer = local
+      local.setRecognitionListener(recognitionListener(id))
+      timeout(10000)
       local.checkRecognitionSupport(intent(), ContextCompat.getMainExecutor(context), object : RecognitionSupportCallback {
         override fun onSupportResult(support: RecognitionSupport) {
           if (!current(id) || phase != "preparing") return
@@ -84,6 +86,46 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
         override fun onError(error: Int) { if (current(id) && phase == "preparing") complete(mapOf("code" to "language-unverified")) }
       })
     } catch (_: Exception) { complete(mapOf("code" to "local-unavailable")) }
+  }
+  private fun capturing(id: Int) =
+    current(id) && (phase == "opening" || phase == "listening" || phase == "recognizing")
+
+  private fun recognitionListener(id: Int): RecognitionListener {
+    return object : RecognitionListener {
+      override fun onReadyForSpeech(params: Bundle?) { if (current(id) && phase == "opening") { phase = "listening"; status(id, "listening") } }
+      override fun onBeginningOfSpeech() = Unit
+      override fun onRmsChanged(rmsdB: Float) = Unit
+      override fun onBufferReceived(buffer: ByteArray?) = Unit
+      override fun onPartialResults(partialResults: Bundle?) = Unit
+      override fun onEvent(eventType: Int, params: Bundle?) = Unit
+      override fun onEndOfSpeech() {
+        if (capturing(id)) { phase = "recognizing"; status(id, "recognizing"); timeout(10000) }
+      }
+      override fun onError(error: Int) {
+        if (!capturing(id)) return
+        val code = when (error) {
+          SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "permission-denied"
+          SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "no-result"
+          SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "model-missing"
+          SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "resource-busy"
+          SpeechRecognizer.ERROR_AUDIO, SpeechRecognizer.ERROR_CLIENT -> "interrupted"
+          else -> "engine-failed"
+        }
+        complete(mapOf("code" to code))
+      }
+      override fun onResults(results: Bundle?) {
+        if (!capturing(id)) return
+        // Não seleciona silenciosamente entre hipóteses distintas, mesmo com MAX_RESULTS=1.
+        try {
+          val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
+          val text = texts?.singleOrNull()
+          if (texts != null && texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
+          else if (text.isNullOrEmpty() || text.length > 2000) complete(mapOf("code" to "no-result"))
+          else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
+            "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
+        } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
+      }
+    }
   }
   fun start(id: Int, promise: Promise) {
     if (!current(id) || phase != "prepared" || !verified) { promise.resolve(mapOf("code" to "language-unverified")); return }
@@ -105,42 +147,6 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       if (audio.requestAudioFocus(request) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
         complete(mapOf("code" to "interrupted")); return
       }
-      if (!current(id)) return
-      local.setRecognitionListener(object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) { if (current(id) && phase == "opening") { phase = "listening"; status(id, "listening") } }
-        override fun onBeginningOfSpeech() = Unit
-        override fun onRmsChanged(rmsdB: Float) = Unit
-        override fun onBufferReceived(buffer: ByteArray?) = Unit
-        override fun onPartialResults(partialResults: Bundle?) = Unit
-        override fun onEvent(eventType: Int, params: Bundle?) = Unit
-        override fun onEndOfSpeech() {
-          if (current(id)) { phase = "recognizing"; status(id, "recognizing"); timeout(10000) }
-        }
-        override fun onError(error: Int) {
-          if (!current(id)) return
-          val code = when (error) {
-            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "permission-denied"
-            SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "no-result"
-            SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> "model-missing"
-            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "resource-busy"
-            SpeechRecognizer.ERROR_AUDIO, SpeechRecognizer.ERROR_CLIENT -> "interrupted"
-            else -> "engine-failed"
-          }
-          complete(mapOf("code" to code))
-        }
-        override fun onResults(results: Bundle?) {
-          if (!current(id)) return
-          // Não seleciona silenciosamente entre hipóteses distintas, mesmo com MAX_RESULTS=1.
-          try {
-            val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
-            val text = texts?.singleOrNull()
-            if (texts != null && texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
-            else if (text.isNullOrEmpty() || text.length > 2000) complete(mapOf("code" to "no-result"))
-            else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
-              "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
-          } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
-        }
-      })
       if (!current(id)) return
       capturedAtMs = System.currentTimeMillis(); timeout(30000)
       local.startListening(intent())
