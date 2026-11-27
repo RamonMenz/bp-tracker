@@ -69,6 +69,16 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # render-report-pdf.test.ts confere o PDF real com pdftotext/pdftoppm. Sem poppler-utils
+      # esses testes falham no CI (CI=true) em vez de serem pulados.
+      - name: Instalar poppler-utils (pdftotext/pdftoppm)
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+          pdftotext -v
+          pdftoppm -v
+
       - name: Testes (Jest)
         run: npm test -- --ci
 
