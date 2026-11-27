@@ -76,6 +76,8 @@ const FAKE_PDF = { size: 1, type: 'application/pdf' } as Blob;
 function signedInAs(uid: string | null): void {
   mockUseSession.mockReturnValue({
     user: uid === null ? null : ({ uid } as ReturnType<typeof useSession>['user']),
+    sessionEpoch: null,
+    getSessionEpoch: () => null,
     isLoading: false,
     signIn: jest.fn(),
     signOut: jest.fn(),

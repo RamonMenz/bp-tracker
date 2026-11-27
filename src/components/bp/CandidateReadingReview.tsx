@@ -92,7 +92,7 @@ export function CandidateReadingReview({ review }: { review: CandidateReviewView
         setPickerAttempt(null);
         review.recapture();
       }} />
-      <Button label="Cancelar" variant="ghost" onPress={() => { setPickerAttempt(null); review.cancel(); }} />
+      <Button label="Cancelar" variant="ghost" disabled={review.cancelDisabled} onPress={() => { setPickerAttempt(null); review.cancel(); }} />
     </Card>
   );
 }

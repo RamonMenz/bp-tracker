@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { decodeFinalTranscript } from '@/domain/final-transcript';
 import { interpretVoice } from '@/domain/interpret-voice-pt-br';
 import type { createAssistedConfirmation } from '@/features/readings/confirmed-assisted-reading';
+import type { FirstMeasurement } from '@/features/readings/useSecondMeasurementFlow';
 
 import { useCandidateReview } from './useCandidateReview';
 
@@ -10,7 +11,7 @@ type Confirmation = ReturnType<typeof createAssistedConfirmation>;
 export type VoiceReviewOptions =
   | { mode: 'simulation' }
   | { mode: 'preview' }
-  | { mode: 'recognition'; confirmation: Confirmation };
+  | { mode: 'recognition'; confirmation: Confirmation; onSaved?: (reading: FirstMeasurement) => void };
 
 /** Recebe contrato final; não abre microfone ou importa writer. Preview não pode persistir. */
 export function useVoiceReview(options: VoiceReviewOptions = { mode: 'simulation' }) {
@@ -23,13 +24,15 @@ export function useVoiceReview(options: VoiceReviewOptions = { mode: 'simulation
     : settings.mode === 'preview' ? { simulation: false, previewOnly: true } : {
     simulation: false,
     onInvalidate: () => { clinical.current = null; settings.confirmation.cancel(); },
-    onConfirmDraft: async (draft, reviewAttempt) => {
+    onConfirmDraft: async (draft, reviewAttempt, values) => {
       const attempt = clinical.current;
       if (!attempt || attempt.reviewAttempt !== reviewAttempt || attempt.persistAttempt === null) return false;
       const ticket = settings.confirmation.revise(attempt.persistAttempt, draft);
       if (!ticket) return false;
       const result = await settings.confirmation.confirmAndSave(ticket);
-      return result.kind === 'acknowledged';
+      if (result.kind !== 'acknowledged' || clinical.current !== attempt) return false;
+      settings.onSaved?.({ ...values, id: result.readingId });
+      return true;
     },
   });
   function newAttempt() {
@@ -57,6 +60,11 @@ export function useVoiceReview(options: VoiceReviewOptions = { mode: 'simulation
     }
     // A transcrição não entra em estado React, nota ou payload de confirmação.
     const candidates = interpretVoice(final);
+    if (settings.mode === 'recognition' && Object.values(candidates.fields).every(field => field.status === 'missing')) {
+      settings.confirmation.cancel();
+      setInputIssue('Nenhuma medição identificada. Fale novamente ou use o registro manual.');
+      return false;
+    }
     setInputIssue(null);
     return core.receive(attempt, candidates);
   }

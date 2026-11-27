@@ -7,13 +7,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthRedirect } from '@/features/auth/useAuthRedirect';
 import { SessionProvider, useSession } from '@/features/auth/useSession';
 import { useOnboardingGate } from '@/features/onboarding/useOnboardingGate';
-import { useConsentGate } from '@/features/privacy/useConsentGate';
+import { ConsentGateContext, useConsentGate } from '@/features/privacy/useConsentGate';
 import { useForegroundPush } from '@/features/reminders/useForegroundPush';
 import { useNotificationRedirect } from '@/features/reminders/useNotificationRedirect';
 import { ThemePreferenceProvider } from '@/features/theme/useThemePreference';
 
 function RootNavigator() {
-  const { user, isLoading } = useSession();
+  const { user, isLoading, sessionEpoch } = useSession();
 
   useAuthRedirect(user, isLoading);
   // Consentimento ANTES do onboarding (LGPD art. 11, I): o onboarding apresenta o registro de
@@ -21,8 +21,8 @@ function RootNavigator() {
   // versão vigente confirmado no servidor, o gate de onboarding recebe "ainda carregando" e não
   // decide nada; ele só é liberado no render em que o aceite aparece — o mesmo em que o gate de
   // consentimento, chamado antes, tira o usuário de /consent. A ordem das chamadas importa.
-  const { hasConsent } = useConsentGate(user, isLoading);
-  useOnboardingGate(user, isLoading || !hasConsent);
+  const consent = useConsentGate(user, isLoading, sessionEpoch);
+  useOnboardingGate(user, isLoading || !consent.hasConsent);
   useNotificationRedirect();
   useForegroundPush();
 
@@ -37,7 +37,11 @@ function RootNavigator() {
     );
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <ConsentGateContext.Provider value={consent}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ConsentGateContext.Provider>
+  );
 }
 
 export default function RootLayout() {

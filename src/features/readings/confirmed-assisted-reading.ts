@@ -32,7 +32,7 @@ interface Ports {
 
 /** Porta da TASK-03. Só confirmAndSave pode carregar/chamar o writer.
  * Não usa resultados de reconhecimento, React effects ou valores de confiança.
- * Ainda não ligada às telas/PoCs. Tickets não são prova criptográfica de gesto.
+ * Tickets vinculam o gesto à revisão corrente.
  */
 export function createAssistedConfirmation(ports: Ports) {
   let attemptId = 0;

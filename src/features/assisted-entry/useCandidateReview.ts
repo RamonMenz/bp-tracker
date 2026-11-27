@@ -60,7 +60,7 @@ export type CandidateReviewOptions =
   | { simulation: true }
   | { simulation: false; previewOnly: true }
   | { simulation: false; onInvalidate: () => void;
-      onConfirmDraft: (draft: CandidateReviewDraft, attempt: number) => Promise<boolean> };
+      onConfirmDraft: (draft: CandidateReviewDraft, attempt: number, values: CandidateReviewValues) => Promise<boolean> };
 
 export function useCandidateReview(modality: EntryModality, options: CandidateReviewOptions = { simulation: true }) {
   const initial: ReviewState = { phase: 'idle', attempt: 0, candidates: null, draft: null, confirmed: null };
@@ -152,7 +152,11 @@ export function useCandidateReview(modality: EntryModality, options: CandidateRe
         await Promise.resolve(); // Somente memória, sem callback de escrita.
         success = true;
       } else {
-        success = await choice.onConfirmDraft({ ...snapshot.draft!, measuredAt: new Date(snapshot.draft!.measuredAt) }, snapshot.attempt);
+        success = await choice.onConfirmDraft(
+          { ...snapshot.draft!, measuredAt: new Date(snapshot.draft!.measuredAt) },
+          snapshot.attempt,
+          values,
+        );
       }
     } catch { success = false; } // Nunca expor exceção potencialmente clínica.
     if (!mounted.current || current.current !== pending) return false;
@@ -171,4 +175,8 @@ export function useCandidateReview(modality: EntryModality, options: CandidateRe
     receive, isWaitingFor, recapture, cancel, edit, confirm };
 }
 export type CandidateReviewController = ReturnType<typeof useCandidateReview>;
-export type CandidateReviewView = Omit<CandidateReviewController, 'receive' | 'isWaitingFor'> & { recaptureDisabled?: boolean; previewNotice?: string };
+export type CandidateReviewView = Omit<CandidateReviewController, 'receive' | 'isWaitingFor'> & {
+  recaptureDisabled?: boolean;
+  cancelDisabled?: boolean;
+  previewNotice?: string;
+};
