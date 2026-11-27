@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "main": "expo-router/entry",
+  "expo": {
+    "autolinking": {
+      "nativeModulesDir": "./native-modules",
+      "exclude": ["aferi-photo-capture"]
+    }
+  },
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo start --dev-client --android",

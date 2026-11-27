@@ -40,7 +40,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       Build.VERSION.SDK_INT < 31 -> "local-unavailable"
       !SpeechRecognizer.isOnDeviceRecognitionAvailable(context) -> "local-unavailable"
       Build.VERSION.SDK_INT < 33 -> "language-unverified"
-      else -> "ready" // Somente API local. Idioma instalado é checado em prepare.
+      else -> "ready" // Idioma instalado é checado com checkRecognitionSupport.
     }
   } catch (_: Exception) { "local-unavailable" }
 
@@ -51,19 +51,24 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
     // Não usa EXTRA_PREFER_OFFLINE nem factory genérica/remota.
   }
-  private fun current(id: Int) = activeId == id && id > 0 && !cleanupBlocked
+  private fun current(id: Int) = activeId == id && id != 0 && !cleanupBlocked
   private fun timeout(ms: Long) {
     deadline?.let { handler.removeCallbacks(it) }
     val id = activeId
     val task = Runnable { if (current(id)) complete(mapOf("code" to "timeout")) }
     deadline = task; handler.postDelayed(task, ms)
   }
-  fun prepare(id: Int, promise: Promise) {
+  // IDs negativos identificam consultas sem captura e não colidem com as sessões JS.
+  fun checkLocalLanguage(id: Int, promise: Promise) = checkSupport(id, promise, forCapture = false)
+  fun prepare(id: Int, promise: Promise) = checkSupport(id, promise, forCapture = true)
+
+  private fun checkSupport(id: Int, promise: Promise, forCapture: Boolean) {
     if (cleanupBlocked) { promise.resolve(mapOf("code" to "cleanup-failed")); return }
-    if (id <= 0 || owner != null || activeId != 0) { promise.resolve(mapOf("code" to "resource-busy")); return }
+    val validId = if (forCapture) id > 0 else id < 0
+    if (!validId || owner != null || activeId != 0) { promise.resolve(mapOf("code" to "resource-busy")); return }
     val available = availability()
     if (available != "ready") { promise.resolve(mapOf("code" to available)); return }
-    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+    if (forCapture && ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
       promise.resolve(mapOf("code" to "permission-denied")); return
     }
     owner = this; activeId = id; phase = "preparing"; pending = promise; verified = false
@@ -79,6 +84,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
           try {
             verified = support.installedOnDeviceLanguages.any { it.replace('_', '-').equals("pt-BR", ignoreCase = true) }
             if (!verified) { complete(mapOf("code" to "model-missing")); return }
+            if (!forCapture) { complete(mapOf("code" to "ready")); return }
             phase = "prepared"; timeout(5000)
             val target = pending; pending = null; target?.resolve(mapOf("code" to "ready"))
           } catch (_: Exception) { complete(mapOf("code" to "language-unverified")) }

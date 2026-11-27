@@ -85,6 +85,9 @@ jobs:
       - name: Bundle Web sem voz por padrão (VOZ-01)
         run: node tools/voz-produto/bundle-off.check.cjs
 
+      - name: Bundle Android sem voz por padrão (VOZ-01)
+        run: node tools/voz-produto/android-bundle-off.check.cjs
+
       - name: Diagnóstico Metro (PowerShell, fixtures sem rede)
         run: pwsh -NoLogo -NoProfile -File tools/task07/AferiMetroConnection.check.ps1
 
