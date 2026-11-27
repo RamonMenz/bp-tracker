@@ -38,3 +38,44 @@ export function splitDetailLines(lines: readonly string[], maxLines: number): st
 
   return chunks;
 }
+
+/**
+ * Quebra estimada por quantidade de caracteres, para fatiar detalhes longos quando o motor de
+ * layout (HTML do Android) não expõe as métricas da fonte. Mantém os parágrafos (`\n`), quebra nos
+ * espaços e corta palavras maiores que a linha (ex.: URL). Não descarta nem reordena texto: juntar
+ * as linhas devolve o conteúdo original, salvo os espaços onde houve quebra.
+ */
+export function wrapTextByChars(text: string, maxChars: number): string[] {
+  if (maxChars < 1) {
+    throw new Error('maxChars precisa ser positivo.');
+  }
+
+  const lines: string[] = [];
+
+  for (const paragraph of text.split('\n')) {
+    let current = '';
+
+    for (const word of paragraph.split(' ').filter((part) => part !== '')) {
+      let rest = word;
+
+      while (rest.length > 0) {
+        const separator = current === '' ? '' : ' ';
+
+        if (current.length + separator.length + rest.length <= maxChars) {
+          current += separator + rest;
+          rest = '';
+        } else if (current !== '') {
+          lines.push(current);
+          current = '';
+        } else {
+          lines.push(rest.slice(0, maxChars));
+          rest = rest.slice(maxChars);
+        }
+      }
+    }
+
+    lines.push(current);
+  }
+
+  return lines;
+}
