@@ -2,7 +2,7 @@
 
 **Branch:** `feat/eas-standalone`, a partir de `origin/staging` em `f8cfdee`.
 **Objetivo:** um APK que **embute o JavaScript** (não precisa de Metro nem de PC) com os módulos nativos atuais de staging (`expo-print`, `aferi-local-voice`), gerado pela EAS e disparado pelo GitHub Actions, com o log completo do build visível no GitHub.
-**Estado:** ver [Registro para o relatório final](#registro-para-o-relatório-final). **Nada aqui foi validado em aparelho.**
+**Estado:** APK gerado pela EAS e inspecionado no CI (build `257aeb67…`, §6). **Nada aqui foi validado em aparelho.**
 
 ## 1. Decisões
 
@@ -53,6 +53,11 @@ Toda `EXPO_PUBLIC_*` usada no código é substituída pelo valor literal no bund
 | `EXPO_PUBLIC_SENTRY_DSN` | `extra.sentry` | Endereço do coletor, público. |
 | `EXPO_PUBLIC_WEB_VOICE_ENABLED`, `EXPO_PUBLIC_ANDROID_VOICE_ENABLED` | `extra` (booleanos) | Flags. Neste APK, a Android vale `true`. |
 | `EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN` | código, **só dentro de `if (__DEV__)`** | ⚠️ **Credencial.** Ver abaixo. |
+
+**O que de fato estava no ambiente `development` da EAS** (lido na 3ª execução, só nomes):
+- **Plain text ou sensitive, embutidas no APK:** `EXPO_PUBLIC_FIREBASE_API_KEY`, `EXPO_PUBLIC_FIREBASE_APP_ID`, `EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN`, `EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`, `EXPO_PUBLIC_FIREBASE_PROJECT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+- **Secret:** `GOOGLE_SERVICES_JSON`, que é variável de arquivo e vai para a config nativa, não para o JS.
+- **Ausentes no ambiente:** `EXPO_PUBLIC_APPCHECK_DEBUG_TOKEN`, `EXPO_PUBLIC_FIREBASE_VAPID_KEY`, `EXPO_PUBLIC_APPCHECK_RECAPTCHA_SITE_KEY` e `EXPO_PUBLIC_SENTRY_DSN`. **Não há debug token na EAS**, então ele não está no APK. A flag de voz vem do `env` do perfil.
 
 **Risco do debug token.** Um debug token registrado no Console dá acesso que passa por cima do App Check. Neste APK release, `__DEV__` é `false` e o bloco que o lê é eliminado no bundle. Mesmo assim, se a variável estiver no ambiente `development` da EAS, ela está no builder e no `env:pull` do CI. O workflow avisa quando o nome existe (`::warning::`) e **falha** se o valor aparecer no APK. A recomendação é não manter essa variável na EAS: deixá-la só no `.env.local` do computador. O APK é de uso interno do autor, mas não deve ser repassado: ele carrega a config do projeto Firebase de teste.
 
@@ -106,8 +111,20 @@ O acesso a `docs.expo.dev` estava bloqueado neste ambiente. A doc foi lida no c�
 
 - **Decisão.** O perfil `standalone-teste` gera um APK release com JS embutido e voz Android ligada só nele, pelo ambiente `development` da EAS. O workflow tem input de perfil, pré-voo nativo gratuito, espera do build, log completo no GitHub, inspeção do APK e URL da página do build. Os perfis `development`, `preview` e `production` não mudaram.
 - **Evidência no host.** O `@expo/eas-json` resolve os quatro perfis como esperado. O `expo export -p android` com a flag ligada e config fictícia passou, com a voz presente no bundle. O `expo prebuild` com config fictícia passou. Lint passou nos scripts novos. Typecheck passou.
-- **Builds na EAS.** *(preenchido na seção 6)*
-- **Pendências.** Instalar e usar no aparelho, com voz (conta de teste), PDF e login. Conferir o App Check no APK fora da Play Store.
+- **Builds na EAS.** Gastei **1 de 3**.
+  - O build `257aeb67-4c74-477c-b905-e9c75b63af90` terminou com **FINISHED** em cerca de 23 min: [página do build](https://expo.dev/accounts/ramoncode/projects/bp-tracker/builds/257aeb67-4c74-477c-b905-e9c75b63af90).
+  - APK de 109 MB, com o JS embutido (`assets/index.android.bundle`), a voz no bundle, o módulo `aferivoice` compilado nos dex e sem dev launcher.
+  - Permissões `RECORD_AUDIO` e `POST_NOTIFICATIONS` declaradas, `CAMERA` ausente. Debug token ausente do ambiente.
+  - O Kotlin do `aferi-local-voice` compilou no pré-voo e no builder da EAS.
+- **Erros corrigidos.**
+  - O `eas env:pull` falhava em 1 s porque o eas-cli avalia o `app.config.ts` com `EXPO_NO_DOTENV=1`, e o `requireEnv` exige variáveis. Corrigido com `ci-placeholder` (§1.5).
+  - A URL do artefato aparecia no cabeçalho `env:` de um passo. Agora ela passa por arquivo.
+- **Pendências.**
+  - Instalar e usar no aparelho, com voz (conta de teste), PDF e login Google. **Nada validado em aparelho.**
+  - Conferir o App Check (Play Integrity) no APK fora da Play Store.
+  - O job `development` continua falhando no `env:pull` até receber o mesmo bloco `env` com `ci-placeholder`. Ele foi mantido como estava a pedido.
+  - O log da execução 46080650099 contém a URL do artefato. O autor pode apagar esse log em Actions, se quiser.
+  - O commit `c142321` usa o tipo `ci(build)`, fora da tabela do CLAUDE.md. Corrigir no squash: a reescrita com force-push foi bloqueada pela política do ambiente.
 
 ## 6. Resultado das tentativas
 
@@ -117,3 +134,4 @@ O acesso a `docs.expo.dev` estava bloqueado neste ambiente. A doc foi lida no c�
 |---|---|---|---|---|
 | 1 | [46079186932](https://github.com/RamonMenz/bp-tracker/actions/runs/46079186932) | ✅ passou: export com voz, prebuild e `:app:compileReleaseKotlin` em cerca de 5 min | **não criado** (0 de cota) | `eas env:pull` falhou em 1 s: `expo config --json exited with non-zero code: 1` (`requireEnv` sem variáveis no runner). Correção: `ci-placeholder` no job (§1.5), reproduzido no host. |
 | 2 | [46080650099](https://github.com/RamonMenz/bp-tracker/actions/runs/46080650099) | pulado (já passou na 1ª, mesmo nativo) | **build 1/3: FINISHED** em cerca de 23 min, [página do build](https://expo.dev/accounts/ramoncode/projects/bp-tracker/builds/257aeb67-4c74-477c-b905-e9c75b63af90) | APK de 109 MB. Inspeção: `assets/index.android.bundle` presente, voz no bundle (1), `expo/modules/aferivoice` nos dex (24), dev launcher ausente (0), `RECORD_AUDIO` e `POST_NOTIFICATIONS` declaradas, `CAMERA` ausente. Debug token não legível no `env:pull`. Falha minha: a URL do artefato apareceu no cabeçalho `env:` do passo de inspeção. Corrigido. |
+| 3 | [46083732616](https://github.com/RamonMenz/bp-tracker/actions/runs/46083732616) | pulado | **sem cota**: `build_id` do build 1, só relatório e reinspeção | Confirmado: a URL do artefato não aparece mais no log. Os nomes das variáveis estão na §2. O mesmo resultado de inspeção do APK. |
