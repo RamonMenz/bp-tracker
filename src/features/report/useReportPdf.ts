@@ -7,11 +7,12 @@ import type { ReportAverageLine } from '@/lib/report/report-model';
 import type { ReportPeriodError } from '@/lib/report/report-period';
 
 import { reportPdfPlatform } from './report-pdf-platform';
-import type { PdfPreviewHandle, ReportPeriodRequest } from './report-pdf-platform.types';
+import type { PdfPreviewHandle, ReportPdfArtifact, ReportPeriodRequest } from './report-pdf-platform.types';
 
 /** Resumo exibido ANTES de salvar (spec §3.4.1), com o mesmo retrato do PDF pré-visualizado. */
 export interface ReportReview {
   fileName: string;
+  /** Vazia quando a plataforma não tem pré-visualização embutida (Android). */
   previewUrl: string;
   requestedPeriod: string;
   coverageLines: string[];
@@ -25,8 +26,10 @@ export interface ReportReview {
 export type ReportStage = 'idle' | 'preparing' | 'review';
 
 export interface UseReportPdfResult {
-  /** false no Android nesta etapa: o botão não deve aparecer. */
+  /** false só onde não há adaptador de PDF: o botão não deve aparecer. */
   isAvailable: boolean;
+  /** `download` (Web: prévia + download) ou `share` (Android: sem prévia, folha de compartilhamento). */
+  deliveryMode: 'download' | 'share';
   stage: ReportStage;
   review: ReportReview | null;
   /** Sempre mensagem amigável em pt-BR, nunca `error.message` cru (CLAUDE.md §4.3). */
@@ -35,7 +38,11 @@ export interface UseReportPdfResult {
   prepareReport: (request: ReportPeriodRequest) => Promise<boolean>;
   /** Refaz a preparação com o último período (nova leitura, novo retrato). */
   retry: () => Promise<boolean>;
-  /** Entrega o PDF revisado ao navegador — única ação que gera arquivo. */
+  /**
+   * Entrega o PDF revisado — única ação que tira o arquivo do app. true quando a entrega começou e
+   * o diálogo pode fechar. No Android a folha de compartilhamento abre em seguida; uma falha dela
+   * aparece depois em `error`, com o diálogo já fechado.
+   */
   saveReport: () => boolean;
   /** Descarta a revisão e volta à escolha do período, mantendo a escolha anterior no diálogo. */
   changePeriod: () => void;
@@ -50,6 +57,7 @@ const EMPTY_UNCONFIRMED_MESSAGE =
   'Nenhuma medição encontrada no período, mas não foi possível confirmar o histórico completo. Verifique sua conexão e tente novamente.';
 const GENERIC_MESSAGE = 'Não foi possível gerar o relatório. Tente novamente.';
 const DOWNLOAD_MESSAGE = 'Não foi possível baixar o relatório. Tente novamente.';
+const SHARE_MESSAGE = 'Não foi possível abrir o compartilhamento do relatório. Gere o relatório novamente.';
 const TIMEOUT_MESSAGE =
   'A preparação do relatório demorou demais. Verifique sua conexão ou escolha um período menor e tente novamente.';
 
@@ -150,7 +158,7 @@ export function useReportPdf(): UseReportPdfResult {
   const inFlightRef = useRef(false);
   const uidRef = useRef(uid);
   const lastRequestRef = useRef<ReportPeriodRequest | null>(null);
-  const pdfRef = useRef<Blob | null>(null);
+  const pdfRef = useRef<ReportPdfArtifact | null>(null);
   const previewRef = useRef<PdfPreviewHandle | null>(null);
 
   function releasePreview(): void {
@@ -238,9 +246,27 @@ export function useReportPdf(): UseReportPdfResult {
 
       // O prazo cobre o import de jsPDF/AutoTable dentro de `render`. Um desenho que termina resolve
       // num microtask, antes do timer: só o carregamento travado é descartado.
-      const pdf = await withDeadline(pipeline.render(built.model), deadline);
+      const rendering = pipeline.render(built.model);
+      let pdf: ReportPdfArtifact;
+
+      try {
+        pdf = await withDeadline(rendering, deadline);
+      } catch (renderError) {
+        if (renderError instanceof PreparationTimeoutError) {
+          // O resultado que chegar depois do prazo não tem dono: o adaptador o descarta (no
+          // Android, apaga o arquivo temporário; na Web, nada a fazer). Uma falha tardia dessa
+          // etapa abandonada não tem a quem informar — a mensagem do prazo já foi dada.
+          rendering.then(
+            (late) => reportPdfPlatform.discard?.(late),
+            () => undefined,
+          );
+        }
+        throw renderError;
+      }
 
       if (!isCurrent()) {
+        // Cancelado ou conta trocada durante a renderização: o arquivo nunca será entregue.
+        reportPdfPlatform.discard?.(pdf);
         return false;
       }
 
@@ -301,15 +327,43 @@ export function useReportPdf(): UseReportPdfResult {
       return false;
     }
 
+    const failureMessage = reportPdfPlatform.deliveryMode === 'share' ? SHARE_MESSAGE : DOWNLOAD_MESSAGE;
+    let delivery: void | Promise<void>;
+
     try {
-      reportPdfPlatform.deliver(review.fileName, pdf);
+      delivery = reportPdfPlatform.deliver(review.fileName, pdf);
     } catch {
       logError('report.deliver', new Error('report-deliver-failed'), { uid });
-      setState((previous) => ({ ...previous, error: DOWNLOAD_MESSAGE }));
+      setState((previous) => ({ ...previous, error: failureMessage }));
       return false;
     }
 
-    releasePreview();
+    if (delivery === undefined) {
+      releasePreview();
+    } else {
+      // Compartilhamento em andamento: o arquivo só é liberado quando a folha fechar, nunca antes
+      // (o app de destino ainda pode estar lendo). Sai do estado do hook já agora: cancelar,
+      // trocar de conta ou desmontar não podem apagá-lo durante a leitura.
+      const handle = previewRef.current;
+      previewRef.current = null;
+      pdfRef.current = null;
+      delivery.then(
+        () => handle?.release(),
+        () => {
+          handle?.release();
+          // Sem a exceção do SDK: a mensagem dela pode trazer o caminho do arquivo.
+          logError('report.deliver', new Error('report-deliver-failed'), { uid });
+
+          if (uidRef.current === uid) {
+            // Só aparece se nada novo começou nesta conta; outra conta nunca vê o erro.
+            setState((previous) =>
+              previous.owner === uid && previous.stage === 'idle' ? { ...previous, error: failureMessage } : previous,
+            );
+          }
+        },
+      );
+    }
+
     setState({ owner: uid, ...IDLE });
     return true;
   }
@@ -326,6 +380,7 @@ export function useReportPdf(): UseReportPdfResult {
 
   return {
     isAvailable: reportPdfPlatform.isAvailable,
+    deliveryMode: reportPdfPlatform.deliveryMode,
     stage: isOwnState ? state.stage : 'idle',
     review: isOwnState ? state.review : null,
     error: isOwnState ? state.error : null,

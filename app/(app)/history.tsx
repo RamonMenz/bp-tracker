@@ -105,6 +105,7 @@ export default function HistoryScreen() {
   const { exportCsv, isExporting, error: exportError } = useExportCsv();
   const {
     isAvailable: isReportPdfAvailable,
+    deliveryMode: reportDeliveryMode,
     stage: reportStage,
     review: reportReview,
     error: reportError,
@@ -124,6 +125,9 @@ export default function HistoryScreen() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  /** Erro do relatório que chega com o diálogo fechado — no Android, a folha de compartilhamento
+   *  só falha depois de "Salvar ou compartilhar" já ter fechado o diálogo. Derivado no render. */
+  const pendingReportError = isReportDialogOpen ? null : reportError;
   /** id da medição sendo excluída agora — é o que diz a QUAL linha o indicador de progresso
    *  pertence, já que useDeleteReading é um hook só, compartilhado pela lista inteira. */
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -253,7 +257,7 @@ export default function HistoryScreen() {
               loading={isExporting}
             />
 
-            {/* Só na Web nesta etapa (P1): independente do CSV, que continua igual. */}
+            {/* Web (download) e Android (compartilhamento): independente do CSV, que continua igual. */}
             {isReportPdfAvailable ? (
               <Button
                 label="Gerar relatório PDF"
@@ -290,10 +294,13 @@ export default function HistoryScreen() {
       {/* Fora da FlashList de propósito (BUG-07): dentro do ListHeaderComponent, o erro nascia no
           topo absoluto da lista — quem excluía uma linha várias rolagens abaixo nunca via a
           mensagem. Ancorado aqui, ela fica visível não importa até onde a lista tenha rolado. */}
-      {exportError || deleteError ? (
+      {exportError || deleteError || pendingReportError ? (
         <View pointerEvents="box-none" className="absolute inset-x-4 bottom-4 gap-2">
           {exportError ? <InlineFeedback tone="danger" message={exportError} style={tokens.shadow.raised} /> : null}
           {deleteError ? <InlineFeedback tone="danger" message={deleteError} style={tokens.shadow.raised} /> : null}
+          {pendingReportError ? (
+            <InlineFeedback tone="danger" message={pendingReportError} style={tokens.shadow.raised} />
+          ) : null}
         </View>
       ) : null}
 
@@ -325,6 +332,7 @@ export default function HistoryScreen() {
         stage={reportStage}
         review={reportReview}
         error={reportError}
+        deliveryMode={reportDeliveryMode}
         // Fica aberto durante a preparação e a revisão; erros (período vazio, sem conexão, limite)
         // aparecem dentro do diálogo para o usuário trocar o período.
         onPrepare={(request) => void prepareReport(request)}

@@ -28,6 +28,11 @@ export interface ExportPdfDialogProps {
   onChangePeriod: () => void;
   /** Fecha o diálogo; durante a preparação ou revisão, também as descarta (quem monta decide). */
   onCancel: () => void;
+  /**
+   * `download` (Web): prévia embutida e download. `share` (Android): sem prévia, o PDF sai pela
+   * folha de compartilhamento do sistema. Vem de `useReportPdf().deliveryMode`.
+   */
+  deliveryMode?: 'download' | 'share';
 }
 
 type Shortcut = ReportPeriodRequest['kind'];
@@ -75,6 +80,7 @@ export function ExportPdfDialog({
   onRetry,
   onChangePeriod,
   onCancel,
+  deliveryMode = 'download',
 }: ExportPdfDialogProps) {
   const scheme = useColorScheme();
   const palette = colors[scheme];
@@ -114,13 +120,16 @@ export function ExportPdfDialog({
                 onRetry={onRetry}
                 onChangePeriod={onChangePeriod}
                 onCancel={onCancel}
+                deliveryMode={deliveryMode}
               />
             ) : (
               <>
                 <Text variant="sectionHeader">Período do relatório</Text>
 
                 <Text variant="body">
-                  O PDF é preparado neste aparelho, com as medições do período escolhido. Você revisa a prévia antes de salvar.
+                  {deliveryMode === 'share'
+                    ? 'O PDF é preparado neste aparelho, com as medições do período escolhido. Você confere o resumo antes de salvar ou compartilhar.'
+                    : 'O PDF é preparado neste aparelho, com as medições do período escolhido. Você revisa a prévia antes de salvar.'}
                 </Text>
 
                 <View className="gap-2" accessibilityRole="radiogroup">
