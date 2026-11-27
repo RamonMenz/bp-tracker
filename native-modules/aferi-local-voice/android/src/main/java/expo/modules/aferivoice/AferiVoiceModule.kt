@@ -45,6 +45,10 @@ class AferiVoiceModule : Module() {
       val local = speech
       if (local == null) promise.resolve(mapOf("code" to "language-unverified")) else local.start(id, promise)
     }.runOnQueue(Queues.MAIN)
+    AsyncFunction("startWithHypotheses") { id: Int, promise: Promise ->
+      val local = speech
+      if (local == null) promise.resolve(mapOf("code" to "language-unverified")) else local.start(id, promise, withHypotheses = true)
+    }.runOnQueue(Queues.MAIN)
     AsyncFunction("finish") { id: Int -> speech?.finish(id) ?: false }.runOnQueue(Queues.MAIN)
     AsyncFunction("cancel") { id: Int -> speech?.cancel(id) ?: true }.runOnQueue(Queues.MAIN)
     OnActivityEntersBackground { speech?.interrupt() }

@@ -46,6 +46,17 @@ async function within(work: Promise<boolean>, ms: number): Promise<boolean> {
 /** Só FinalTranscript após fechamento. Sem transcrição/hipóteses em estado React ou escrita. */
 export function createVoiceSession(ports: VoiceCapturePorts, onState: (state: VoiceState) => void,
   onFinal: (attemptId: number, final: FinalTranscript) => void) {
+  return createVoiceSessionWithResult(ports, onState, raw => {
+    const final = decodeFinalTranscript(raw);
+    return final && { value: final };
+  }, onFinal);
+}
+
+type DecodedResult<T> = { value: T; issue?: VoiceCaptureCode };
+
+/** Decodifica a saída da porta na chegada e só publica o resultado após confirmação de fechamento. */
+export function createVoiceSessionWithResult<T>(ports: VoiceCapturePorts, onState: (state: VoiceState) => void,
+  decode: (raw: unknown) => DecodedResult<T> | null, onFinal: (attemptId: number, final: T) => void) {
   let state: VoiceState = { phase: 'idle', attemptId: 0, issue: null };
   let current: VoiceAttempt | null = null;
   let completion = Promise.resolve();
@@ -56,7 +67,7 @@ export function createVoiceSession(ports: VoiceCapturePorts, onState: (state: Vo
     state = { ...state, phase, issue }; if (!disposed) onState(state);
   }
   async function run(attempt: VoiceAttempt, ticket: object) {
-    let final: FinalTranscript | null = null;
+    let final: DecodedResult<T> | null = null;
     let issue: VoiceCaptureCode | null = null;
     let permission: Promise<boolean> | null = null;
     let unsubscribe: (() => void) | null = null;
@@ -76,9 +87,11 @@ export function createVoiceSession(ports: VoiceCapturePorts, onState: (state: Vo
       attempt.check(); emit('preparing');
       requireReady(await attempt.wait(ports.prepare(attempt.id), 12000));
       attempt.check(); emit('opening');
-      const raw = await attempt.wait(ports.start(attempt.id), 35000); attempt.check();
-      if (raw && typeof raw === 'object' && 'code' in raw) throw new VoiceCaptureError(voiceCode(raw.code));
-      final = decodeFinalTranscript(raw);
+      final = await attempt.wait(ports.start(attempt.id), 35000).then(raw => {
+        attempt.check();
+        if (raw && typeof raw === 'object' && 'code' in raw) throw new VoiceCaptureError(voiceCode(raw.code));
+        return decode(raw);
+      });
       if (!final) throw new VoiceCaptureError('engine-failed');
     } catch (error) { issue = error instanceof VoiceCaptureError ? error.code : 'engine-failed'; }
     finally {
@@ -96,8 +109,8 @@ export function createVoiceSession(ports: VoiceCapturePorts, onState: (state: Vo
       else if (attempt.aborted || disposed) emit('cancelled', issue === 'timeout' ? 'timeout' : 'cancelled');
       else if (issue) emit(issue === 'cancelled' ? 'cancelled' : 'failed', issue);
       else if (final) {
-        emit('reviewing');
-        if (!disposed) { try { onFinal(attempt.id, final); } catch { emit('failed', 'engine-failed'); } }
+        emit(final.issue ? 'failed' : 'reviewing', final.issue);
+        if (!disposed) { try { onFinal(attempt.id, final.value); } catch { emit('failed', 'engine-failed'); } }
       }
       attempt.cancel();
       if (current === attempt) { current = null; beginClose = null; }

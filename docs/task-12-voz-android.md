@@ -27,13 +27,14 @@ Fluxo por ação explícita:
 4. Solicitar foco de áudio transitório exclusivo e reconhecer uma única fala em
    pt-BR, sem parciais ou detecção automática de idioma. Não usa factory genérica,
    `EXTRA_PREFER_OFFLINE`, gravador paralelo, URI, WAV temporário ou fallback remoto.
-5. Somente `onResults` pode produzir `FinalTranscript` da TASK-03, texto limitado a
-   2000 caracteres e instante civil do início de `startListening`. Parciais, buffer,
-   volume/RMS e eventos genéricos são ignorados, sem transporte de áudio ao JS.
-   Hipóteses textuais distintas retornam `ambiguous-result`; não escolhe a primeira.
+5. Na demo, somente `onResults` entrega ao JS as hipóteses finais em pt-BR e o
+   instante civil do início de `startListening`. São até cinco textos distintos, com até
+   2.000 caracteres cada após `trim`. Parciais, buffer, volume/RMS e eventos
+   genéricos são ignorados, sem transporte de áudio ao JS.
 6. Invalidar tentativa, cancelar/destruir reconhecedor e abandonar foco antes de
-   resolver o resultado final. JS aguarda confirmação de fechamento antes de
-   entregar ao `useVoiceReview.receiveFinal` → decoder → parser TASK-14 → revisão.
+   resolver o resultado final. O JS interpreta cada hipótese com o parser da
+   TASK-14 e aguarda a confirmação de fechamento antes de abrir a revisão com o
+   conjunto concordante ou informar `ambiguous-result` se houver divergência.
 
 `android-voice-session.ts` coordena identidade, uma tentativa global, eventos por
 ID, permissão tardia não abortável, deadlines e fechamento aguardado. Toques
@@ -66,7 +67,7 @@ com persistência. Simulação anterior e preparação clínica TASK-11/15 prese
 cancelar, falar novamente e **Ir para registro manual**. Sem módulo/serviço/idioma
 comprovado, não inicia microfone e oferece manual. Nenhum erro bruto, transcrição,
 hipótese, áudio ou confiança entra em log, estado React, nota ou payload clínico.
-Transcrição final só vive transitoriamente na fronteira/parser; não é exibida.
+As hipóteses finais só vivem transitoriamente na fronteira e no parser.
 Não se promete sobrescrita física de RAM ou não retenção interna pelo fabricante.
 
 O manual do cliente isolado reutiliza `ReadingForm`, componentes e validações
@@ -124,10 +125,12 @@ horas reais e saldo global do teto R$ 300 não informados.
 
 ## Windows — gerar e identificar o APK local
 
-Comece na raiz do repositório com a branch `feat/voz-capacidade` disponível
-localmente e selecionada. O ambiente de referência usa Node 24.22.0, npm 11.19.1,
-JVM 17.0.21, wrapper Gradle 9.3.1 e SDK em `%LOCALAPPDATA%\Android\Sdk` com
-Build-Tools 36.0.0. O destino `C:\dev\aferi-voz-build` deve estar livre. Preserve
+Comece na raiz do repositório com o commit da revisão a avaliar selecionado.
+A V1 usou a branch `feat/voz-capacidade`. Para o reteste de 27/11, selecione um
+commit que contenha a correção das hipóteses. O ambiente de referência usa Node
+24.22.0, npm 11.19.1, JVM 17.0.21, wrapper Gradle 9.3.1 e SDK em
+`%LOCALAPPDATA%\Android\Sdk` com Build-Tools 36.0.0. O destino
+`C:\dev\aferi-voz-build` deve estar livre. Preserve
 worktrees e APKs anteriores. Os comandos abaixo usam `powershell.exe`,
 validado na rodada Windows do autor, onde `pwsh` não estava disponível.
 Os checks do CI usam PowerShell 7.
@@ -309,6 +312,51 @@ ativo. O hash acima é do JSON de build do autor.
 | K | Em modo avião, uma tentativa abriu revisão vazia e outra produziu os três candidatos esperados. O ensaio cobre capacidade offline nas condições descritas. Tráfego e retenção interna do serviço permanecem sem inspeção. |
 | L | Após confirmar candidatos sintéticos, sair para o manual e retornar, a revisão e a confirmação anteriores haviam desaparecido. Evidência de comportamento visível da demo. |
 
+## 27/11/2026 — Concordância das hipóteses finais
+
+No reteste relatado pelo autor no Samsung, as duas formas curtas
+sem pulso falharam em 10 de 10 tentativas. Predominou `ambiguous-result` e
+algumas tentativas abriram revisão vazia. As mesmas formas com pulso acertaram
+em 6 de 6 tentativas. A inspeção confirmou que duas strings distintas bastavam
+para o Android recusar o resultado antes do parser, mesmo com `EXTRA_MAX_RESULTS`
+igual a 1. A equivalência das hipóteses recebidas nessas tentativas segue por
+verificar no aparelho.
+
+Na demo, o Android agora solicita até cinco resultados e retorna somente as
+hipóteses distintas de `onResults`. Remove espaços nas pontas e descarta
+entradas em branco. Uma lista sem texto útil, mais de cinco textos distintos ou
+qualquer texto com mais de 2.000 caracteres após `trim` produz `no-result`.
+O JS interpreta cada hipótese com `interpretVoice` e exige igualdade de campos,
+status, valores, bases de interpretação e motivos de incerteza. “12 por 8” e
+“doze por oito” concordam. Um conjunto vazio e outro com candidatos geram
+`ambiguous-result`. Se todos produzirem campos vazios, a revisão continua vazia
+e exige correção antes de confirmar. A confirmação continua explícita e em memória
+na demo. O modo `recognition` do produto mantém a entrada nativa de transcrição
+única e o fluxo de confirmação existente.
+
+Somente a demo mostra a faixa de hipóteses distintas (`1`, `2` ou
+`3+`) e se houve concordância (`sim` ou `não`) na tentativa concluída. O painel
+é limpo ao iniciar outra tentativa ou cancelar. O diagnóstico fica em memória e
+contém somente esses dois dados. A mudança aumenta a quantidade de resultados
+solicitada ao motor. O reteste mede o comportamento dessa configuração no aparelho.
+A compilação Kotlin e a execução em aparelho desta revisão ficaram **não
+verificadas** no ambiente sem SDK Android e sem Samsung. Segue pendente a inspeção
+de armazenamento e tráfego do processo do reconhecedor do fabricante.
+
+### Reteste no Samsung
+
+Gere e instale um novo APK do cliente de avaliação e
+use o Metro da mesma revisão, conforme os blocos Windows acima. Repita 10
+tentativas, alternando “cento e vinte por oitenta” e “sistólica cento e vinte,
+diastólica oitenta”. Repita 6 tentativas com as mesmas formas seguidas de
+“pulso setenta e dois”. Por grupo, registre quantas revisões conferiram, quantas
+vieram vazias e os códigos fixos de recusa. Anote a faixa e a concordância quando
+o painel aparecer. Repita em modo avião com Metro via USB, exercite toques
+repetidos em iniciar e terminar e cancele durante a escuta e o reconhecimento.
+Observe o indicador de microfone e confirme que resultado tardio não reabre a
+revisão. Devolva as contagens e o quadro sanitizado abaixo, sem áudio,
+transcrições, valores reconhecidos ou posição de hipótese.
+
 ## Taxonomia do veredito
 
 Cada indisponibilidade confirmada representa um **limite de capacidade no
@@ -325,7 +373,7 @@ Uma divergência do fluxo esperado, como iniciar sem `ready` da preparação,
 | `permission-denied` | O microfone não foi concedido ou ficou indisponível por permissão. Nova tentativa depende de ação do usuário. |
 | `ready` | No probe inicial, API/serviço permitem prosseguir. Na preparação, o reconhecedor local verificou pt-BR instalado. Só este segundo estado habilita a captura; ainda não demonstra uma fala reconhecida. |
 | `resource-busy`, `interrupted`, `timeout` | Reconhecedor ocupado, sessão interrompida ou tempo excedido. Registre fase e liberação observável. |
-| `no-result`, `ambiguous-result`, `engine-failed` | Resultado final ausente, hipóteses diferentes ou falha do motor. Registre apenas o código e a mensagem fixa. |
+| `no-result`, `ambiguous-result`, `engine-failed` | Resultado final ausente ou fora dos limites, interpretações divergentes ou falha do motor. Registre o código e a mensagem fixa. Na demo, registre também a faixa e a concordância quando disponíveis. |
 | `cancelled`, `cleanup-failed` | Sessão cancelada ou liberação não confirmada. A segunda condição deixa a voz bloqueada e o manual acessível. |
 
 ## Devolução sanitizada da rodada
@@ -378,3 +426,15 @@ ficam fora do relato.
   prevê V2 Web atrás de flag desligada por padrão e V3 Android com rebuild do
   Dev Client. A verificação de privacidade do serviço e os aceites de
   confirmação, cancelamento e troca de conta ainda condicionam a habilitação.
+
+### Atualização de 27/11/2026
+
+- **Evidência.** O autor relatou 10 falhas em 10 tentativas sem pulso e 6 acertos
+  em 6 tentativas com pulso no Samsung. A regra anterior recusava grafias
+  distintas antes do parser. Testes com a porta nativa simulada verificam
+  concordância, divergência, descarte de texto e cancelamento.
+- **Decisão.** Exigir concordância integral das interpretações, preservar a
+  revisão explícita e mostrar somente faixa e concordância na demo.
+- **Limites e reprodução.** Compilação Kotlin e eficácia no Samsung continuam
+  sem verificação para esta revisão. Recompilar a demo e repetir os grupos
+  sintéticos com e sem pulso, incluindo a rodada offline e o cancelamento.

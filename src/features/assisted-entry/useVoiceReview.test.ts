@@ -116,7 +116,16 @@ test('integração local com TASK-11 exige confirmação explícita e usa source
 test('fixture não entra no modo clínico; resultado real não entra no modo demonstrativo', async () => {
   const flow = clinicalFlow();
   const live = await renderHook(() => useVoiceReview({ mode: 'recognition', confirmation: flow.confirmation }));
-  await act(() => { expect(live.result.current.receiveFinal(live.result.current.newAttempt(), final('120 por 80'), 'synthetic')).toBe(false); });
+  const candidates = { modality: 'voice', capturedAtMs, fields: {
+    systolic: { status: 'candidate', value: 120, basis: 'explicit-phrase' },
+    diastolic: { status: 'candidate', value: 80, basis: 'explicit-phrase' }, pulse: { status: 'missing' },
+  } } as const;
+  await act(() => {
+    const id = live.result.current.newAttempt();
+    expect(live.result.current.receiveFinal(id, final('120 por 80'), 'synthetic')).toBe(false);
+    expect(live.result.current.receivePreview(id, candidates)).toBe(false);
+  });
+  expect(live.result.current.state.draft).toBeNull();
   expect(flow.loadWriter).not.toHaveBeenCalled();
   const demo = await renderHook(useVoiceReview);
   await act(() => { expect(demo.result.current.receiveFinal(demo.result.current.newAttempt(), final('120 por 80'), 'recognition')).toBe(false); });

@@ -21,7 +21,11 @@ import expo.modules.kotlin.Promise
 
 // Base TASK-05 (7fbe137), isolada da câmera. Sem gravador, URI/arquivo, rede ou logger.
 class LocalSpeech(private val context: Context, private val status: (Int, String) -> Unit) {
-  companion object { private var owner: LocalSpeech? = null }
+  companion object {
+    private const val MAX_HYPOTHESES = 5
+    private const val MAX_HYPOTHESIS_LENGTH = 2000
+    private var owner: LocalSpeech? = null
+  }
   private val handler = Handler(Looper.getMainLooper())
   private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
   private var recognizer: SpeechRecognizer? = null
@@ -34,6 +38,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
   private var cleanupBlocked = false
   private var capturedAtMs = 0L
   private var finishRequested = false
+  private var collectHypotheses = false
 
   fun availability(): String = try {
     when {
@@ -44,11 +49,11 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     }
   } catch (_: Exception) { "local-unavailable" }
 
-  private fun intent() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+  private fun intent(maxResults: Int = 1) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, maxResults)
     // Não usa EXTRA_PREFER_OFFLINE nem factory genérica/remota.
   }
   private fun current(id: Int) = activeId == id && id != 0 && !cleanupBlocked
@@ -121,19 +126,34 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       }
       override fun onResults(results: Bundle?) {
         if (!capturing(id)) return
-        // Não seleciona silenciosamente entre hipóteses distintas, mesmo com MAX_RESULTS=1.
         try {
-          val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
-          val text = texts?.singleOrNull()
-          if (texts != null && texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
-          else if (text.isNullOrEmpty() || text.length > 2000) complete(mapOf("code" to "no-result"))
-          else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
-            "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
+          val resultsList = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()
+          if (!collectHypotheses) {
+            val texts = resultsList.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            val text = texts.singleOrNull()
+            if (texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
+            else if (text.isNullOrEmpty() || text.length > MAX_HYPOTHESIS_LENGTH) complete(mapOf("code" to "no-result"))
+            else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
+              "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
+            return
+          }
+          val hypotheses = mutableSetOf<String>()
+          for (hypothesis in resultsList) {
+            val text = hypothesis.trim()
+            if (text.isNotEmpty()) hypotheses.add(text)
+            if (text.length > MAX_HYPOTHESIS_LENGTH || hypotheses.size > MAX_HYPOTHESES) {
+              complete(mapOf("code" to "no-result"))
+              return
+            }
+          }
+          if (hypotheses.isEmpty()) complete(mapOf("code" to "no-result"))
+          else complete(mapOf("kind" to "transcript-hypotheses", "locale" to "pt-BR", "final" to true,
+            "capturedAtMs" to capturedAtMs.toDouble(), "hypotheses" to hypotheses.toList()))
         } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
       }
     }
   }
-  fun start(id: Int, promise: Promise) {
+  fun start(id: Int, promise: Promise, withHypotheses: Boolean = false) {
     if (!current(id) || phase != "prepared" || !verified) { promise.resolve(mapOf("code" to "language-unverified")); return }
     pending = promise
     if (availability() != "ready") { complete(mapOf("code" to "local-unavailable")); return }
@@ -142,7 +162,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     }
     try {
       val local = recognizer ?: throw IllegalStateException()
-      phase = "opening"; finishRequested = false
+      phase = "opening"; finishRequested = false; collectHypotheses = withHypotheses
       val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
         .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANT)
           .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
@@ -155,7 +175,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       }
       if (!current(id)) return
       capturedAtMs = System.currentTimeMillis(); timeout(30000)
-      local.startListening(intent())
+      local.startListening(intent(if (collectHypotheses) MAX_HYPOTHESES else 1))
     } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
   }
   fun finish(id: Int): Boolean {
@@ -178,7 +198,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
   }
   private fun complete(result: Map<String, Any>) {
     val target = pending; pending = null
-    activeId = 0; verified = false; capturedAtMs = 0L; finishRequested = false
+    activeId = 0; verified = false; capturedAtMs = 0L; finishRequested = false; collectHypotheses = false
     phase = "closing" // Invalida antes de cancel/destroy reentrantes.
     deadline?.let { handler.removeCallbacks(it) }; deadline = null
     val engine = recognizer; recognizer = null
