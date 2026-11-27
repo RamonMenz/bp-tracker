@@ -1,9 +1,12 @@
 // Traz para o log do GitHub o log completo de um build da EAS, que `eas build --wait` não mostra
 // (no CI ele só acompanha o status). Entrada: o JSON de `eas build:view <id> --json`.
-// Saída: o log por fase, um resumo das linhas de erro ao final e, em $GITHUB_OUTPUT, status,
-// URL da página do build e a URL do artefato (gravada só no arquivo de saída, nunca impressa).
-// Uso: node tools/eas/build-report.cjs <build.json>
-const { readFileSync, appendFileSync } = require('node:fs');
+// Saída: o log por fase, um resumo das linhas de erro ao final e, em $GITHUB_OUTPUT, status e
+// URL da página do build. A URL do artefato vai SÓ para <dir>/apk-url.txt — nunca para
+// $GITHUB_OUTPUT nem `env:` de passo, que o GitHub imprime no cabeçalho de cada passo.
+// As mensagens do log também são gravadas em <dir>/eas-build.log, para o resumo final.
+// Uso: node tools/eas/build-report.cjs <build.json> <dir>
+const { readFileSync, appendFileSync, writeFileSync } = require('node:fs');
+const path = require('node:path');
 const { Buffer } = require('node:buffer');
 const { gunzipSync } = require('node:zlib');
 
@@ -37,6 +40,7 @@ function parseLines(text) {
 
 async function main() {
   const file = process.argv[2];
+  const outDir = process.argv[3];
   const parsed = JSON.parse(readFileSync(file, 'utf8'));
   const build = Array.isArray(parsed) ? parsed[0] : parsed;
   if (!build?.id) throw new Error('JSON sem build');
@@ -63,6 +67,10 @@ async function main() {
     process.stdout.write(`${msg}\n`);
   }
   if (currentPhase !== null) process.stdout.write('::endgroup::\n');
+  if (outDir) {
+    writeFileSync(path.join(outDir, 'eas-build.log'), lines.map(({ phase, msg }) => `[${phase}] ${msg}`).join('\n'));
+    writeFileSync(path.join(outDir, 'apk-url.txt'), build.artifacts?.applicationArchiveUrl ?? build.artifacts?.buildUrl ?? '');
+  }
 
   const errorLines = lines.filter(({ msg }) => ERROR_PATTERN.test(msg)).slice(-MAX_ERROR_LINES);
   process.stdout.write('\n===== Resumo do build EAS =====\n');
@@ -76,8 +84,7 @@ async function main() {
   process.stdout.write(`\nPágina do build: ${url}\n`);
 
   if (process.env.GITHUB_OUTPUT) {
-    const apkUrl = build.artifacts?.applicationArchiveUrl ?? build.artifacts?.buildUrl ?? '';
-    appendFileSync(process.env.GITHUB_OUTPUT, `status=${build.status}\npage_url=${url}\napk_url=${apkUrl}\n`);
+    appendFileSync(process.env.GITHUB_OUTPUT, `status=${build.status}\npage_url=${url}\n`);
   }
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Build EAS \`${build.buildProfile ?? ''}\`: ${build.status}\n\n[Página do build](${url})\n`);

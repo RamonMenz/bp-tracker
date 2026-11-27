@@ -31,7 +31,7 @@
 6. **Segurança do log.**
    - `EXPO_TOKEN` vem só de `secrets.EXPO_TOKEN` e entra só nos passos que falam com a EAS, nunca no `npm ci`.
    - `tools/eas/env-names.cjs` emite `::add-mask::` para cada valor com 6 ou mais caracteres e imprime só nomes. Nada usa `cat` ou `printenv` no arquivo.
-   - A URL do APK passa entre passos por `GITHUB_OUTPUT` e não é impressa.
+   - A URL do artefato passa entre passos **por arquivo** em `$RUNNER_TEMP`. Na 2ª execução ela ia em `env:` do passo, e o GitHub imprime esse bloco no cabeçalho de cada passo, então a URL apareceu no log daquela execução (ver §6). O conserto veio na 3ª execução.
 7. **Um build por vez.** `concurrency: eas-build`, sem cancelar o que está em curso. Timeouts: 60 min no pré-voo e 180 min no build, porque a fila gratuita pode demorar. Se o job estourar o tempo, o build continua na EAS e pode ser acompanhado com o input `build_id`, que **não cria build novo**.
 8. **Versões fixadas no job novo.** Node 22: a doc do EAS CLI marca o Node 20 como obsoleto. `eas-cli@27.11.0`: a versão cujo código foi lido para estas decisões. O job `development` ficou como estava (Node 20, `eas-cli` mais recente, `--no-wait`).
 9. **Inspeção do APK sem gastar cota.** O workflow baixa o APK pronto e confere, imprimindo só contagens:
@@ -111,8 +111,9 @@ O acesso a `docs.expo.dev` estava bloqueado neste ambiente. A doc foi lida no c�
 
 ## 6. Resultado das tentativas
 
-*(atualizado a cada execução; cota EAS usada até aqui: 0 builds)*
+*(atualizado a cada execução; cota EAS usada até aqui: 1 build)*
 
 | # | Execução do GitHub | Pré-voo nativo | Build EAS | Causa e correção |
 |---|---|---|---|---|
 | 1 | [46079186932](https://github.com/RamonMenz/bp-tracker/actions/runs/46079186932) | ✅ passou: export com voz, prebuild e `:app:compileReleaseKotlin` em cerca de 5 min | **não criado** (0 de cota) | `eas env:pull` falhou em 1 s: `expo config --json exited with non-zero code: 1` (`requireEnv` sem variáveis no runner). Correção: `ci-placeholder` no job (§1.5), reproduzido no host. |
+| 2 | [46080650099](https://github.com/RamonMenz/bp-tracker/actions/runs/46080650099) | pulado (já passou na 1ª, mesmo nativo) | **build 1/3: FINISHED** em cerca de 23 min, [página do build](https://expo.dev/accounts/ramoncode/projects/bp-tracker/builds/257aeb67-4c74-477c-b905-e9c75b63af90) | APK de 109 MB. Inspeção: `assets/index.android.bundle` presente, voz no bundle (1), `expo/modules/aferivoice` nos dex (24), dev launcher ausente (0), `RECORD_AUDIO` e `POST_NOTIFICATIONS` declaradas, `CAMERA` ausente. Debug token não legível no `env:pull`. Falha minha: a URL do artefato apareceu no cabeçalho `env:` do passo de inspeção. Corrigido. |

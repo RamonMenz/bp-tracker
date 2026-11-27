@@ -186,7 +186,7 @@ jobs:
         id: envnames
         run: |
           eas env:pull --environment development --non-interactive --path "$RUNNER_TEMP/eas-development.env"
-          node tools/eas/env-names.cjs "$RUNNER_TEMP/eas-development.env"
+          node tools/eas/env-names.cjs "$RUNNER_TEMP/eas-development.env" "$RUNNER_TEMP/env-names.txt"
           rm -rf .eas/.env
           echo "Perfil standalone-teste acrescenta (eas.json > env): EXPO_PUBLIC_ANDROID_VOICE_ENABLED"
           git status --porcelain
@@ -227,7 +227,7 @@ jobs:
         if: ${{ !cancelled() && steps.build.outputs.build_id != '' }}
         run: |
           eas build:view "$BUILD_ID" --json > "$RUNNER_TEMP/build-final.json"
-          node tools/eas/build-report.cjs "$RUNNER_TEMP/build-final.json"
+          node tools/eas/build-report.cjs "$RUNNER_TEMP/build-final.json" "$RUNNER_TEMP"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           BUILD_ID: ${{ steps.build.outputs.build_id }}
@@ -238,7 +238,8 @@ jobs:
         if: ${{ !cancelled() && steps.report.outputs.status == 'FINISHED' }}
         run: |
           apk="$RUNNER_TEMP/app.apk"
-          curl -sSfL "$APK_URL" -o "$apk"
+          # A URL do artefato é lida do arquivo (não vai para `env:`, que o GitHub imprime).
+          curl -sSfL "$(cat "$RUNNER_TEMP/apk-url.txt")" -o "$apk"
           echo "Tamanho do APK: $(du -h "$apk" | cut -f1)"
           unzip -l "$apk" | grep -E 'assets/index\.android\.bundle' || { echo "::error::APK sem bundle JS embutido"; exit 1; }
           echo "Voz no bundle ('Verificar voz local'): $(unzip -p "$apk" assets/index.android.bundle | grep -a -c 'Verificar voz local' || true)"
@@ -253,12 +254,16 @@ jobs:
           else
             echo "Debug token do App Check: não legível no ambiente development (ausente ou secret; ver a lista de nomes acima)."
           fi
-        env:
-          APK_URL: ${{ steps.report.outputs.apk_url }}
 
       - name: Resultado
         if: ${{ !cancelled() && steps.build.outputs.build_id != '' }}
         run: |
+          # Repete no fim (onde a leitura do log por "tail" alcança) só NOMES e linhas de status.
+          if [ -f "$RUNNER_TEMP/env-names.txt" ]; then cat "$RUNNER_TEMP/env-names.txt"; fi
+          if [ -f "$RUNNER_TEMP/eas-build.log" ]; then
+            echo "Linhas do builder sobre variáveis (o eas-cli só lista nomes):"
+            grep -iE 'environment variables|build profile "env"|defined in both' "$RUNNER_TEMP/eas-build.log" | head -n 20 || true
+          fi
           echo "Status: $STATUS"
           echo "Página do build: $PAGE_URL"
           test "$STATUS" = "FINISHED"
