@@ -18,6 +18,8 @@ export interface ReportReviewPanelProps {
   onRetry: () => void;
   onChangePeriod: () => void;
   onCancel: () => void;
+  /** `share` (Android): sem prévia embutida; a ação vira "Salvar ou compartilhar". */
+  deliveryMode?: 'download' | 'share';
 }
 
 /**
@@ -36,10 +38,19 @@ export function ReportReviewPanel({
   onRetry,
   onChangePeriod,
   onCancel,
+  deliveryMode = 'download',
 }: ReportReviewPanelProps) {
   const scheme = useColorScheme();
   const palette = colors[scheme];
   const isPartial = !review.isCoverageConfirmed;
+  const isShare = deliveryMode === 'share';
+  const saveLabel = isShare
+    ? isPartial
+      ? 'Salvar ou compartilhar recorte parcial'
+      : 'Salvar ou compartilhar PDF'
+    : isPartial
+      ? 'Salvar recorte parcial em PDF'
+      : 'Salvar PDF';
 
   return (
     <View className="gap-4">
@@ -80,22 +91,34 @@ export function ReportReviewPanel({
             <Text key={warning} variant="body">{`• ${warning}`}</Text>
           ))}
           <Text variant="caption">
-            Você pode tentar novamente com conexão ou salvar este recorte parcial; o PDF declara a condição.
+            {isShare
+              ? 'Você pode tentar novamente com conexão ou salvar/compartilhar este recorte parcial; o PDF declara a condição.'
+              : 'Você pode tentar novamente com conexão ou salvar este recorte parcial; o PDF declara a condição.'}
           </Text>
         </View>
       ) : null}
 
-      <PdfPreviewFrame url={review.previewUrl} title="Pré-visualização do relatório em PDF" />
+      {isShare ? (
+        // Android: sem pré-visualização embutida nesta versão (spec §3.4.1 pede recurso compatível
+        // com a plataforma; o leitor de PDF escolhido pelo usuário faz esse papel).
+        <Text variant="body">
+          Este aparelho não mostra a prévia do PDF dentro do Aferi. Depois de salvar ou compartilhar, abra o arquivo no aplicativo escolhido para conferi-lo.
+        </Text>
+      ) : (
+        <PdfPreviewFrame url={review.previewUrl} title="Pré-visualização do relatório em PDF" />
+      )}
 
       <Text variant="caption">
-        O PDF foi preparado neste aparelho. Ao salvar, a cópia fica no destino que você escolher, fora do controle do Aferi.
+        {isShare
+          ? 'O PDF foi preparado neste aparelho. Ao salvar ou compartilhar, o destino escolhido pode manter uma cópia fora do controle do Aferi.'
+          : 'O PDF foi preparado neste aparelho. Ao salvar, a cópia fica no destino que você escolher, fora do controle do Aferi.'}
       </Text>
 
       {error ? <InlineFeedback tone="danger" message={error} /> : null}
 
       <View className="gap-3">
         <Button
-          label={isPartial ? 'Salvar recorte parcial em PDF' : 'Salvar PDF'}
+          label={saveLabel}
           onPress={onSave}
           disabled={isPreparing}
         />
