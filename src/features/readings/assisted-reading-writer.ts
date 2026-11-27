@@ -1,8 +1,7 @@
 import { createAssistedConfirmation, type AssistedWriteContext } from './confirmed-assisted-reading';
 
-/** Composição preparada para a futura tela autenticada, ainda não montada no app.
- * O chamador deve manter persistenceEnabled=false até homologação segura e
- * fornecer UID, epoch e aceite atuais. Demonstrações não importam este módulo.
+/** Porta da tela autenticada. Exige flag, UID, epoch e aceite atuais.
+ * Demonstrações não importam este módulo.
  */
 export function prepareAssistedReadingWriter(currentContext: () => AssistedWriteContext) {
   return createAssistedConfirmation({

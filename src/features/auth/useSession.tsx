@@ -1,13 +1,19 @@
-import { onAuthStateChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { onIdTokenChanged, signOut as firebaseSignOut, type User } from 'firebase/auth';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { auth } from '@/services/firebase';
 
 import { ensureUserProfile } from './ensureUserProfile';
 import { signInWithGoogle } from './signInWithGoogle';
 
+interface SessionEpoch {
+  readonly id: number;
+}
+
 export interface UseSessionResult {
   user: User | null;
+  sessionEpoch: SessionEpoch | null;
+  getSessionEpoch: () => SessionEpoch | null;
   isLoading: boolean;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -26,17 +32,23 @@ function getErrorCode(error: unknown): string | undefined {
 }
 
 function useSessionState(): UseSessionResult {
-  const [user, setUser] = useState<User | null>(null);
+  const [identity, setIdentity] = useState<{ user: User; epoch: SessionEpoch } | null>(null);
+  const currentIdentity = useRef(identity);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     let generation = 0;
-    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
-      if (!active) return;
+    let observedUser: User | null | undefined;
+    const unsubscribe = onIdTokenChanged(auth, (nextUser) => {
+      // Um novo login pode substituir o objeto User sem mudar o UID. Refresh do
+      // token do mesmo objeto conserva o epoch e a revisão em andamento.
+      if (!active || observedUser === nextUser) return;
+      observedUser = nextUser;
       const currentGeneration = ++generation;
       // Retirar a identidade anterior antes de aguardar qualquer sincronização.
-      setUser(null);
+      currentIdentity.current = null;
+      setIdentity(null);
       if (nextUser === null) {
         setIsLoading(false);
         return;
@@ -44,17 +56,19 @@ function useSessionState(): UseSessionResult {
       setIsLoading(true);
 
       // Falha ao sincronizar o perfil não deve travar o login — o próximo
-      // onAuthStateChanged (próxima abertura do app) tenta de novo.
+      // login (ou a próxima abertura do app) tenta de novo.
       ensureUserProfile(nextUser)
         .catch(() => undefined)
         .finally(() => {
           if (!active || currentGeneration !== generation) return;
-          setUser(nextUser);
+          const nextIdentity = { user: nextUser, epoch: { id: currentGeneration } };
+          currentIdentity.current = nextIdentity;
+          setIdentity(nextIdentity);
           setIsLoading(false);
         });
     });
 
-    return () => { active = false; generation++; unsubscribe(); };
+    return () => { active = false; currentIdentity.current = null; unsubscribe(); };
   }, []);
 
   async function signIn(): Promise<void> {
@@ -81,12 +95,24 @@ function useSessionState(): UseSessionResult {
     }
   }
 
-  return { user, isLoading, signIn, signOut };
+  function getSessionEpoch(): SessionEpoch | null {
+    const active = currentIdentity.current;
+    return active && active.user === auth.currentUser ? active.epoch : null;
+  }
+
+  return {
+    user: identity?.user ?? null,
+    sessionEpoch: identity?.epoch ?? null,
+    getSessionEpoch,
+    isLoading,
+    signIn,
+    signOut,
+  };
 }
 
 const SessionContext = createContext<UseSessionResult | null>(null);
 
-// Provider único no _layout.tsx: garante um só onAuthStateChanged (e um só ensureUserProfile
+// Provider único no _layout.tsx: garante um só observador do Firebase Auth (e um só ensureUserProfile
 // por transição de estado) mesmo com várias telas consumindo useSession.
 export function SessionProvider({ children }: { children: ReactNode }) {
   const session = useSessionState();

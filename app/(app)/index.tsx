@@ -14,6 +14,7 @@ import type { SessionReading } from '@/domain/session-average';
 import { useLastReading } from '@/features/readings/useLastReading';
 import { useReadingForm } from '@/features/readings/useReadingForm';
 import { useSecondMeasurementFlow } from '@/features/readings/useSecondMeasurementFlow';
+import { VoiceEntry } from '@/screens/VoiceEntry';
 
 // Onboarding simples: o aviso aparece uma vez (no primeiro uso deste aparelho) e some ao ser
 // dispensado — nunca mais bloqueia o caminho de registrar em ≤10s (CLAUDE.md §1).
@@ -118,6 +119,7 @@ export default function RecordScreen() {
           systolicRef={systolicRef}
           onSubmit={() => void handleSubmit()}
         />
+        {!isSecondMeasurementOpen ? <VoiceEntry onSaved={flow.handleReadingSaved} /> : null}
       </View>
 
       {/* Em 'idle' nada disto existe — o formulário continua sendo a primeira coisa da tela, e o

@@ -121,6 +121,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     googleWebClientId,
     appCheck,
     sentry,
+    webVoiceEnabled: process.env.EXPO_PUBLIC_WEB_VOICE_ENABLED === 'true',
     // Gerado por `eas build:configure` (config dinâmica não aceita escrita automática do eas-cli
     // — precisa entrar aqui manualmente). Liga este projeto ao projeto EAS
     // @ramoncode/bp-tracker; sem isso `eas build`/`eas init` não sabem para onde enviar o build.

@@ -1,3 +1,5 @@
+const path = require('node:path');
+
 const { getDefaultConfig } = require('expo/metro-config');
 const { withNativeWind } = require('nativewind/metro');
 
@@ -13,6 +15,11 @@ const JSPDF_ORIGIN = /[\\/]node_modules[\\/]jspdf[\\/]/;
 const upstreamResolveRequest = config.resolver.resolveRequest;
 
 config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // O export padrão nem inclui a voz ou seu chunk assíncrono no grafo do produto.
+  if (platform === 'web' && moduleName === '@/screens/VoiceEntry'
+    && process.env.EXPO_PUBLIC_WEB_VOICE_ENABLED !== 'true') {
+    return { type: 'sourceFile', filePath: path.join(__dirname, 'src/screens/VoiceEntry.tsx') };
+  }
   if (JSPDF_UNUSED_OPTIONAL_DEPENDENCIES.has(moduleName) && JSPDF_ORIGIN.test(context.originModulePath)) {
     return { type: 'empty' };
   }

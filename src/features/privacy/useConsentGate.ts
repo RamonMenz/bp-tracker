@@ -1,13 +1,19 @@
 import type { User } from 'firebase/auth';
 import { useRouter, useSegments } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { createContext, useEffect, useRef } from 'react';
 
 import { usePrivacyConsent } from './usePrivacyConsent';
 
 export interface UseConsentGateResult {
   /** `true` só com aceite da versão vigente confirmado no servidor. */
   hasConsent: boolean;
+  getHasConsent: () => boolean;
 }
+
+export const ConsentGateContext = createContext<UseConsentGateResult>({
+  hasConsent: false,
+  getHasConsent: () => false,
+});
 
 /**
  * Gate de navegação do consentimento (LGPD art. 11, I) — mesma assinatura de `useAuthRedirect` e
@@ -27,8 +33,8 @@ export interface UseConsentGateResult {
  * Em `(auth)` não faz nada: o `useAuthRedirect` tira o usuário de lá primeiro, e este efeito roda
  * de novo quando os segmentos mudam.
  */
-export function useConsentGate(user: User | null, isLoading: boolean): UseConsentGateResult {
-  const { status } = usePrivacyConsent(user);
+export function useConsentGate(user: User | null, isLoading: boolean, sessionEpoch?: object | null): UseConsentGateResult {
+  const { status, getHasConsent } = usePrivacyConsent(user, sessionEpoch);
   const segments = useSegments();
   const router = useRouter();
   const redirectedRef = useRef(false);
@@ -61,5 +67,5 @@ export function useConsentGate(user: User | null, isLoading: boolean): UseConsen
     router.replace(destination);
   }, [user, isLoading, status, isOnConsentRoute, isInAuthGroup, router]);
 
-  return { hasConsent: status === 'accepted' };
+  return { hasConsent: !isLoading && status === 'accepted', getHasConsent };
 }

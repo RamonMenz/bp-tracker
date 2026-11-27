@@ -1,6 +1,7 @@
 import type { FinalTranscript } from '@/domain/assisted-entry';
 
 import { VoiceCaptureError, VOICE_MESSAGES, type VoiceCapturePorts, type VoiceCaptureCode } from './voice-capture-contract';
+import { browserSpeechConstructor, localModelOptions } from './web-voice-capability.web';
 
 export const WEB_VOICE_MESSAGES: Record<VoiceCaptureCode, string> = { ...VOICE_MESSAGES,
   unsupported: 'Voz local indisponível neste navegador. Use HTTPS/localhost ou o registro manual.',
@@ -24,14 +25,12 @@ export const WEB_VOICE_MODEL_MESSAGES = {
 export type WebVoiceModelState = keyof typeof WEB_VOICE_MODEL_MESSAGES;
 type WebVoiceModelOutcome = Exclude<WebVoiceModelState, 'installing'>;
 
-interface LocalModelOptions { langs: ['pt-BR']; processLocally: true }
-const localModelOptions = (): LocalModelOptions => ({ langs: ['pt-BR'], processLocally: true });
 const MODEL_INSTALL_TIMEOUT_MS = 120_000;
 
 export interface LocalWebSpeechConstructor {
   new(): LocalWebSpeech;
-  available?: (options: LocalModelOptions) => Promise<unknown>;
-  install?: (options: LocalModelOptions) => Promise<boolean>;
+  available?: (options: ReturnType<typeof localModelOptions>) => Promise<unknown>;
+  install?: (options: ReturnType<typeof localModelOptions>) => Promise<boolean>;
 }
 interface WebVoicePorts extends VoiceCapturePorts {
   canInstallModel(): boolean;
@@ -49,10 +48,7 @@ export interface WebVoiceEnvironment {
 }
 const browser: WebVoiceEnvironment = {
   secure: () => globalThis.isSecureContext === true,
-  constructorForSpeech: () => {
-    const host = window as unknown as { SpeechRecognition?: LocalWebSpeechConstructor; webkitSpeechRecognition?: LocalWebSpeechConstructor };
-    return host.SpeechRecognition ?? host.webkitSpeechRecognition;
-  },
+  constructorForSpeech: browserSpeechConstructor,
   now: () => Date.now(),
 };
 const record = (value: unknown): Record<string | number, unknown> | null => value && typeof value === 'object' ? value as Record<string | number, unknown> : null;
