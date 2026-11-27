@@ -21,7 +21,11 @@ import expo.modules.kotlin.Promise
 
 // Base TASK-05 (7fbe137), isolada da câmera. Sem gravador, URI/arquivo, rede ou logger.
 class LocalSpeech(private val context: Context, private val status: (Int, String) -> Unit) {
-  companion object { private var owner: LocalSpeech? = null }
+  companion object {
+    private const val MAX_HYPOTHESES = 5
+    private const val MAX_HYPOTHESIS_LENGTH = 2000
+    private var owner: LocalSpeech? = null
+  }
   private val handler = Handler(Looper.getMainLooper())
   private val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
   private var recognizer: SpeechRecognizer? = null
@@ -48,7 +52,7 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
     putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
     putExtra(RecognizerIntent.EXTRA_LANGUAGE, "pt-BR")
     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, MAX_HYPOTHESES)
     // Não usa EXTRA_PREFER_OFFLINE nem factory genérica/remota.
   }
   private fun current(id: Int) = activeId == id && id > 0 && !cleanupBlocked
@@ -115,14 +119,19 @@ class LocalSpeech(private val context: Context, private val status: (Int, String
       }
       override fun onResults(results: Bundle?) {
         if (!capturing(id)) return
-        // Não seleciona silenciosamente entre hipóteses distintas, mesmo com MAX_RESULTS=1.
         try {
-          val texts = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
-          val text = texts?.singleOrNull()
-          if (texts != null && texts.size > 1) complete(mapOf("code" to "ambiguous-result"))
-          else if (text.isNullOrEmpty() || text.length > 2000) complete(mapOf("code" to "no-result"))
-          else complete(mapOf("kind" to "transcript", "locale" to "pt-BR", "final" to true,
-            "capturedAtMs" to capturedAtMs.toDouble(), "text" to text))
+          val hypotheses = mutableSetOf<String>()
+          for (hypothesis in results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION).orEmpty()) {
+            val text = hypothesis.trim()
+            if (text.isNotEmpty()) hypotheses.add(text)
+            if (text.length > MAX_HYPOTHESIS_LENGTH || hypotheses.size > MAX_HYPOTHESES) {
+              complete(mapOf("code" to "no-result"))
+              return
+            }
+          }
+          if (hypotheses.isEmpty()) complete(mapOf("code" to "no-result"))
+          else complete(mapOf("kind" to "transcript-hypotheses", "locale" to "pt-BR", "final" to true,
+            "capturedAtMs" to capturedAtMs.toDouble(), "hypotheses" to hypotheses.toList()))
         } catch (_: Exception) { complete(mapOf("code" to "engine-failed")) }
       }
     }

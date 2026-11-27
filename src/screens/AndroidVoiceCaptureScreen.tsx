@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react';
+
 import { VoiceReadingReview } from '@/components/bp/VoiceReadingReview';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Screen } from '@/components/ui/Screen';
 import { Text } from '@/components/ui/Text';
 import { useAndroidVoiceReview } from '@/features/assisted-entry/useAndroidVoiceReview';
-import type { VoicePhase } from '@/services/recognition/android-voice-session';
+import type { AndroidVoiceDiagnostic, VoicePhase } from '@/services/recognition/android-voice-session';
 import { VOICE_MESSAGES } from '@/services/recognition/voice-capture-contract';
 
 const PHASES: Record<VoicePhase, string> = {
@@ -14,8 +16,13 @@ const PHASES: Record<VoicePhase, string> = {
   reviewing: 'Confira os candidatos antes de confirmar.', cancelled: 'Tentativa cancelada.', failed: 'Voz indisponível nesta tentativa.',
   blocked: 'Liberação não confirmada. Use o registro manual.',
 };
-export function AndroidVoiceCaptureScreen({ onManual }: { onManual: (release: Promise<boolean>) => void }) {
-  const { state, busy, start, finish, review, leaveForManual } = useAndroidVoiceReview();
+type Props = {
+  onManual: (release: Promise<boolean>) => void;
+  onDiagnostic?: (diagnostic: AndroidVoiceDiagnostic | null) => void;
+  children?: ReactNode;
+};
+export function AndroidVoiceCaptureScreen({ onManual, onDiagnostic, children }: Props) {
+  const { state, busy, start, finish, review, leaveForManual } = useAndroidVoiceReview(onDiagnostic);
   return <Screen>
     <Card className="gap-4">
       <Text variant="title" accessibilityRole="header">Voz Android · avaliação</Text>
@@ -27,6 +34,7 @@ export function AndroidVoiceCaptureScreen({ onManual }: { onManual: (release: Pr
       <Button label="Ir para registro manual" variant="secondary" onPress={() => onManual(leaveForManual())} />
       <Text accessibilityLiveRegion="polite">{PHASES[state.phase]}</Text>
       {state.issue ? <Text accessibilityRole="alert">{VOICE_MESSAGES[state.issue]}</Text> : null}
+      {children}
     </Card>
     <VoiceReadingReview review={review} />
   </Screen>;

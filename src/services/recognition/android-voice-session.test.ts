@@ -1,9 +1,8 @@
-import type { FinalTranscript } from '@/domain/assisted-entry';
-
 import type { createAndroidVoiceSession as Create, VoiceState } from './android-voice-session';
 import type { AndroidVoicePorts } from './voice-capture-contract';
 
-const final: FinalTranscript = { kind: 'transcript', final: true, locale: 'pt-BR', capturedAtMs: 1793001600000, text: 'doze por oito, pulso setenta e dois' };
+const final = { kind: 'transcript-hypotheses', final: true, locale: 'pt-BR', capturedAtMs: 1793001600000,
+  hypotheses: ['doze por oito, pulso setenta e dois'] };
 let create: typeof Create;
 beforeEach(() => { jest.resetModules(); create = jest.requireActual<typeof import('./android-voice-session')>('./android-voice-session').createAndroidVoiceSession; });
 afterEach(() => jest.useRealTimers());
@@ -31,7 +30,15 @@ test('carrega disponibilidade/idioma antes de escutar, só por ação; final só
   jest.mocked(t.ports.close).mockImplementation(() => new Promise(resolve => { release = resolve; }));
   t.deliver(); await flush(); expect(t.state().phase).toBe('closing'); expect(t.result).not.toHaveBeenCalled();
   release(true); await t.session.settled();
-  expect(t.result).toHaveBeenCalledWith(t.state().attemptId, final); expect(t.state().phase).toBe('reviewing');
+  expect(t.result).toHaveBeenCalledWith(t.state().attemptId, {
+    diagnostic: { count: 1, agreed: true },
+    candidates: { modality: 'voice', capturedAtMs: final.capturedAtMs, fields: {
+      systolic: { status: 'candidate', value: 120, basis: 'colloquial-pair' },
+      diastolic: { status: 'candidate', value: 80, basis: 'colloquial-pair' },
+      pulse: { status: 'candidate', value: 72, basis: 'label' },
+    } },
+  });
+  expect(t.state().phase).toBe('reviewing');
   expect(t.unsubscribe).toHaveBeenCalledTimes(1);
 });
 test.each(['local-unavailable','language-unverified'])('API %s não solicita permissão, idioma ou microfone', async code => {
@@ -53,7 +60,7 @@ test('recusa de permissão não cria reconhecedor nem repete solicitação', asy
 test('parciais/eventos/IDs antigos não entregam candidatos; terminar repetido não confirma', async () => {
   const t = rig(); await t.listening(); const id = t.state().attemptId;
   t.event({ attemptId: id - 1, status: 'recognizing' }); expect(t.state().phase).toBe('listening');
-  t.event({ attemptId: id, status: 'partial', text: final.text }); expect(t.result).not.toHaveBeenCalled();
+  t.event({ attemptId: id, status: 'partial', hypotheses: final.hypotheses }); expect(t.result).not.toHaveBeenCalled();
   expect(t.session.finish()).toBe(true); expect(t.session.finish()).toBe(false); await flush();
   expect(t.ports.finish).toHaveBeenCalledTimes(1); expect(t.result).not.toHaveBeenCalled();
   t.event({ attemptId: id, status: 'listening' }); expect(t.state().phase).toBe('recognizing');
@@ -64,9 +71,24 @@ test.each(['no-result','interrupted','ambiguous-result','engine-failed','permiss
   expect(t.state().issue).toBe(code); expect(t.result).not.toHaveBeenCalled(); expect(JSON.stringify(t.state())).not.toContain('SENTINELA');
   expect(t.ports.start).toHaveBeenCalledTimes(1); expect(t.ports.close).toHaveBeenCalledTimes(1);
 });
-test.each([null, { ...final, final: false }, { ...final, locale: 'pt-PT' }, { ...final, text: 'x'.repeat(2001) }])('saída inválida/parcial não atravessa fronteira final: %#', async value => {
+test.each([
+  null, { ...final, final: false }, { ...final, locale: 'pt-PT' }, { ...final, capturedAtMs: Infinity },
+  { ...final, hypotheses: [] }, { ...final, hypotheses: [' '] }, { ...final, hypotheses: [false] },
+  { ...final, hypotheses: ['12 por 8', '12 por 8'] }, { ...final, hypotheses: ['12 por 8', 'x'.repeat(2001)] },
+  { ...final, hypotheses: ['1', '2', '3', '4', '5', '6'] },
+])('saída inválida/parcial não atravessa fronteira final (%#)', async value => {
   const t = rig(); await t.listening(); t.deliver(value); await t.session.settled();
   expect(t.state().issue).toBe('engine-failed'); expect(t.result).not.toHaveBeenCalled();
+});
+test('cancelar durante fechamento descarta até resultado já interpretado', async () => {
+  const t = rig(); await t.listening();
+  let release!: (value: boolean) => void;
+  jest.mocked(t.ports.close).mockImplementation(() => new Promise(resolve => { release = resolve; }));
+  t.deliver({ ...final, hypotheses: ['12 por 8', 'doze por oito'] }); await flush();
+  expect(t.state().phase).toBe('closing');
+  const cancelled = t.session.cancel(); release(true); await cancelled;
+  expect(t.state().phase).toBe('cancelled');
+  expect(t.result).not.toHaveBeenCalled(); expect(t.ports.close).toHaveBeenCalledTimes(1);
 });
 test('cancelar enquanto escuta invalida final tardio e libera antes de nova tentativa', async () => {
   const t = rig(); await t.listening(); expect(t.session.start()).toBe(false);

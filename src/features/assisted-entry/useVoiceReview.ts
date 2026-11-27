@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import type { CandidateSet } from '@/domain/assisted-entry';
 import { decodeFinalTranscript } from '@/domain/final-transcript';
 import { interpretVoice } from '@/domain/interpret-voice-pt-br';
 import type { createAssistedConfirmation } from '@/features/readings/confirmed-assisted-reading';
@@ -46,6 +47,9 @@ export function useVoiceReview(options: VoiceReviewOptions = { mode: 'simulation
     return id;
   }
   function cancel() { setInputIssue(null); core.cancel(); }
+  function receivePreview(attempt: number, candidates: CandidateSet): boolean {
+    return settings.mode === 'preview' && core.receive(attempt, candidates);
+  }
   function receiveFinal(attempt: number, value: unknown, provenance: 'recognition' | 'synthetic'): boolean {
     if (!core.isWaitingFor(attempt)) return false; // Tardio/duplicado não chega ao parser.
     if ((settings.mode === 'simulation' && provenance !== 'synthetic')
@@ -69,7 +73,7 @@ export function useVoiceReview(options: VoiceReviewOptions = { mode: 'simulation
     return core.receive(attempt, candidates);
   }
   const { receive: _receive, isWaitingFor: _isWaitingFor, ...view } = core;
-  return { ...view, newAttempt, recapture: newAttempt, cancel, receiveFinal,
+  return { ...view, newAttempt, recapture: newAttempt, cancel, receiveFinal, receivePreview,
     inputIssue: core.state.phase === 'cancelled' ? null : inputIssue,
     canConfirm: core.canConfirm && (settings.mode !== 'recognition' || persistenceReady) };
 }
