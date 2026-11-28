@@ -126,6 +126,14 @@ public final class SevenSegmentDecoderCheck {
         paint(glare, 540, slotX(h, 2) - 4, 0.05 * 540 - 4, 0.5 * h + 8, h + 8, 255);
         expect("centena encoberta por reflexo", SevenSegmentDecoder.decode(glare, WIDTH, 540, "gtech"),
             "U:centena-encoberta", "C:84", "C:70");
+        byte[] seven = display("gtech", 540, "", "80", "70");
+        drawDigit(seven, 540, "bc", slotX(h, 2), 0.05 * 540, h);
+        drawDigit(seven, 540, "bc", slotX(h, 1), 0.05 * 540, h);
+        drawDigit(seven, 540, "bc", slotX(h, 0), 0.05 * 540 + 0.06 * h, 0.94 * h);
+        darken(seven, 540, slotX(h, 0) + 0.045 * h, 0.05 * 540 - 0.02 * h, 0.41 * h, 0.09 * h);
+        expect("sete com barra separada (modelo certo)", SevenSegmentDecoder.decode(seven, WIDTH, 540, "gtech"), "C:117", "C:80", "C:70");
+        expect("sete com barra fora da faixa (modelo trocado)",
+            new String[] {SevenSegmentDecoder.decode(seven, WIDTH, 540, "generic")[0]}, "U:um-ou-sete");
         byte[] copy = display("generic", 520, "121", "79", "64");
         byte[] before = copy.clone();
         SevenSegmentDecoder.decode(copy, WIDTH, 520, "generic");

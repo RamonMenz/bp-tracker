@@ -13,7 +13,10 @@ Mudanças em relação à v1, cada uma ligada a uma causa observada no ajuste (�
      (reflexo) ou escura demais, o campo fica vazio (verificado só com sintéticos: nenhuma foto saturou);
   3. coerência do campo: dígitos em posições distintas, sem sobreposição; senão, vazio;
   4. visor sem dígitos: nenhum campo com grupo do tamanho de dígito ⇒ todos vazios com motivo
-     explícito "visor-sem-digitos" (regra estrutural; o contraste medido não separou o visor apagado).
+     explícito "visor-sem-digitos" (regra estrutural; o contraste medido não separou o visor apagado);
+  5. "um-ou-sete": um "1" com uma barra horizontal não explicada logo acima, terminando na sua borda
+     direita, fica vazio (a barra "a" de um "7" fora da faixa fazia o "7" virar "1"; achado com o modelo
+     do aparelho trocado).
 Testadas e REJEITADAS (registro em §12): margem fixa e margem adaptativa na retificação, remoção de
 traços longos (gerou um número errado apresentado como válido) e guarda de dígito encostado na borda
 (sem benefício demonstrado; custou campos corretos). Também rejeitado: espaçamento igual entre dígitos.
@@ -271,6 +274,20 @@ def hundreds_occluded(gray, digits):
     return region.size > 0 and float(((region >= 250) | (region <= 15)).mean()) > 0.25
 
 
+def seven_bar_nearby(parts, digits, box, field_height):
+    """Mudança 5: um "1" com uma barra horizontal fora dos dígitos aceitos, terminando na borda direita do
+    "1" e logo acima do seu topo, pode ser um "7" cuja barra "a" (componente separado no BSPII) ficou de
+    fora; perder só essa barra é a única perda de um segmento que troca o valor (7 → 1)."""
+    right, top = box[0] + box[2], box[1]
+
+    def inside(c):
+        return any(c[0] >= g[0] and c[1] >= g[1] and c[0] + c[2] <= g[0] + g[2] and c[1] + c[3] <= g[1] + g[3]
+                   for g in digits)
+    return any(not inside(c) and c[2] >= 0.25 * field_height and c[2] >= 2 * c[3]
+               and abs(c[0] + c[2] - right) <= 0.2 * field_height
+               and top - 0.15 * field_height <= c[1] + c[3] <= top + 0.12 * field_height for c in parts)
+
+
 def decode_rectified(gray, device):
     """Campos a partir do LCD retificado em tons de cinza (entrada do porte TS)."""
     fg, shear = binarize(gray)
@@ -314,6 +331,9 @@ def decode_rectified(gray, device):
             values.append(value)
         if failure or values[0] == 0:
             fields[field], reasons[field] = {"status": "uncertain"}, failure or "zero-a-esquerda"
+            continue
+        if any(value == 1 and seven_bar_nearby(parts, digits, box, field_height) for box, value in zip(digits, values)):
+            fields[field], reasons[field] = {"status": "uncertain"}, "um-ou-sete"
             continue
         fields[field] = {"status": "candidate", "value": int("".join(map(str, values)))}
     if not any_digit:

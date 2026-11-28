@@ -46,6 +46,19 @@ describe('decodeSevenSegment (candidato não habilitado)', () => {
     expect(decodeSevenSegment(image, 'gtech').systolic).toEqual({ status: 'uncertain', reason: 'centena-encoberta' });
   });
 
+  test('"7" com a barra superior separada e fora da faixa do gabarito não vira "1"', () => {
+    // SIS "117" desenhado no layout BSPII, com a barra "a" do "7" separada de b (como no aparelho real).
+    const image = syntheticDisplay('gtech', ['', '80', '70']);
+    const { top, height } = fieldGeometry('gtech', 0);
+    drawDigit(image, ['b', 'c'], slotX(height)(2), top, height);
+    drawDigit(image, ['b', 'c'], slotX(height)(1), top, height);
+    drawDigit(image, ['b', 'c'], slotX(height)(0), top + 0.06 * height, 0.94 * height);
+    darken(image, slotX(height)(0) + 0.045 * height, top - 0.02 * height, 0.41 * height, 0.09 * height);
+    expect(decodeSevenSegment(image, 'gtech').systolic).toEqual(candidate(117));
+    // Com o modelo trocado, a barra cai fora da faixa do SIS: o campo fica vazio em vez de "111".
+    expect(decodeSevenSegment(image, 'generic').systolic).toEqual({ status: 'uncertain', reason: 'um-ou-sete' });
+  });
+
   test('mancha no meio de um dígito torna a varredura discordante e o campo vazio', () => {
     const image = syntheticDisplay('gtech', ['120', '80', '72']);
     const { top, height } = fieldGeometry('gtech', 0);

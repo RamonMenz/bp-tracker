@@ -542,8 +542,13 @@ nada. É a única forma de transformar os números de ajuste em validação.
 | Versão | Arquivo do algoritmo | sha256 | Commit de referência |
 |---|---|---|---|
 | v1 (Parte 1) | `tools/lab-fotografia/hseg.py` | `d3cf2d8836b10210ecb6437b7ad1803b5cc40b682bbeba5b40d00ce412457fdb` | `75adad8` (avaliação reservada da Parte 1; inalterado desde então) |
-| v2 (Parte 2) | `tools/lab-fotografia/hseg_v2.py` | `9c1969e4cf7f8f93bb7e94e71cfe73f021ccaa30bb749bd59a3a5de7c3650ff5` | commit que introduz a seção 13 (congelada antes de qualquer foto nova) |
-| v2, porte TS | `src/domain/seven-segment/decode-seven-segment.ts` e `image-ops.ts` | `659c5dba…dc52828d` e `409154d3…ce462f76a5` | idem |
+| v2 (Parte 2), revisão 2 | `tools/lab-fotografia/hseg_v2.py` | `2f96b1db8a5ee7a979a9c7206459bfdbc4fb4d7685f2425f6b46a457c0afb6b3` | commit da guarda "um-ou-sete" (seção 12.5); congelada antes de qualquer foto nova |
+| v2 rev. 2, porte TS | `src/domain/seven-segment/decode-seven-segment.ts` e `image-ops.ts` | `61679be2…3b770b33d2` e `409154d3…ce462f76a5` | idem |
+| v2 rev. 2, protótipo Java | `tools/lab-fotografia/hseg-java/SevenSegmentDecoder.java` | `9e27fe88…56b1847` | idem |
+
+A revisão 1 da v2 (sha256 `9c1969e4…3c650ff5`) foi substituída pela revisão 2 **antes** de qualquer
+foto nova, por causa de um achado de segurança (seção 12.5). Nenhuma foto nova foi avaliada com
+nenhuma das revisões.
 
 `tools/lab-fotografia/evaluate.py` só executa uma versão cujo arquivo tenha exatamente o sha256
 acima; se o arquivo mudar, ele **recusa**. Verificado: com um byte acrescentado, o script saiu
@@ -684,8 +689,8 @@ novas medem.
   (`synthetic-display.test-fixture.ts`): dígitos 0–9 nos dois gabaritos, itálico, sombra suave,
   visor apagado (`visor-sem-digitos`), "1" de centena parcialmente apagado, "1" de centena encoberto
   por reflexo saturado (`centena-encoberta`), mancha no meio do dígito, zero à esquerda e
-  quantidade inválida, imutabilidade da entrada e conversão para a revisão. 14 testes no total,
-  todos passando.
+  quantidade inválida, imutabilidade da entrada, conversão para a revisão e, na revisão 2, o "7" com
+  barra separada (seção 12.5). 16 testes no total, todos passando.
 - **Paridade com a referência Python v2:** idêntica em status, valor **e motivo** em **20/20** LCDs
   retificados das fotos (comparação feita fora do repositório) e em 6/6 sintéticos.
 - Tempo indicativo: cerca de 590 ms por LCD no Node do contêiner, sem otimização. Não é medida de
@@ -835,3 +840,29 @@ parcialmente apagada, centena encoberta por reflexo e entrada intacta). Fica **f
 `native-modules/` e não é integrado ao módulo. O CI ganhou um passo no job "Bridge OCR (Java puro)"
 que compila com `--release 17` e roda os checks. **Paridade com a referência Python v2:** idêntica em
 **20/20** LCDs das fotos de laboratório (comparação local, sem comitar entradas nem saídas).
+
+### 12.5 Achado de segurança: modelo do aparelho trocado (revisão 2 da v2)
+
+Ao consolidar o estudo Android (seção 15.3, "escolher o modelo errado deve dar campos vazios"), testei
+a revisão 1 com o **gabarito do outro modelo** nas 20 fotos (ajuste). Resultado: **2 errado-válido**
+(SIS de 06 e de 19). Causa: no BSPII, a barra "a" do "7" é um componente separado; com o gabarito
+errado, a faixa do SIS começa abaixo dela, a barra fica de fora e o que sobra (b+c) é lido como
+**"1"**. Pela tabela de padrões, perder uma única barra só troca o valor nesse caso (7 → 1). O
+mesmo pode acontecer com o modelo certo se a guia da câmera ficar desalinhada.
+
+**Mudança 5, "um-ou-sete":** um "1" com uma barra horizontal fora dos dígitos aceitos (largura ≥ 2×
+altura e ≥ 25% da altura do dígito), terminando na borda direita do "1" e logo acima do seu topo,
+deixa o campo vazio. Uma primeira versão, mais ampla (qualquer tinta acima e à esquerda), custou 4
+campos certos com o modelo certo (o "mmHg" do genérico e restos de moldura) e foi substituída pela
+versão geométrica.
+
+| Medida (20 fotos, ajuste) | Revisão 1 | **Revisão 2** |
+|---|---|---|
+| Modelo certo: corretos / errado-válido / pares | 51/57 / 0 / 16/19 | **51/57 / 0 / 16/19** |
+| Modelo trocado: corretos / **errado-válido** / ausentes | 41 / **2** / 17 | 41 / **0** / 19 |
+| Sintético "117" com a barra do "7" separada, gabarito trocado | lido como 111 (errado) | **vazio** (`um-ou-sete`) |
+
+Testes sintéticos novos: TS (16 no total) e Java ("sete com barra separada", nos modelos certo e
+trocado). Paridade Python × TS × Java refeita: **20/20** com o modelo certo e **20/20** com o
+modelo trocado. LOO da revisão 2: igual à tabela 12.4 (51/57, 0 errado-válido, 16/19). Demo Web
+(e2e local com LCDs reais): 51/57, 0 errado-válido, 16/19.

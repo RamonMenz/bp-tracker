@@ -205,6 +205,20 @@ function hundredsOccluded(gray: Uint8Array, width: number, first: Box, second: B
   return hidden / ((x1 - x0) * first[3]) > 0.25;
 }
 
+/**
+ * Um "1" com uma barra horizontal fora dos dígitos aceitos, terminando na sua borda direita e logo acima
+ * do topo, pode ser um "7" cuja barra "a" (componente separado no BSPII) ficou de fora: perder só essa
+ * barra é a única perda de um segmento que troca o valor (7 → 1). Achado com o modelo trocado.
+ */
+function sevenBarNearby(parts: Box[], digits: Box[], box: Box, fieldHeight: number): boolean {
+  const right = box[0] + box[2];
+  const top = box[1];
+  const inside = (c: Box) => digits.some(g => c[0] >= g[0] && c[1] >= g[1] && c[0] + c[2] <= g[0] + g[2] && c[1] + c[3] <= g[1] + g[3]);
+  return parts.some(c => !inside(c) && c[2] >= 0.25 * fieldHeight && c[2] >= 2 * c[3]
+    && Math.abs(c[0] + c[2] - right) <= 0.2 * fieldHeight
+    && top - 0.15 * fieldHeight <= c[1] + c[3] && c[1] + c[3] <= top + 0.12 * fieldHeight);
+}
+
 /** Lê os três campos de um LCD retificado do modelo indicado. */
 export function decodeSevenSegment(image: GrayImage, device: SevenSegmentDevice): Record<ClinicalField, SevenSegmentField> {
   const { width, height } = image;
@@ -264,6 +278,10 @@ export function decodeSevenSegment(image: GrayImage, device: SevenSegmentDevice)
     }
     if (failure || values[0] === 0) {
       result[field] = uncertain(failure || 'zero-a-esquerda');
+      continue;
+    }
+    if (digits.some((box, i) => values[i] === 1 && sevenBarNearby(parts, digits, box, fieldHeight))) {
+      result[field] = uncertain('um-ou-sete');
       continue;
     }
     result[field] = { status: 'candidate', value: Number(values.join('')) };

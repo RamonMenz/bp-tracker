@@ -287,6 +287,21 @@ public final class SevenSegmentDecoder {
         return (double) hidden / ((long) (x1 - x0) * first[3]) > 0.25;
     }
 
+    /** Um "1" com barra horizontal não explicada logo acima, terminando na sua borda direita: pode ser "7". */
+    private static boolean sevenBarNearby(List<int[]> parts, List<int[]> digits, int[] box, int fieldHeight) {
+        int right = box[0] + box[2], top = box[1];
+        for (int[] c : parts) {
+            boolean inside = false;
+            for (int[] g : digits) {
+                if (c[0] >= g[0] && c[1] >= g[1] && c[0] + c[2] <= g[0] + g[2] && c[1] + c[3] <= g[1] + g[3]) inside = true;
+            }
+            if (!inside && c[2] >= 0.25 * fieldHeight && c[2] >= 2 * c[3]
+                && Math.abs(c[0] + c[2] - right) <= 0.2 * fieldHeight
+                && top - 0.15 * fieldHeight <= c[1] + c[3] && c[1] + c[3] <= top + 0.12 * fieldHeight) return true;
+        }
+        return false;
+    }
+
     /** Lê os três campos de um LCD retificado ("gtech" ou "generic"). Não modifica a entrada. */
     public static String[] decode(byte[] grayBytes, int width, int height, String device) {
         double[][] template = "generic".equals(device) ? GENERIC : GTECH;
@@ -384,6 +399,11 @@ public final class SevenSegmentDecoder {
                 value.append((int) d);
             }
             if (failure == null && value.charAt(0) == '0') failure = "zero-a-esquerda";
+            if (failure == null) {
+                for (int i = 0; i < digits.size(); i++) {
+                    if (value.charAt(i) == '1' && sevenBarNearby(parts, digits, digits.get(i), fieldHeight)) failure = "um-ou-sete";
+                }
+            }
             result[f] = failure != null ? "U:" + failure : "C:" + Integer.parseInt(value.toString());
         }
         if (!anyDigit) Arrays.fill(result, "U:visor-sem-digitos");
