@@ -20,7 +20,7 @@ validação independente depende de **fotos novas** do autor (seção 11).
 |---|---|---|
 | P2-1. Correção do `interpretPhoto` (dígito espúrio) | Feita (seção 10) | — |
 | P2-2. Protocolo de validação independente | Pronto; critério registrado antes das fotos novas (seção 11) | Autor tira e envia as fotos |
-| P2-3. H-seg v2 (ajuste dentro da amostra) | Pendente | — |
+| P2-3. H-seg v2 (ajuste dentro da amostra) | Python pronto, LOO feita (seção 12); porte TS na etapa 4 | Congelar v2 após paridade TS |
 | P2-4. Candidato TS em `src/domain/seven-segment/` | Pendente | — |
 | P2-5. Demo Web experimental | Pendente | — |
 | P2-6. Estudo Android | Pendente | — |
@@ -604,3 +604,65 @@ A saída lista, por foto, só categorias (C, E, T, -, FP) e o motivo da recusa, 
 do resultado por aparelho, do limite superior da regra de três e do veredito. Teste de fumaça
 nas 20 fotos antigas (**dentro da amostra**, não validação): reproduziu exatamente os números da
 v1 (49/57, 0 errado-válido, 16/19 pares) e respondeu "inconclusivo" por amostra abaixo do mínimo.
+
+## 12. H-seg v2 — ajuste DENTRO DA AMOSTRA (não é validação)
+
+Arquivo próprio, `tools/lab-fotografia/hseg_v2.py`. A v1 (`hseg.py`) não foi tocada (sha256 na
+seção 11.1). **Todos os números desta seção vêm das 20 fotos já vistas: são de ajuste.**
+
+### 12.1 Correção de diagnóstico da Parte 1
+
+A Parte 1 atribuiu as falhas do pulso a uma "borda inferior detectada acima da real". A inspeção
+da Parte 2 mostrou que, pelo menos nas fotos 01 e 02, **o recorte não corta os dígitos**: o cinza
+mostra o pulso inteiro. O que acontece é que a metade inferior do dígito se fragmenta na
+binarização (contraste menor perto da borda), e o filtro de vão vertical da v1, calculado só a
+partir das peças altas, descartava esses fragmentos.
+
+### 12.2 O que mudou (cada mudança ligada a uma causa observada)
+
+1. **Vão vertical pelo gabarito:** cada modelo declara a altura esperada do dígito por campo (BSPII:
+   SIS e DIA 0,31, pulso 0,21; genérico: 0,26, 0,26 e 0,20, em fração da altura do LCD), medida nas
+   fotos. Só quando as peças altas cobrem **menos de 80%** dessa altura (dígito fragmentado) o vão se
+   estende até ela; caso contrário, fica igual ao da v1. Corrigiu o pulso de 01 e 02.
+2. **"1" de centena encoberto:** num campo de 2 dígitos, se a posição da centena (um passo à
+   esquerda) estiver saturada (≥ 250) ou escura (≤ 15) em mais de 25% da área, o campo fica vazio.
+   Nenhuma das 20 fotos saturou, então a guarda só foi verificada com sintéticos (etapa 4). Um "1"
+   oculto **sem** saturação ou escuridão, por exemplo sob tinta ou objeto, continua indetectável.
+3. **Coerência:** dígitos em posições distintas, sem sobreposição horizontal; senão, vazio.
+4. **Visor sem dígitos:** se nenhum campo tem grupo do tamanho de um dígito, os três ficam vazios com
+   o motivo `visor-sem-digitos`. É uma regra estrutural: o contraste normalizado medido **não**
+   separou o visor apagado (67) das fotos ligadas (60 a 187), então não há limiar fotométrico.
+5. **Gabarito por modelo explícito:** `TEMPLATES` documenta cada modelo (BSPII e o genérico das fotos
+   12/16/20). Um modelo novo exige gabarito novo, e o H-seg não lê aparelho desconhecido.
+
+### 12.3 Tentativas testadas e rejeitadas (histórico honesto)
+
+| Tentativa | Efeito nas 20 fotos (ajuste) | Decisão |
+|---|---|---|
+| Margem fixa de 6% (vertical) + 3% (lateral) na retificação | 37/57; a borda lateral do LCD colava em "1" e "7" | Rejeitada |
+| Só margem vertical fixa, com e sem remoção de traços longos (ablação) | 46–48/57 contra 49/57 sem nenhuma das duas | Rejeitada |
+| Remoção de traços longos (> 60% do lado) | **Gerou 1 errado-válido** (18 SIS: resto da barra apagada virou segmento "a" de um "4", lido como "9") | Rejeitada por segurança |
+| Espaçamento igual entre dígitos | Recusava valores certos: o "1" de centena do BSPII ocupa meia posição | Rejeitada (premissa errada) |
+| Margem inferior adaptativa + guarda de "dígito encostado na borda" | 44–45/57; a margem nunca ajudou; a guarda custou 4 campos certos sem risco demonstrado (sintéticos cortados à direita e embaixo: a v1 já não erra) | Rejeitadas |
+| Vão pelo gabarito incondicional | 44/57 (o SIS passou a alcançar o "mmHg") | Substituída pela versão condicional |
+
+### 12.4 Resultado da v2 (AJUSTE, dentro da amostra)
+
+| Medida | v1 (mesmas 20 fotos; números da Parte 1) | **v2 (ajuste)** | **v2 LOO (estimativa de ajuste)** |
+|---|---|---|---|
+| Campos corretos | 49/57 | **51/57** | 51/57 |
+| Errado-válido / troca | 0 / 0 | **0 / 0** | 0 / 0 |
+| Par SIS/DIA exato | 16/19 | 16/19 | 16/19 |
+| Pulso correto | 13/19 | 15/19 | 15/19 |
+| Falso positivo (desligado) | 0 | 0 | 0 |
+
+Por foto (v2): 01–05, 07, 09, 10, 12, 13, 15–17 e 19 com todos os campos corretos (a 05, desligada,
+fica corretamente vazia). Ausentes: 06 DIA (varredura), 08 pulso (varredura), 11 SIS (varredura),
+14 pulso (varredura), 18 SIS (sombra fundida ao topo: tinta não explicada) e 20 pulso (dígito
+baixo).
+
+**LOO** (`tools/lab-fotografia/loo_v2.py`): a altura esperada, único parâmetro derivado das fotos, é
+remedida sem a foto de teste. As medianas variaram pouco (BSPII: SIS 0,29–0,31, DIA 0,28–0,32, pulso
+0,20–0,22), e o resultado foi idêntico. **Limite:** as *regras* foram desenhadas olhando todas as
+fotos, inclusive as 7 reservadas na Parte 1, então a LOO não mede o otimismo desse desenho. Só fotos
+novas medem.

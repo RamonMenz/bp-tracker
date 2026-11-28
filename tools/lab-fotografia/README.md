@@ -39,6 +39,8 @@ tem as colunas `id,sis,dia,pul,device,...`, com `sis` vazio para o aparelho desl
 | `ocr/run-ocr.mjs` | Empacota `ocr/entry.ts`, que importa sem alteração o adaptador Web do projeto (`tesseract-worker.web.ts` + `interpretPhoto`), e o roda no Chromium local em condições fixas |
 | `hseg.py decode` | H-seg: decodificação de sete segmentos por lógica pura, com gabarito de layout por modelo |
 | `score.py` | Pontua contra o gabarito e imprime só categorias e agregados |
+| `hseg_v2.py` | H-seg v2 (ajuste dentro da amostra; referência Python do candidato `src/domain/seven-segment/`). `decode` e `export` (LCD cinza para paridade, só no diretório temporário) |
+| `loo_v2.py` | Validação cruzada leave-one-out da v2: estimativa de ajuste, imprime só categorias |
 | `evaluate.py` | Validação independente em um comando: aplica uma versão congelada do H-seg (verifica o sha256) e imprime métricas e veredito pré-registrados, sem valores (docs, seção 11) |
 | `hseg-ts/hseg.ts` | Porte em TypeScript puro (sem I/O, DOM ou dependências) da decodificação do H-seg, a partir de um LCD já retificado em tons de cinza |
 | `hseg-ts/check-hseg.mts` | Verificações com visores 100% sintéticos (`hseg-ts/synthetic.ts`); nome sem `.test` para não entrar no Jest do app |
