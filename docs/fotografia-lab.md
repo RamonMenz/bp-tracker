@@ -23,7 +23,7 @@ validação independente depende de **fotos novas** do autor (seção 11).
 | P2-3. H-seg v2 (ajuste dentro da amostra) | Feita e **congelada** (seções 12 e 11.1) | Validação com fotos novas |
 | P2-4. Candidato TS em `src/domain/seven-segment/` | Feito, com guarda de não habilitação (seção 13) | — |
 | P2-5. Demo Web experimental | Feita; e2e sintético verde (seção 14) | Autor testa no celular (roteiro 14.3) |
-| P2-6. Estudo Android | Pendente | — |
+| P2-6. Estudo Android | Estudo escrito; protótipo Java puro com checks no CI (seção 15) | Decisão da orientadora antes de qualquer integração |
 | P2-7. Consolidação | Pendente | — |
 
 ### Parte 1
@@ -769,3 +769,69 @@ campo como **C** (certo), **E** (número errado exibido, o que é o mais importa
 **–** (vazio); se foi difícil encaixar na guia; o tempo aproximado entre capturar e ver a revisão; se
 o indicador de câmera do Android apagou depois da captura e do cancelamento; e mensagens de erro.
 Esse teste mede **uso e encaixe**, não substitui a validação com fotos da seção 11.
+
+## 15. Android — estudo de porte (sem alterar `native-modules/`)
+
+### 15.1 Projeto proposto (não implementado no módulo)
+
+O caminho atual (`AferiPhotoView.kt`) já faz: CameraX `ImageAnalysis` em YUV_420_888 → **cópia NV21 em
+RAM** (`FrameBytes`) → recorte/escala guiados (`FrameTransform`, `roi-1`, guia com `GUIDE_MARGIN`) →
+`InputImage.fromByteBuffer` → ML Kit → linhas e caixas para o JS → `interpretPhoto`. O porte do H-seg
+entraria **depois do `FrameTransform`, no lugar do ML Kit**:
+
+1. **Entrada:** o plano Y (luminância) do NV21 já recortado pela guia **é** a imagem em tons de cinza;
+   não há conversão de cor. O recorte precisa da proporção do LCD do modelo escolhido, e não da guia
+   genérica atual, e precisa ser reamostrado para 400 px de largura (o `FrameTransform` já reamostra).
+2. **Decodificação em Kotlin/Java** sobre esse `byte[]`, na mesma thread de análise, sem copiar pixels
+   para o JS. O protótipo `tools/lab-fotografia/hseg-java/SevenSegmentDecoder.java` mostra a lógica em
+   Java puro, idêntica à referência.
+3. **Saída para o JS:** apenas `{campo: valor | incerto(motivo)}`, sem pixels, texto bruto ou caixas.
+   No contrato atual entraria como um terceiro formato de observação, ou o adaptador
+   `photo-android.native.ts` converteria direto para `CandidateSet`, como `toCandidateSet` faz na Web.
+   A revisão e a confirmação (`CandidateReadingReview`, porta `confirmAndSave`) não mudam.
+4. **Seleção de modelo** na tela de captura, levada à view como prop (como `comparison`), com a guia
+   desenhada pela proporção do modelo.
+5. **Ciclo de vida:** reaproveitar `CaptureRun` (uma tentativa ativa, cancelamento, resultado tardio
+   descartado) e a liberação da câmera antes de processar, como hoje. O buffer NV21 tem o mesmo teto
+   (`MAX_FRAME_PIXELS`).
+
+### 15.2 Custo
+
+- **Build novo do Dev Client** de avaliação (EAS ou build local no Windows do autor): é alteração
+  nativa, e não basta trocar o bundle do Metro. O ROI591 custou várias rodadas de build, hash e
+  inspeção (TASK-09); estimar ao menos o mesmo esforço de preparo e verificação.
+- Código: o decodificador (cerca de 400 linhas em Java) + seleção de modelo + ponte de resultado + testes
+  JVM. Não precisa de dependência nova: dispensa até o ML Kit nesse caminho, mas o motor decidido
+  continua sendo o ML Kit (ver 15.4).
+- Desempenho: em Java puro, o laço de vizinhança 41×41 é a parte cara. No contêiner, a versão TS leva
+  cerca de 0,6 s por LCD; num celular de entrada pode passar de 1 s. Há otimização conhecida (filtro
+  de máximo/mínimo em O(1) por pixel), **não aplicada**, para não divergir da referência.
+
+### 15.3 Riscos
+
+- A guia na mão do usuário **não** tem a precisão do localizador automático usado no laboratório:
+  o H-seg depende de as bordas do LCD coincidirem com o recorte (gabarito em frações do LCD). É o
+  risco principal e só se mede no aparelho.
+- Reflexo e foco ao vivo, movimento e exposição automática do CameraX diferem de fotos estáticas.
+- Gabarito por modelo: cada aparelho novo exige gabarito, e o usuário precisa escolher o modelo certo.
+  **Escolher o modelo errado deve resultar em campos vazios, não em números errados; isso não foi
+  testado.**
+- Latência na thread de análise e liberação de memória (o mesmo cuidado do `FrameTransform`).
+
+### 15.4 O que verificar no aparelho e o que depende de governança
+
+No aparelho: (1) acerto e errado-válido com a guia real, pelo protocolo da seção 11 adaptado à
+captura ao vivo; (2) latência e memória; (3) câmera liberada no cancelamento, em segundo plano e na
+rotação; (4) nenhuma persistência ou log de pixels (FOT-10/11/12), como já se exige do caminho ML Kit.
+Governança: substituir ou complementar o ML Kit por decodificação própria é **mudança de abordagem**
+frente à decisão congelada (spec §6.1; P02/P103) e depende da orientadora (P106/P048). Nada disso
+foi iniciado.
+
+### 15.5 Protótipo Java puro (feito)
+
+`tools/lab-fotografia/hseg-java/`: `SevenSegmentDecoder.java` (lógica) e
+`SevenSegmentDecoderCheck.java` (checks sintéticos: 0–9 nos dois modelos, visor apagado, centena
+parcialmente apagada, centena encoberta por reflexo e entrada intacta). Fica **fora** de
+`native-modules/` e não é integrado ao módulo. O CI ganhou um passo no job "Bridge OCR (Java puro)"
+que compila com `--release 17` e roda os checks. **Paridade com a referência Python v2:** idêntica em
+**20/20** LCDs das fotos de laboratório (comparação local, sem comitar entradas nem saídas).

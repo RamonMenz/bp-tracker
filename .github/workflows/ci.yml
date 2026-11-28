@@ -46,6 +46,13 @@ jobs:
           java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.OcrLinePolicyTest
           java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.FrameTransformTest
           java -cp "$RUNNER_TEMP/aferi-photo-checks" expo.modules.aferiphoto.CaptureRunTest
+      - name: Protótipo de sete segmentos (Java puro, laboratório, fora do módulo nativo)
+        run: |
+          mkdir -p "$RUNNER_TEMP/aferi-seven-segment"
+          javac --release 17 -d "$RUNNER_TEMP/aferi-seven-segment" \
+            tools/lab-fotografia/hseg-java/SevenSegmentDecoder.java \
+            tools/lab-fotografia/hseg-java/SevenSegmentDecoderCheck.java
+          java -cp "$RUNNER_TEMP/aferi-seven-segment" aferi.lab.sevensegment.SevenSegmentDecoderCheck
 
   app:
     name: App (lint, typecheck e testes)
