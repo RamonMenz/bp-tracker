@@ -1,6 +1,7 @@
 // Guarda: o decodificador de sete segmentos é CANDIDATO e NÃO está habilitado no produto. Este teste
-// falha se qualquer arquivo de app/ ou native-modules/ importar src/domain/seven-segment
-// (aguarda decisão da orientadora: P02/P106/P048; docs/fotografia-lab.md).
+// falha se qualquer arquivo de app/ ou native-modules/ importar src/domain/seven-segment, e também se
+// outro arquivo de src/ o fizer (o que abriria caminho transitivo a partir de app/). Só a demo isolada
+// demos/web-capture o usa (aguarda decisão da orientadora: P02/P106/P048; docs/fotografia-lab.md).
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative } from 'path';
 
@@ -21,6 +22,14 @@ function sources(dir: string): string[] {
 test.each(['app', 'native-modules'])('nenhum arquivo de %s/ referencia src/domain/seven-segment', folder => {
   const offenders = sources(join(ROOT, folder))
     .filter(path => IMPORT.test(readFileSync(path, 'utf8')))
+    .map(path => relative(ROOT, path));
+  expect(offenders).toEqual([]);
+});
+
+test('nenhum outro arquivo de src/ referencia src/domain/seven-segment (sem caminho transitivo)', () => {
+  const own = join(ROOT, 'src', 'domain', 'seven-segment');
+  const offenders = sources(join(ROOT, 'src'))
+    .filter(path => !path.startsWith(own) && IMPORT.test(readFileSync(path, 'utf8')))
     .map(path => relative(ROOT, path));
   expect(offenders).toEqual([]);
 });

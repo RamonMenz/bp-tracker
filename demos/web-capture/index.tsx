@@ -3,7 +3,7 @@ import '../../global.css';
 import { registerRootComponent } from 'expo';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { WebPhotoCaptureScreen } from '@/screens/WebPhotoCaptureScreen.web';
+import { DemoRoot } from './DemoRoot';
 
-function WebCaptureEvaluation() { return <SafeAreaProvider><WebPhotoCaptureScreen /></SafeAreaProvider>; }
+function WebCaptureEvaluation() { return <SafeAreaProvider><DemoRoot /></SafeAreaProvider>; }
 registerRootComponent(WebCaptureEvaluation);

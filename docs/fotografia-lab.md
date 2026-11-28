@@ -22,7 +22,7 @@ validação independente depende de **fotos novas** do autor (seção 11).
 | P2-2. Protocolo de validação independente | Pronto; critério registrado antes das fotos novas (seção 11) | Autor tira e envia as fotos |
 | P2-3. H-seg v2 (ajuste dentro da amostra) | Feita e **congelada** (seções 12 e 11.1) | Validação com fotos novas |
 | P2-4. Candidato TS em `src/domain/seven-segment/` | Feito, com guarda de não habilitação (seção 13) | — |
-| P2-5. Demo Web experimental | Pendente | — |
+| P2-5. Demo Web experimental | Feita; e2e sintético verde (seção 14) | Autor testa no celular (roteiro 14.3) |
 | P2-6. Estudo Android | Pendente | — |
 | P2-7. Consolidação | Pendente | — |
 
@@ -690,3 +690,82 @@ novas medem.
   retificados das fotos (comparação feita fora do repositório) e em 6/6 sintéticos.
 - Tempo indicativo: cerca de 590 ms por LCD no Node do contêiner, sem otimização. Não é medida de
   celular.
+
+## 14. Demo Web: leitor de sete segmentos EXPERIMENTAL
+
+### 14.1 O que foi feito
+
+- `demos/web-capture/DemoRoot.tsx`: seletor explícito do leitor. O **padrão continua sendo o OCR
+  Tesseract.js (motor decidido)**; a outra opção é **"Leitor de sete segmentos (experimental)"**.
+- `demos/web-capture/seven-segment/`: tela, hook e sessão, todos **dentro da demo**. Nenhum código de
+  `src/` fora de `src/domain/seven-segment/` importa o leitor (a guarda agora cobre `src/`, `app/` e
+  `native-modules/`).
+  - A tela avisa que é um candidato de laboratório não habilitado. O usuário **escolhe o modelo**
+    (G-Tech BSPII ou o genérico) e alinha o visor a uma **guia de enquadramento** com a proporção do
+    LCD do modelo (ROI guiado).
+  - Captura: a área da guia é desenhada num canvas **em memória**, convertida em tons de cinza e o
+    canvas é zerado. A **câmera é encerrada antes da leitura**, e a leitura usa o candidato TS puro.
+  - Sem worker, rede ou armazenamento. Cancelar ou sair da página descarta tudo; resultado tardio é
+    ignorado. Reaproveita `Attempt`/`WebPhotoResources` (descarte, cancelamento, liberação de câmera)
+    e a revisão compartilhada em modo `previewOnly`, com confirmação só em memória e sem writer.
+    Campo incerto chega **vazio** à revisão.
+- Limite conhecido: a decodificação roda na thread principal (cerca de 0,5 s no contêiner) e não é
+  interrompível no meio; o cancelamento descarta o resultado ao fim.
+
+### 14.2 Verificação no Chromium do contêiner (Playwright)
+
+`node demos/web-capture/checks/seven-segment-e2e.mjs` (depois do export Web) sobe o `serve.mjs` com a
+CSP real e substitui `getUserMedia` por um stream de canvas com um visor **sintético** encaixado na
+guia. Resultado:
+
+- visor sintético sem câmera lido com os três campos certos (valores inventados);
+- câmera falsa nos **dois modelos**: três campos certos, faixas da câmera encerradas,
+  `srcObject` nulo e todos os canvas zerados;
+- confirmação "somente em memória";
+- **cancelar com a câmera aberta**: câmera liberada e nenhuma revisão devolvida;
+- **0 requisições externas, 0 escritas HTTP, 0 exceções**; IndexedDB, Cache API, service workers,
+  localStorage e sessionStorage **vazios**.
+
+**Só localmente, sem comitar entradas ou saídas** (`--lcd-dir`, com os LCDs reais retificados das 20
+fotos encaixados na guia): mesmos números da v2 Python, foto a foto (51/57, 0 errado-válido, 16/19
+pares). É **dentro da amostra** e com encaixe perfeito, o que não ocorre na mão do usuário.
+
+Regressão: o check existente `checks/browser-runtime.mjs` (Tesseract, cartão sintético) continuou
+passando com o seletor novo (workers 2/2 encerrados, 0 armazenamento, 0 rede). O export Web
+(`expo export --platform web`) terminou sem erro.
+
+### 14.3 Roteiro para o autor testar no celular (Android + Chrome)
+
+Preparação no computador (uma vez), a partir da raiz:
+
+```bash
+npm ci --ignore-scripts
+npm --prefix demos/web-capture/ocr-assets ci --ignore-scripts
+cd demos/web-capture
+node scripts/prepare-ocr.mjs
+EXPO_OFFLINE=1 EXPO_NO_TELEMETRY=1 ../../node_modules/.bin/expo export --platform web
+node serve.mjs            # http://localhost:8098, só no próprio computador
+```
+
+O celular precisa enxergar `localhost` para ter **contexto seguro**, condição para a câmera no
+navegador:
+
+1. No celular: Opções do desenvolvedor → **Depuração USB** ligada; conecte o cabo USB e autorize o
+   computador.
+2. No Chrome do computador: abra `chrome://inspect/#devices`, clique em **Port forwarding…**,
+   adicione `8098` → `localhost:8098` e marque **Enable port forwarding**. Mantenha essa aba aberta.
+   (Alternativa com ADB: `adb reverse tcp:8098 tcp:8098`.)
+3. No Chrome do celular: abra `http://localhost:8098`.
+4. Escolha **Leitor de sete segmentos (experimental)**, o **modelo** do aparelho e **Iniciar câmera
+   (sete segmentos)**; permita a câmera; encaixe as bordas do LCD (sem a moldura) na guia; toque em
+   **Capturar e ler segmentos**; confira a revisão; use **Confirmar revisão em memória** ou
+   **Cancelar**. Nada é salvo.
+5. Teste também: cancelar com a câmera aberta, trocar de app no meio (a câmera deve desligar) e o
+   aparelho desligado.
+
+**O que registrar (sem fotos, prints ou valores):** modelo do celular, versão do Android e do Chrome;
+para cada tentativa, o modelo do aparelho, as condições (luz, reflexo, inclinação) e o resultado por
+campo como **C** (certo), **E** (número errado exibido, o que é o mais importante de anotar), ou
+**–** (vazio); se foi difícil encaixar na guia; o tempo aproximado entre capturar e ver a revisão; se
+o indicador de câmera do Android apagou depois da captura e do cancelamento; e mensagens de erro.
+Esse teste mede **uso e encaixe**, não substitui a validação com fotos da seção 11.
