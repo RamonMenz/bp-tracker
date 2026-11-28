@@ -14,8 +14,8 @@ legado e privacidade ficam como estão. Este documento **não declara a fotograf
 | 1. Pré-registro (esta seção 1) | Registrado antes de qualquer execução | — |
 | 2. Linha de base Tesseract.js | AJUSTE executado: **não passa** no critério (seção 2) | AVALIAÇÃO só no fim |
 | 3. H-seg (Python, depois TS) | Congelado; AJUSTE **passa** no critério (seção 3); porte TS idêntico ao Python (seção 3.1) | AVALIAÇÃO só no fim |
-| 4. Modelos Tesseract de sete segmentos | Em execução (emenda 2) | Pontuar AJUSTE |
-| 5. Análise do ML Kit (documental) | Pendente | — |
+| 4. Modelos Tesseract de sete segmentos | AJUSTE: `ssd_int` **não passa**; `7seg`/`ssd` incompatíveis com o núcleo WASM (seção 4) | AVALIAÇÃO só no fim |
+| 5. Análise do ML Kit (documental) | Feita (seção 5) | Depende do aparelho |
 | 6. Avaliação única do conjunto reservado | Pendente | — |
 
 Para retomar em outra sessão: as fotos **não** estão no repositório. O autor precisa
@@ -139,6 +139,17 @@ crua, só LCD cru e com Otsu, LCD + rótulos cru e com Otsu. A inversão sai por
 escuro sobre fundo claro. Esses modelos foram treinados só com números e pontuação. Se não lerem
 os rótulos, `interpretPhoto` não tem âncora por construção, e o teto do OCR passa a ser a medida
 principal.
+
+**Emenda 3, registrada antes de rodar o substituto:** `7seg` e `ssd` são modelos de ponto
+flutuante. No worker do projeto, as duas execuções abortaram com `engine-failed` em 92 de 100
+tentativas por modelo. Um diagnóstico com tesseract.js direto no Node mostrou a causa:
+`Aborted(missing function: tesseract::DotProductSSE)`. O núcleo WASM LSTM do tesseract.js 7.0.0
+não traz a rotina flutuante, e o projeto usa o `eng` **inteiro** (`best_int`). As 8 tentativas
+"bem-sucedidas" por modelo não reconheceram nenhuma linha. Por **incompatibilidade técnica**, e
+não por resultado, entra `ssd_int.traineddata` (sha256 `55775938…91339339`), a versão inteira do
+mesmo `ssd` publicada no mesmo repositório, nas mesmas cinco condições. `7seg` não tem versão
+inteira publicada. Convertê-lo exigiria as ferramentas de treino do Tesseract, então ele fica
+**inconclusivo**.
 
 A análise da causa do fracasso do ML Kit é documental (seção 6) e não conta como família.
 
@@ -294,3 +305,68 @@ para `<=` no Python e no TS. O AJUSTE foi reexecutado: **sem mudança** (33/36, 
 chanfradas dos LCDs reais, senão um dígito vira três grupos; (ii) o "1" precisa ter pelo menos
 85% da altura dos outros dígitos do campo, o que vale para segmentos verticais longos, como nos
 dois aparelhos. Visores com outras proporções exigem revisar esses limiares.
+
+## 4. OCR com modelo de sete segmentos — Tesseract (família "OCR especializado")
+
+**Origem e licença:** [`Shreeshrii/tessdata_ssd`](https://github.com/Shreeshrii/tessdata_ssd),
+Apache-2.0 (compatível com o tesseract.js, Apache-2.0), commit `e493a10`, de 18/04/2019. É um
+ajuste fino de `tessdata_best/eng` feito pela autora com texto numérico e três fontes de sete
+segmentos sintéticas. O README declara que é uma prova de conceito. **Nada disso entra no
+produto**: os modelos ficaram só no diretório temporário e foram servidos ao worker do projeto
+no lugar do `eng`.
+
+| Modelo | Execução no worker do projeto | Correto | Errado-válido | Par exato | Teto do OCR | Com dígito ASCII | Com rótulo |
+|---|---|---|---|---|---|---|---|
+| `7seg` (flutuante) | **abortou** em 92/100 (`DotProductSSE` ausente no núcleo WASM) | 0/36 | 0 | 0/12 | 0/36 | — | — |
+| `ssd` (flutuante) | **abortou** em 92/100 (mesma causa) | 0/36 | 0 | 0/12 | 0/36 | — | — |
+| `ssd_int` (inteiro; emenda 3) | 100/100 sem erro | 0/36 | 0 | 0/12 | **1/36** (só no LCD cru) | 9–12/12 | 0/12 |
+
+Os números são do AJUSTE, nas cinco condições da emenda 2 (melhor condição de cada coluna).
+Nenhuma condição do `ssd_int` produziu candidato: o modelo só reconhece números e pontuação,
+então não lê SIS/DIA/PULSO, e `interpretPhoto` não tem âncora. O teto mostra que o problema não
+é só de associação: mesmo como texto livre, o número esperado apareceu em 1 de 36 campos.
+Também não houve falso positivo na foto desligada.
+
+**Veredito no AJUSTE: não passa** (S2 com 0/12 pares). `7seg` e `ssd` ficam **inconclusivos**
+neste ambiente: não rodam no núcleo WASM do projeto sem conversão para inteiro. Não se sabe como
+se sairiam no Tesseract nativo. Família 1 reprovou, família 2 passou e família 3 reprovou, então
+a condição de parada (b), de duas reprovações seguidas, não se aplicou.
+
+## 5. Por que o ML Kit não emitiu dígitos — análise documental
+
+Base: [E-015](relatorio/decisoes-e-evidencias.md), [resultado do ROI591](task-09-etapa-4-resultado-roi591.md),
+[viabilidade](task-09-etapa-6-viabilidade-roi591.md), [visor real](task-09-diagnostico-visor-real.md),
+os [cartões sintéticos](../tools/task09/cartoes-ocr.html) e as medições de laboratório deste
+documento. Nada foi executado no aparelho. Não se propõe repetir o ROI591 nem varrer parâmetros
+do ML Kit.
+
+Fatos de partida: no Samsung, o cartão A (fonte comum) teve os três valores corretos, e o cartão B
+(sete segmentos em CSS, mesmo layout, alto contraste) não teve **nenhum dígito ASCII** nos níveis
+`Text`, `TextBlock` e `Line` do SDK, mesmo com os rótulos presentes depois do ROI. No BSPII real
+houve ausência de campos; com o visor desligado, os rótulos chegaram. Neste laboratório, com
+outro motor (Tesseract `eng`), o padrão se repetiu nas fotos reais: rótulos lidos, nenhum valor do
+visor no texto. Sobre os dígitos saíram **letras ou símbolos** (letras em 6 a 10 das 12 fotos só
+do LCD). Já o H-seg, sem nenhum aprendizado, extraiu 33 de 36 valores das mesmas fotos, inclusive
+das de baixa resolução.
+
+| Hipótese | A favor | O que enfraquece | Só o aparelho responde |
+|---|---|---|---|
+| **H1 — glifo fora da distribuição:** o reconhecedor latino geral não mapeia dígitos de segmentos separados para 0–9 | A e B diferem só no formato dos dígitos; outro motor geral (Tesseract `eng`) falha igual nas fotos reais e troca os dígitos por letras e símbolos; o modelo de sete segmentos do Tesseract também falhou, então o problema não é "falta de fonte" no treino de uma rede só | Cartão CSS ≠ LCD real; uma captura por cartão; não se sabe o que o ML Kit escreveu nas linhas de B | Classe dos caracteres (letra, dígito, pontuação) das linhas **sobre a região dos dígitos**, sem o texto |
+| **H2 — a detecção não propõe linhas sobre os dígitos:** segmentos separados não formam uma "linha de texto" para o detector | "Linhas presentes" em B pode vir só dos rótulos; segmentos são componentes desconexos | No Tesseract, a detecção propôs linhas sobre o LCD, então lá isso não aconteceu; o ML Kit tem outro detector | Caixas das linhas comparadas com a região dos dígitos (só sobreposição, sem conteúdo) |
+| **H3 — captura: escala, foco, borrão ou exposição do quadro de análise** | O quadro de análise tem 960×720; a câmera em movimento borra | ROI591 ampliou 2× sem ganho; B tem alto contraste; aqui, fotos de 431×670 px são decodificáveis pelo H-seg, então a informação existe mesmo em baixa resolução | Nitidez e tamanho em pixels dos dígitos no buffer real (métrica numérica, sem imagem) |
+| **H4 — a bridge ou os filtros descartam os dígitos** | — | `bridge-2` mostrou ausência de ASCII já antes dos filtros (E-015) | — (enfraquecida pelo próprio histórico) |
+| **H5 — interpretação ou associação** | — | Nenhum dígito chegou ao interpretador; o `interpretPhoto` lê os cartões A | — (descartada como causa primária) |
+| **H6 — confusão com letras (ex.: segmentos lidos como I, l, \|, B, S)** | É o que o Tesseract fez aqui; o indicador "sem ASCII" não exclui letras | Não observado no ML Kit | Mesma contagem por classe de caractere da H1 |
+
+**Leitura.** H1 e H6 são as mais compatíveis com o conjunto de evidências: o problema parece ser
+o **tipo de glifo** para modelos de texto geral, e não a captura (H3 enfraquecida pelo H-seg nas
+mesmas condições) nem o código do projeto (H4 e H5 enfraquecidas). Isso **não está demonstrado
+para o ML Kit**: falta saber o que o SDK escreveu sobre a região dos dígitos. Um único ensaio com
+o cartão B, que devolvesse só a contagem de caracteres por classe (letra, dígito, pontuação) e a
+sobreposição das caixas com a região dos dígitos, distinguiria H1/H6 de H2 sem expor conteúdo.
+Esse ensaio **não foi pedido nem executado**, e decidir fazê-lo cabe ao autor.
+
+Consequência prática, condicionada a H1/H6: nenhum ajuste de pré-processamento para o ML Kit
+transforma segmentos em dígitos. Uma etapa de decodificação de segmentos (como o H-seg) ou um
+modelo treinado em LCD seria necessária, e qualquer das duas é uma **mudança de abordagem** que
+depende da governança (seção 8).
