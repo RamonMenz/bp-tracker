@@ -24,7 +24,7 @@ validação independente depende de **fotos novas** do autor (seção 11).
 | P2-4. Candidato TS em `src/domain/seven-segment/` | Feito, com guarda de não habilitação (seção 13) | — |
 | P2-5. Demo Web experimental | Feita; e2e sintético verde (seção 14) | Autor testa no celular (roteiro 14.3) |
 | P2-6. Estudo Android | Estudo escrito; protótipo Java puro com checks no CI (seção 15) | Decisão da orientadora antes de qualquer integração |
-| P2-7. Consolidação | Pendente | — |
+| P2-7. Consolidação | Feita (seção 16) | Fotos novas (seção 11) e teste no celular (seção 14.3) |
 
 ### Parte 1
 
@@ -819,8 +819,9 @@ entraria **depois do `FrameTransform`, no lugar do ML Kit**:
   risco principal e só se mede no aparelho.
 - Reflexo e foco ao vivo, movimento e exposição automática do CameraX diferem de fotos estáticas.
 - Gabarito por modelo: cada aparelho novo exige gabarito, e o usuário precisa escolher o modelo certo.
-  **Escolher o modelo errado deve resultar em campos vazios, não em números errados; isso não foi
-  testado.**
+  Escolher o modelo errado precisa resultar em campos vazios, não em números errados. O teste com o
+  gabarito trocado nas 20 fotos achou 2 números errados na revisão 1, corrigidos na revisão 2 (seção
+  12.5). Ainda assim, **é preciso confirmar isso no aparelho**.
 - Latência na thread de análise e liberação de memória (o mesmo cuidado do `FrameTransform`).
 
 ### 15.4 O que verificar no aparelho e o que depende de governança
@@ -866,3 +867,74 @@ Testes sintéticos novos: TS (16 no total) e Java ("sete com barra separada", no
 trocado). Paridade Python × TS × Java refeita: **20/20** com o modelo certo e **20/20** com o
 modelo trocado. LOO da revisão 2: igual à tabela 12.4 (51/57, 0 errado-válido, 16/19). Demo Web
 (e2e local com LCDs reais): 51/57, 0 errado-válido, 16/19.
+
+## 16. Consolidação da Parte 2
+
+### 16.1 Versões e números (nunca misturar)
+
+| Versão | Estado | Números conhecidos | Natureza dos números |
+|---|---|---|---|
+| H-seg **v1** (`hseg.py`, `75adad8`) | **Congelada** desde a Parte 1 | Avaliação reservada da Parte 1: 16/21 campos, 0 errado-válido, 6/7 pares; nas 20 fotos: 49/57, 0, 16/19 | O reservado foi avaliação única **na Parte 1**; hoje tudo é ajuste |
+| H-seg **v2 rev. 2** (`hseg_v2.py`, TS e Java idênticos) | **Congelada** antes das fotos novas | 20 fotos: 51/57, 0 errado-válido, 16/19 pares; LOO igual; modelo trocado: 0 errado-válido | **Ajuste dentro da amostra**, não validação |
+| Tesseract.js `eng` + `interpretPhoto` corrigido | Produto (motor decidido), sem mudança de motor | 20 fotos: 0/57 lidos, 0 errado-válido, 0 falso positivo depois da correção | Verificação dentro da amostra |
+
+### 16.2 O que está e o que NÃO está validado
+
+| Afirmação | Situação |
+|---|---|
+| Tesseract.js (motor Web decidido) não lê o LCD de sete segmentos das fotos | Demonstrado em laboratório (Parte 1), nas condições testadas |
+| `interpretPhoto` não aceita mais dígito isolado junto ao rótulo | Corrigido no produto, com testes sintéticos; verificado nas 20 fotos (dentro da amostra) |
+| H-seg lê o visor com 0 errado-válido | **Não validado.** Só ajuste (v2) e uma avaliação reservada de 7 fotos (v1, Parte 1). Depende das **fotos novas** (seção 11) |
+| H-seg funciona com a guia na mão do usuário | **Não testado.** O laboratório usa localização automática ou encaixe perfeito. Depende do **celular** (seção 14.3) |
+| Pixels só em memória, sem rede nem armazenamento, na demo Web | Verificado no Chromium do contêiner com câmera simulada; **não** em navegador de celular |
+| Porte Android | Só estudo e protótipo Java puro; **nada** no módulo nativo nem no aparelho |
+| Fotografia concluída | **Não.** Continua irredutível no TAP (P117) e sem decisão de escopo |
+
+### 16.3 Ameaças à validade
+
+- **Amostra pequena:** 20 fotos (19 ligadas), de dois aparelhos; um deles com 3 fotos.
+- **Mesmo autor**, provavelmente em poucos dias, com os mesmos aparelhos. Valores e condições se
+  repetem; não há independência entre fotos de uma mesma sessão.
+- **O assistente viu todas as fotos** antes de desenhar as regras, inclusive as 7 reservadas na Parte
+  1. Toda regra da v2 foi motivada por falhas observadas nelas. A LOO só remede o parâmetro numérico,
+  e não o desenho, então subestima o otimismo.
+- Três fotos (06–08) parecem imagens de divulgação, não capturas reais do uso.
+- A demo e o e2e com fotos reais usam o LCD **perfeitamente encaixado** na guia; na prática o
+  encaixe será imperfeito.
+- Os tempos foram medidos no contêiner e não representam celulares.
+
+### 16.4 O que depende da orientadora
+
+Qualquer passo do H-seg rumo ao produto é **mudança de abordagem** frente à decisão técnica
+congelada (spec §6.1–6.2, P02/P103). Isso inclui: habilitar o candidato de `src/domain/seven-segment/`
+em alguma rota; complementar ou substituir o ML Kit no Android; adotar gabarito por modelo de
+aparelho e seleção de modelo pelo usuário; e tratar o limite atual no relatório (P106/P117). Nada
+disso foi feito. A correção do `interpretPhoto` (seção 10) é uma correção de defeito no
+interpretador existente, sem troca de motor nem mudança de escopo.
+
+## 17. Registro para o relatório final (Parte 2)
+
+- **Data e base:** 28/11/2026; branch `exp/fotografia-lab-2` a partir de `staging @ eba7dbd`
+  (depois do merge do #107).
+- **Correção no produto:** `interpretPhoto` deixou de aceitar um dígito isolado junto a um rótulo
+  como candidato. O defeito foi achado no laboratório (3 fotos, uma com o aparelho desligado), os
+  testes foram escritos primeiro e a correção é mínima. Nas 20 fotos, depois da correção, o
+  Tesseract tem 0 errado-válido e 0 falso positivo (dentro da amostra).
+- **Protocolo de validação independente** pronto (`tools/lab-fotografia/evaluate.py`): versões
+  congeladas por sha256, critério pré-registrado (≥ 30 fotos ligadas de ≥ 20 medições, ≥ 3
+  desligadas, **zero errado-válido como condição necessária**, par exato ≥ 60%) e passo a passo
+  para o autor. **Ainda não executado: faltam as fotos novas.**
+- **H-seg v2 (ajuste):** 51/57 campos, 0 errado-válido, 16/19 pares nas 20 fotos já vistas
+  (v1: 49/57, 0, 16/19). LOO idêntica. Um achado de segurança (modelo trocado lia "7" como "1")
+  foi corrigido antes do congelamento. **Nada disso é validação.**
+- **Candidato TS** em `src/domain/seven-segment/`: puro, **não habilitado**, com guarda testada por
+  mutação contra imports de `app/`, `native-modules/` e do resto de `src/`; idêntico ao Python e ao
+  Java nas 20 fotos, com o modelo certo e o trocado.
+- **Demo Web experimental**, com seletor explícito, guia por modelo e revisão só em memória:
+  e2e no Chromium com câmera simulada, sem rede nem armazenamento; regressão do caminho Tesseract
+  verde. **Não testada em celular.**
+- **Android:** estudo de porte sobre o NV21 em memória e protótipo Java puro com checks no CI;
+  módulo nativo intacto.
+- **Pendências do autor:** fotos novas (seção 11.3) e teste da demo no celular (seção 14.3).
+  **Pendência de governança:** decisão da orientadora (seção 16.4). A fotografia **não** está
+  concluída.
