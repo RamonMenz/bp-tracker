@@ -19,7 +19,7 @@ validação independente depende de **fotos novas** do autor (seção 11).
 | Etapa da Parte 2 | Estado | Próximo passo |
 |---|---|---|
 | P2-1. Correção do `interpretPhoto` (dígito espúrio) | Feita (seção 10) | — |
-| P2-2. Protocolo de validação independente | Pendente | — |
+| P2-2. Protocolo de validação independente | Pronto; critério registrado antes das fotos novas (seção 11) | Autor tira e envia as fotos |
 | P2-3. H-seg v2 (ajuste dentro da amostra) | Pendente | — |
 | P2-4. Candidato TS em `src/domain/seven-segment/` | Pendente | — |
 | P2-5. Demo Web experimental | Pendente | — |
@@ -531,3 +531,76 @@ corrigido, as 20 fotos tiveram **0 errado-válido e 0 falso positivo** (antes: 2
 o falso positivo da foto desligada). É uma verificação **dentro da amostra**: as mesmas fotos
 que revelaram o defeito. A leitura continua 0/57, porque a correção não faz o Tesseract ler
 segmentos.
+
+## 11. Protocolo de validação independente (fotos NOVAS)
+
+**Objetivo:** medir o H-seg em fotos que o assistente **nunca viu** e que não serviram para ajustar
+nada. É a única forma de transformar os números de ajuste em validação.
+
+### 11.1 Versões congeladas
+
+| Versão | Arquivo do algoritmo | sha256 | Commit de referência |
+|---|---|---|---|
+| v1 (Parte 1) | `tools/lab-fotografia/hseg.py` | `d3cf2d8836b10210ecb6437b7ad1803b5cc40b682bbeba5b40d00ce412457fdb` | `75adad8` (avaliação reservada da Parte 1; inalterado desde então) |
+| v2 (Parte 2) | registrada na seção 12 quando congelada, **antes** de receber as fotos novas | — | — |
+
+`tools/lab-fotografia/evaluate.py` só executa uma versão cujo arquivo tenha exatamente o sha256
+acima; se o arquivo mudar, ele **recusa**. Verificado: com um byte acrescentado, o script saiu
+com "recusado".
+
+### 11.2 Critério de sucesso (pré-registrado agora, antes das fotos novas)
+
+- **Condição necessária:** **zero** errado-válido (troca incluída) em todos os campos e **zero**
+  falso positivo nas fotos com o aparelho desligado. Um único número errado apresentado como
+  válido reprova a versão.
+- **Amostra mínima:** pelo menos **30 fotos com o visor ligado**, de pelo menos **20 medições
+  distintas** (fotos repetidas do mesmo visor contam como uma medição), mais pelo menos **3 fotos
+  com o aparelho desligado**. Abaixo disso, o resultado é **inconclusivo**, mesmo que pareça bom.
+  Com 30 fotos ligadas (cerca de 90 campos) e zero erro, o limite superior de 95% da taxa de
+  errado-válido fica em cerca de 3,3%.
+- **Utilidade:** par SIS/DIA exato em **≥ 60%** das fotos ligadas, o mesmo limiar da Parte 1.
+- **Veredito:** *funcionou* (condição necessária + amostra mínima + par ≥ 60%); *parcial* (seguro,
+  mas par < 60%); *não funcionou* (qualquer errado-válido ou falso positivo); *inconclusivo*
+  (amostra abaixo do mínimo). O pulso e o desempenho por aparelho são reportados, mas não entram
+  no veredito.
+- **Ordem das versões:** a v1 é avaliada primeiro e é a análise **primária**, por ter sido
+  congelada antes. A v2, se estiver congelada antes das fotos chegarem, é **secundária** e
+  reportada em separado. Os números das duas nunca são misturados nem escolhidos depois.
+- **Avaliação única:** cada versão roda **uma vez** sobre o lote novo. Depois disso, essas fotos
+  também passam a ser dados de ajuste.
+
+### 11.3 Passo a passo para o autor
+
+1. **Quantidade:** no mínimo 36 fotos: 30 com o visor ligado (de ≥ 20 medições diferentes, no
+   máximo 2 fotos por medição), 3 com o aparelho desligado e, se possível, 3 com o visor mostrando
+   outra tela (memória ou erro), anotadas como desligado só se não houver números de medição.
+   Se possível, inclua ≥ 6 fotos do aparelho genérico.
+2. **Condições a variar** (anote em `condicoes`, sem valores): luz ambiente, luz forte ou janela,
+   luz artificial; com e sem reflexo; frontal e inclinado (até cerca de 20°); perto e mais longe
+   (o visor ocupando de ⅓ a ⅔ da largura da foto); sombra parcial. Fotografe o **aparelho inteiro
+   ou pelo menos o visor inteiro com a moldura**: o H-seg localiza o visor pela carcaça clara ao
+   redor.
+3. **Não faça:** editar, recortar ou filtrar as fotos; tirar várias e escolher só as boas (envie
+   todas as que tirar, inclusive as ruins); usar fotos de outra pessoa.
+4. **Nomes:** `v01.jpg`, `v02.jpg`... em ordem de captura.
+5. **Gabarito:** um arquivo `gabarito.csv` com a primeira linha
+   `id,sis,dia,pul,device,medicao,condicoes` e uma linha por foto, por exemplo
+   `v07,<sis>,<dia>,<pul>,gtech,m05,luz forte com reflexo`. Aparelho desligado: `v08,,,,gtech,,desligado`.
+   `device` é `gtech` (G-Tech BSPII) ou `generic`. Anote os valores **do visor**, conferindo-os
+   antes de fotografar.
+6. **Envio:** anexe as fotos e o `gabarito.csv` no chat de uma sessão do Claude Code neste
+   repositório e peça "rodar a validação independente da seção 11". Como na Parte 1, fotos e
+   gabarito ficam só na sessão e nunca são comitados.
+
+### 11.4 Comando (reproduzível)
+
+```bash
+# preparo (uma vez): ver tools/lab-fotografia/README.md (venv com opencv-python-headless e numpy)
+"$LAB/venv/bin/python" -I tools/lab-fotografia/evaluate.py --photos "$LAB/novas" --expected "$LAB/novas/gabarito.csv" --version v1
+"$LAB/venv/bin/python" -I tools/lab-fotografia/evaluate.py --photos "$LAB/novas" --expected "$LAB/novas/gabarito.csv" --version v2
+```
+
+A saída lista, por foto, só categorias (C, E, T, -, FP) e o motivo da recusa, além dos agregados,
+do resultado por aparelho, do limite superior da regra de três e do veredito. Teste de fumaça
+nas 20 fotos antigas (**dentro da amostra**, não validação): reproduziu exatamente os números da
+v1 (49/57, 0 errado-válido, 16/19 pares) e respondeu "inconclusivo" por amostra abaixo do mínimo.
