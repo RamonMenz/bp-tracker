@@ -16,7 +16,7 @@ legado e privacidade ficam como estão. Este documento **não declara a fotograf
 | 3. H-seg (Python, depois TS) | Congelado; AJUSTE **passa** no critério (seção 3); porte TS idêntico ao Python (seção 3.1) | AVALIAÇÃO só no fim |
 | 4. Modelos Tesseract de sete segmentos | AJUSTE: `ssd_int` **não passa**; `7seg`/`ssd` incompatíveis com o núcleo WASM (seção 4) | AVALIAÇÃO só no fim |
 | 5. Análise do ML Kit (documental) | Feita (seção 5) | Depende do aparelho |
-| 6. Avaliação única do conjunto reservado | Pendente | — |
+| 6. Avaliação única do conjunto reservado | **Executada uma vez** no commit `75adad8` (seção 6) | Ver seção 9 |
 
 Para retomar em outra sessão: as fotos **não** estão no repositório. O autor precisa
 reenviá-las no chat. Os scripts recebem os caminhos como argumento (README em
@@ -370,3 +370,114 @@ Consequência prática, condicionada a H1/H6: nenhum ajuste de pré-processament
 transforma segmentos em dígitos. Uma etapa de decodificação de segmentos (como o H-seg) ou um
 modelo treinado em LCD seria necessária, e qualquer das duas é uma **mudança de abordagem** que
 depende da governança (seção 8).
+
+## 6. Avaliação única do conjunto reservado
+
+Executada **uma vez**, com tudo congelado (commit `75adad8`): localizador, H-seg (já com a
+correção de Otsu da seção 3.1), condições do Tesseract e ROIs. Nenhum parâmetro mudou depois.
+A inspeção visual posterior serviu só para explicar as falhas.
+
+**Correção de contagem do pré-registro:** a seção 1.4 fala em "6 fotos ligadas, 18 campos", mas
+a AVALIAÇÃO tem **7 fotos ligadas** (6 BSPII + 1 genérico) e **21 campos**. O sorteio estava
+correto; a conta no texto, não. A regra geral se mantém: S1 com 0 errado-válido e 0 troca; S2 com
+par exato em ≥ 60% das fotos ligadas, ou seja, **≥ 5 de 7** (mais exigente que o "4 de 6"
+escrito).
+
+| Abordagem | Correto | Errado-válido | Troca | Ausente | Par exato | Teto do OCR | Veredito pré-registrado |
+|---|---|---|---|---|---|---|---|
+| Tesseract.js `eng`, melhor de 9 condições | 0/21 | 0 (1 na foto inteira crua) | 0 | 20–21 | 0/7 | 0/21 | **não funcionou** |
+| Tesseract.js `ssd_int`, 5 condições | 0/21 | 0 | 0 | 21 | 0/7 | ≤ 1/21 | **não funcionou** |
+| Tesseract.js `7seg` / `ssd` | — | — | — | — | — | — | **inconclusivo** (abortam no núcleo WASM inteiro) |
+| **H-seg** (Python; TS idêntico em 7/7) | **16/21** | **0** | **0** | 5 | **6/7** | — | **funcionou** no critério do laboratório |
+
+H-seg por campo: SIS 6/7, DIA 7/7, **PULSO 3/7**. Por aparelho: BSPII com 5/6 pares e genérico
+com 1/1.
+
+| Foto (condição do autor) | SIS | DIA | PULSO | Causa observada da ausência |
+|---|---|---|---|---|
+| 01 ambiente, reflexo | C | C | – | Borda inferior detectada acima da real cortou o pulso; guarda de tinta |
+| 02 luz forte, reflexo | C | C | – | Idem |
+| 14 sombra no topo | C | C | – | Idem; varredura discordante |
+| 15 ambiente, reflexo | C | C | C | — |
+| 18 mão à esquerda | – | C | C | Sombra da borda superior fundida aos dígitos do SIS; guarda de tinta |
+| 19 reflexo forte dividindo o visor | C | C | C | — |
+| 20 genérico | C | C | – | Borda inferior cortou o pulso; guarda de tinta |
+
+Tesseract `eng` por foto: todos os campos ausentes em todas as condições, exceto **18, foto
+inteira crua: PULSO errado-válido**. `ssd_int`: todos ausentes.
+
+**Somando AJUSTE e AVALIAÇÃO, H-seg:** 49/57 campos corretos, **0/57 errado-válido**, 0 troca,
+16/19 pares e 0 falso positivo no visor desligado. Pela "regra de três", 0 erro em 57 campos dá
+um limite superior de 95% de cerca de **5%** para a taxa de errado-válido nessas condições. Só
+na AVALIAÇÃO (0 em 21), o limite fica em cerca de **14%**. O pulso cai do AJUSTE para a AVALIAÇÃO
+(10/12 → 3/7), o que mostra que a borda inferior do localizador é o ponto mais frágil e que o
+sobreajuste não é desprezível.
+
+## 7. Vereditos por abordagem
+
+| Abordagem | Veredito | Em uma frase |
+|---|---|---|
+| Tesseract.js `eng` do projeto (motor Web decidido), foto inteira e recortes, com e sem pré-processamento | **Não funcionou** | Lê os rótulos impressos, mas nunca o número do LCD (teto 0/57). Na foto desligada e em duas fotos ligadas, `interpretPhoto` transformou um dígito espúrio na linha do rótulo em candidato |
+| Tesseract.js com modelos de sete segmentos (`ssd_int`) | **Não funcionou** | Emite dígitos, mas não os do visor (teto de no máximo 2/57 somando a melhor condição de cada conjunto) e não lê rótulos para a associação |
+| Tesseract.js `7seg` e `ssd` (flutuantes) | **Inconclusivo** | Incompatíveis com o núcleo WASM inteiro do projeto; exigiriam conversão |
+| H-seg, decodificação de segmentos por lógica pura com gabarito por modelo | **Funcionou no critério do laboratório**, com ressalvas | 0 errado-válido em 57 campos e 6/7 pares na avaliação, mas com amostra pequena, um autor, dois aparelhos, pulso frágil e gabarito por modelo; **não testado no aparelho** |
+| ML Kit (análise documental) | **Inconclusivo quanto à causa** | H1/H6 (glifo fora da distribuição ou confusão com letras) são as mais compatíveis; só um ensaio no aparelho distingue |
+
+## 8. Limites, o que só o aparelho decide e o que depende da orientadora
+
+**Limites desta investigação.**
+
+- 20 fotos de um único autor, de dois aparelhos, sem variação controlada de foco, distância ou
+  ângulo. Três delas têm aspecto de imagem de divulgação. Não há acurácia representativa nem
+  p50/p95 de latência.
+- O assistente viu todas as fotos ao recebê-las e fez quatro rodadas de ajuste do H-seg com 12
+  fotos. A AVALIAÇÃO reduz esse viés, mas tem 7 fotos.
+- O H-seg depende de um **gabarito de layout por modelo**: não lê aparelhos desconhecidos e exige
+  que o usuário escolha o modelo (ou um guia por modelo). Um "1" de centena **totalmente** oculto
+  continua sendo um modo residual de errado-válido.
+- O localizador automático **não é** o guia de enquadramento: no app, o recorte viria do guia, e a
+  correspondência guia↔quadro tem as dificuldades já documentadas na TASK-09.
+- Os tempos (Tesseract de 150 a 520 ms para reconhecer; H-seg de 36 a 76 ms em Python) são do
+  contêiner, não de um celular. O porte TS não foi medido em navegador móvel.
+- O Tesseract foi testado com a configuração do projeto (PSM 6, `eng` best_int, LSTM). Outras
+  configurações não foram varridas, por desenho.
+
+**O que só o aparelho decide.** (1) Se H1/H6 explicam o ML Kit: classe dos caracteres e
+sobreposição das caixas sobre os dígitos, sem conteúdo. (2) Se o quadro da câmera do app (preview,
+movimento, foco automático, reflexo ao vivo) preserva o que as fotos preservaram. (3) Latência,
+memória e o tamanho que o H-seg acrescentaria em Android e no navegador móvel. (4) Se o guia de
+enquadramento entrega um recorte estável o bastante para a borda inferior, onde o H-seg falhou.
+(5) Toda a privacidade em tempo de execução (FOT-10/11/12), que este laboratório não toca.
+
+**O que dependeria de aprovação da orientadora para virar produto.** A spec (§6.1–6.2) e o
+congelamento da decisão técnica (TAP P103, encaminhamento P02) fixam ML Kit no Android e
+Tesseract.js na Web e vedam OpenCV operacional. Levar o H-seg ao produto seria **mudança de
+abordagem**: uma etapa de decodificação própria no lugar ou ao lado do OCR, um gabarito por
+modelo de aparelho e um guia de enquadramento por modelo. Isso exige decisão formal (Q-001,
+P117, P106, P048) e não foi feito nem proposto como adotado. O falso positivo de `interpretPhoto`
+com Tesseract (seção 2) é uma **observação sobre o produto**: mudar o interpretador também passa
+pelo fluxo normal de revisão, e nada foi alterado aqui.
+
+## 9. Registro para o relatório final
+
+- **Data e base:** 28/11/2026; branch `exp/fotografia-lab` a partir de `staging @ f8cfdee`;
+  avaliação no commit `75adad8`.
+- **Dados:** 20 fotos do autor (16 do G-Tech BSPII ligado, 1 desligado, 3 de um segundo aparelho
+  genérico), mantidas só na sessão, nunca comitadas. Divisão sorteada: 13 para AJUSTE e 7 para
+  AVALIAÇÃO reservada.
+- **Pré-registro** antes de qualquer execução (commit `327a30b`), com três emendas registradas
+  antes das execuções correspondentes e uma correção de contagem declarada.
+- **Resultado principal:** o motor Web decidido (Tesseract.js `eng`) **não lê** o LCD de sete
+  segmentos real em nenhuma das 9 condições testadas (0 de 57 valores aparecem no texto), mas lê
+  os rótulos impressos, o mesmo padrão observado no ML Kit. Modelos Tesseract de sete segmentos
+  de terceiros também não resolveram (`ssd_int`) ou não rodam no núcleo WASM do projeto
+  (`7seg`, `ssd`).
+- **Candidata comparativa:** uma decodificação de sete segmentos por lógica pura (H-seg), com
+  gabarito por modelo, atingiu na avaliação reservada 16/21 campos, 6/7 pares SIS/DIA e **0
+  valor errado apresentado como válido**. No total (57 campos), 0 errado-válido, com limite
+  superior de 95% de cerca de 5%. O pulso é o ponto fraco (borda inferior do recorte).
+- **Achado de segurança no produto (sem alteração):** com o Tesseract, `interpretPhoto` aceitou
+  como candidato um dígito espúrio na linha de um rótulo. Isso aconteceu na foto do aparelho
+  desligado (pulso) e em duas fotos ligadas.
+- **Não demonstrado:** nada foi executado em celular; o H-seg não está no produto; a causa do
+  fracasso do ML Kit não foi comprovada; a fotografia **não está concluída**.
