@@ -20,8 +20,8 @@ validação independente depende de **fotos novas** do autor (seção 11).
 |---|---|---|
 | P2-1. Correção do `interpretPhoto` (dígito espúrio) | Feita (seção 10) | — |
 | P2-2. Protocolo de validação independente | Pronto; critério registrado antes das fotos novas (seção 11) | Autor tira e envia as fotos |
-| P2-3. H-seg v2 (ajuste dentro da amostra) | Python pronto, LOO feita (seção 12); porte TS na etapa 4 | Congelar v2 após paridade TS |
-| P2-4. Candidato TS em `src/domain/seven-segment/` | Pendente | — |
+| P2-3. H-seg v2 (ajuste dentro da amostra) | Feita e **congelada** (seções 12 e 11.1) | Validação com fotos novas |
+| P2-4. Candidato TS em `src/domain/seven-segment/` | Feito, com guarda de não habilitação (seção 13) | — |
 | P2-5. Demo Web experimental | Pendente | — |
 | P2-6. Estudo Android | Pendente | — |
 | P2-7. Consolidação | Pendente | — |
@@ -542,7 +542,8 @@ nada. É a única forma de transformar os números de ajuste em validação.
 | Versão | Arquivo do algoritmo | sha256 | Commit de referência |
 |---|---|---|---|
 | v1 (Parte 1) | `tools/lab-fotografia/hseg.py` | `d3cf2d8836b10210ecb6437b7ad1803b5cc40b682bbeba5b40d00ce412457fdb` | `75adad8` (avaliação reservada da Parte 1; inalterado desde então) |
-| v2 (Parte 2) | registrada na seção 12 quando congelada, **antes** de receber as fotos novas | — | — |
+| v2 (Parte 2) | `tools/lab-fotografia/hseg_v2.py` | `9c1969e4cf7f8f93bb7e94e71cfe73f021ccaa30bb749bd59a3a5de7c3650ff5` | commit que introduz a seção 13 (congelada antes de qualquer foto nova) |
+| v2, porte TS | `src/domain/seven-segment/decode-seven-segment.ts` e `image-ops.ts` | `659c5dba…dc52828d` e `409154d3…ce462f76a5` | idem |
 
 `tools/lab-fotografia/evaluate.py` só executa uma versão cujo arquivo tenha exatamente o sha256
 acima; se o arquivo mudar, ele **recusa**. Verificado: com um byte acrescentado, o script saiu
@@ -666,3 +667,26 @@ remedida sem a foto de teste. As medianas variaram pouco (BSPII: SIS 0,29–0,31
 0,20–0,22), e o resultado foi idêntico. **Limite:** as *regras* foram desenhadas olhando todas as
 fotos, inclusive as 7 reservadas na Parte 1, então a LOO não mede o otimismo desse desenho. Só fotos
 novas medem.
+
+## 13. Candidato TypeScript em `src/domain/seven-segment/` — NÃO habilitado
+
+- `decode-seven-segment.ts` e `image-ops.ts`: porte puro da v2 (sem I/O, rede, DOM ou
+  dependências). Entrada: LCD retificado em tons de cinza mais o modelo (`gtech` ou `generic`).
+  Saída: campos candidatos ou incertos com motivo. `toCandidateSet` converte para o contrato da
+  revisão: valor vira candidato com `basis: 'layout'`; dúvida vira `unreadable`, campo vazio. Os tipos
+  de domínio não mudaram.
+- `README.md` e comentários em cada arquivo: **candidato, NÃO habilitado, aguarda decisão da
+  orientadora (P02/P106/P048)**.
+- `not-enabled.test.ts`: falha se qualquer arquivo de `app/` ou `native-modules/` referenciar
+  `seven-segment`. **Teste de mutação:** com um import temporário em `app/`, o teste falhou e
+  listou o arquivo; o import foi removido.
+- `decode-seven-segment.test.ts`, com visores **100% sintéticos**
+  (`synthetic-display.test-fixture.ts`): dígitos 0–9 nos dois gabaritos, itálico, sombra suave,
+  visor apagado (`visor-sem-digitos`), "1" de centena parcialmente apagado, "1" de centena encoberto
+  por reflexo saturado (`centena-encoberta`), mancha no meio do dígito, zero à esquerda e
+  quantidade inválida, imutabilidade da entrada e conversão para a revisão. 14 testes no total,
+  todos passando.
+- **Paridade com a referência Python v2:** idêntica em status, valor **e motivo** em **20/20** LCDs
+  retificados das fotos (comparação feita fora do repositório) e em 6/6 sintéticos.
+- Tempo indicativo: cerca de 590 ms por LCD no Node do contêiner, sem otimização. Não é medida de
+  celular.

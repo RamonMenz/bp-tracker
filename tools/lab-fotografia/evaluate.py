@@ -29,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # Versões congeladas: arquivo do algoritmo e sha256 registrados em docs/fotografia-lab.md.
 FROZEN = {
     "v1": ("hseg.py", "d3cf2d8836b10210ecb6437b7ad1803b5cc40b682bbeba5b40d00ce412457fdb"),
+    "v2": ("hseg_v2.py", "9c1969e4cf7f8f93bb7e94e71cfe73f021ccaa30bb749bd59a3a5de7c3650ff5"),
 }
 # Critério pré-registrado (docs/fotografia-lab.md, seção "Protocolo de validação independente").
 MIN_ON, MIN_MEASUREMENTS, MIN_OFF, PAIR_MIN = 30, 20, 3, 0.60
