@@ -142,7 +142,7 @@ def binarize(lcd):
     background = cv2.GaussianBlur(background, (31, 31), 0)
     normalized = (np.clip(gray / np.maximum(background, 1), 0, 1) * 255).astype(np.uint8)
     threshold, _ = cv2.threshold(normalized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    fg = (normalized < threshold).astype(np.uint8)
+    fg = (normalized <= threshold).astype(np.uint8)  # mesmo lado do THRESH_BINARY: só > limiar é claro
     height, width = fg.shape
     margin = int(0.02 * width)
     fg[:margin], fg[-margin:], fg[:, :margin], fg[:, -margin:] = 0, 0, 0, 0
@@ -273,7 +273,12 @@ def decode_lcd(image, device):
     quad = locate_lcd(image)
     if quad is None:
         return {f: {"status": "missing"} for f in FIELDS}, {"todos": "sem-lcd"}
-    fg = binarize(rectify(image, quad))
+    return decode_rectified(rectify(image, quad), device)
+
+
+def decode_rectified(lcd, device):
+    """Mesma decodificação a partir de um LCD já retificado (entrada do porte TS)."""
+    fg = binarize(lcd)
     height, width = fg.shape
     parts = components(fg)
     fields, reasons = {}, {}

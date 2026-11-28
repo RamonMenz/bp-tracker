@@ -13,8 +13,8 @@ legado e privacidade ficam como estão. Este documento **não declara a fotograf
 |---|---|---|
 | 1. Pré-registro (esta seção 1) | Registrado antes de qualquer execução | — |
 | 2. Linha de base Tesseract.js | AJUSTE executado: **não passa** no critério (seção 2) | AVALIAÇÃO só no fim |
-| 3. H-seg (Python, depois TS) | Python congelado; AJUSTE **passa** no critério (seção 3) | Porte TS puro |
-| 4. Modelos Tesseract de sete segmentos | Pendente | — |
+| 3. H-seg (Python, depois TS) | Congelado; AJUSTE **passa** no critério (seção 3); porte TS idêntico ao Python (seção 3.1) | AVALIAÇÃO só no fim |
+| 4. Modelos Tesseract de sete segmentos | Em execução (emenda 2) | Pontuar AJUSTE |
 | 5. Análise do ML Kit (documental) | Pendente | — |
 | 6. Avaliação única do conjunto reservado | Pendente | — |
 
@@ -261,3 +261,36 @@ aparelho exigiria outro gabarito, e o H-seg não lê aparelhos desconhecidos. (i
 valor de 2 dígitos: a guarda só pega o apagamento parcial. É um modo de falha residual de
 **errado-válido**. (iii) A localização depende de a carcaça ser mais clara que o LCD. (iv) Fotos
 de divulgação (06–08) não representam o enquadramento real do app.
+
+### 3.1 Porte em TypeScript puro e correção pós-congelamento
+
+`tools/lab-fotografia/hseg-ts/hseg.ts` porta a decodificação (LCD retificado em tons de cinza →
+binarização → campos) **sem dependências, I/O ou DOM**. A localização e a retificação (bordas,
+contornos, homografia) não foram portadas: no app, o recorte viria do guia de enquadramento, e
+esse porte exigiria um trabalho de visão computacional que fica fora do escopo de laboratório.
+Fechamento, abertura, desfoque gaussiano, Otsu, componentes conexos e o cisalhamento foram
+reimplementados à mão.
+
+**Verificações executadas:**
+
+- `node --test tools/lab-fotografia/hseg-ts/check-hseg.mts`: **7 de 7** verificações com visores
+  100% sintéticos. Cobrem os dígitos 0–9 nos três campos e nos dois gabaritos, dígitos itálicos,
+  sombra suave, visor apagado sem candidatos, "1" de centena parcialmente apagado deixando o campo
+  incerto, mancha no meio de um dígito deixando o campo incerto, zero à esquerda e quantidade
+  inválida de dígitos;
+- `tsc` estrito (`hseg-ts/tsconfig.json`) e ESLint do projeto sem erros;
+- **paridade com o Python congelado:** saída idêntica nos três campos em **13 de 13** LCDs
+  retificados do AJUSTE e nos sintéticos.
+
+**Defeito encontrado pelos sintéticos e corrigido antes da avaliação reservada:** o Otsu do
+OpenCV trata como claro só o que fica **acima** do limiar, mas a binarização usava `< limiar` para
+o escuro. Os pixels exatamente no limiar sumiam. Num sintético perfeitamente bimodal, metade dos
+segmentos desaparecia; nas fotos reais, de distribuição contínua, o efeito é marginal. Corrigido
+para `<=` no Python e no TS. O AJUSTE foi reexecutado: **sem mudança** (33/36, 0 errado-válido,
+10/12 pares). A correção foi motivada pelo teste sintético, não por resultado nas fotos.
+
+**Premissas de geometria expostas pelos sintéticos** (limites do algoritmo, não ajustados):
+(i) os segmentos horizontais precisam avançar em x sobre os verticais, como nas pontas
+chanfradas dos LCDs reais, senão um dígito vira três grupos; (ii) o "1" precisa ter pelo menos
+85% da altura dos outros dígitos do campo, o que vale para segmentos verticais longos, como nos
+dois aparelhos. Visores com outras proporções exigem revisar esses limiares.

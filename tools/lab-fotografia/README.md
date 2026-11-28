@@ -39,6 +39,8 @@ tem as colunas `id,sis,dia,pul,device,...`, com `sis` vazio para o aparelho desl
 | `ocr/run-ocr.mjs` | Empacota `ocr/entry.ts`, que importa sem alteração o adaptador Web do projeto (`tesseract-worker.web.ts` + `interpretPhoto`), e o roda no Chromium local em condições fixas |
 | `hseg.py decode` | H-seg: decodificação de sete segmentos por lógica pura, com gabarito de layout por modelo |
 | `score.py` | Pontua contra o gabarito e imprime só categorias e agregados |
+| `hseg-ts/hseg.ts` | Porte em TypeScript puro (sem I/O, DOM ou dependências) da decodificação do H-seg, a partir de um LCD já retificado em tons de cinza |
+| `hseg-ts/check-hseg.mts` | Verificações com visores 100% sintéticos (`hseg-ts/synthetic.ts`); nome sem `.test` para não entrar no Jest do app |
 
 ```bash
 python3 -I tools/lab-fotografia/hseg.py locate --photos "$LAB/photos" --out "$LAB/out/rois.json"
@@ -48,6 +50,11 @@ node tools/lab-fotografia/ocr/run-ocr.mjs --photos "$LAB/photos" --assets "$LAB/
   --expected "$LAB/expected.csv" --out "$LAB/out/hseg.json" --ids 03,04
 "$LAB/venv/bin/python" -I tools/lab-fotografia/score.py --expected "$LAB/expected.csv" \
   --results "$LAB/out/hseg.json" --ids 03,04
+```
+
+```bash
+node --test tools/lab-fotografia/hseg-ts/check-hseg.mts      # Node 22.18+ (remoção nativa de tipos)
+npx tsc -p tools/lab-fotografia/hseg-ts/tsconfig.json        # tipos estritos do porte
 ```
 
 `run-ocr.mjs --model <arquivo.traineddata.gz>` serve outro modelo no lugar de
