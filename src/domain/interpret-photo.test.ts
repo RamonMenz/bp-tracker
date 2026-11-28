@@ -129,3 +129,25 @@ test('não modifica entrada, nem usa confiança como aprovação dos valores', (
   expect(interpretPhoto({ ...original, tokens: original.tokens.map(token => ({ ...token, confidence: 0 })) })).toEqual(interpretPhoto(original));
   expect(original).toEqual(snapshot);
 });
+
+// Forma dos tokens observada no laboratório (docs/fotografia-lab.md §2): um dígito espúrio (pedaço de
+// segmento, barra ou ícone) na mesma linha de um rótulo virava candidato. Textos sintéticos, sem valores reais.
+test.each([['7 PULSO'], ['PULSO 7'], ['/ 5 DIA'], ['SIS : 4 mmHg']])('dígito isolado na linha do rótulo não vira candidato: %s', text => {
+  const fields = parse([text]);
+  for (const field of Object.values(fields)) expect(field.status).not.toBe('candidate');
+});
+test('visor apagado com ruído da carcaça não produz nenhum candidato', () => {
+  const fields = parse(['MARCA', 'x: Ny SIS', '01/02/20 1 mmHg', 'i DIA', ': : 5 mmHg', '5 PULSO', 'E min']);
+  expect(fields).toEqual({ systolic: u('unreadable'), diastolic: u('unreadable'), pulse: u('unreadable') });
+});
+test('fragmento de um dígito ao lado do rótulo, em caixa separada, não vira candidato por layout', () => {
+  const tokens = [photoLine('SYS', 0.6, 0.2, 0.12), photoLine('8', 0.4, 0.2, 0.12)];
+  expect(interpretPhoto(photoObservation(tokens)).fields.systolic).toEqual(u('unreadable'));
+});
+test.each([['PUL 72 M 3', c(72)], ['PUL 9:05', u('unreadable')], ['PUL 1.05', u('unreadable')], ['M 3 PUL', u('unreadable')]])(
+  'memória e hora junto do rótulo não viram pulso: %s', (text, expected) => {
+    expect(parse([text]).pulse).toEqual(expected);
+  });
+test('valores de dois dígitos, inclusive fora da faixa, continuam candidatos', () => {
+  expect(parse(['SYS 99', 'DIA 10', 'PUL 19'])).toEqual({ systolic: c(99), diastolic: c(10), pulse: c(19) });
+});

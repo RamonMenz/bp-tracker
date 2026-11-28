@@ -9,6 +9,25 @@ legado e privacidade ficam como estão. Este documento **não declara a fotograf
 
 ## 0. Estado e retomada
 
+### Parte 2 (branch `exp/fotografia-lab-2`, a partir de `staging @ eba7dbd`, depois do merge do #107)
+
+**Regra de honestidade estatística:** as 20 fotos já foram vistas, e as 7 reservadas já foram
+avaliadas uma vez na Parte 1. **Todo número novo sobre essas 20 fotos é de AJUSTE (dentro da
+amostra), nunca validação.** A v1 do H-seg (Parte 1) está congelada e seus números não mudam. A
+validação independente depende de **fotos novas** do autor (seção 11).
+
+| Etapa da Parte 2 | Estado | Próximo passo |
+|---|---|---|
+| P2-1. Correção do `interpretPhoto` (dígito espúrio) | Feita (seção 10) | — |
+| P2-2. Protocolo de validação independente | Pendente | — |
+| P2-3. H-seg v2 (ajuste dentro da amostra) | Pendente | — |
+| P2-4. Candidato TS em `src/domain/seven-segment/` | Pendente | — |
+| P2-5. Demo Web experimental | Pendente | — |
+| P2-6. Estudo Android | Pendente | — |
+| P2-7. Consolidação | Pendente | — |
+
+### Parte 1
+
 | Etapa | Estado | Próximo passo |
 |---|---|---|
 | 1. Pré-registro (esta seção 1) | Registrado antes de qualquer execução | — |
@@ -481,3 +500,34 @@ pelo fluxo normal de revisão, e nada foi alterado aqui.
   desligado (pulso) e em duas fotos ligadas.
 - **Não demonstrado:** nada foi executado em celular; o H-seg não está no produto; a causa do
   fracasso do ML Kit não foi comprovada; a fotografia **não está concluída**.
+
+---
+
+# Parte 2 — 28/11/2026
+
+## 10. Correção do `interpretPhoto`: dígito espúrio na linha do rótulo
+
+**Defeito (Parte 1, seção 2):** com o Tesseract, um dígito isolado (pedaço de segmento, barra
+colorida ou ícone) na mesma linha de um rótulo virava candidato pela regra rótulo + valor. Isso
+aconteceu em 3 fotos, uma delas com o aparelho desligado.
+
+**Testes primeiro (`src/domain/interpret-photo.test.ts`, textos sintéticos):** dígito isolado
+antes ou depois do rótulo ("7 PULSO", "PULSO 7", "/ 5 DIA", "SIS : 4 mmHg"); visor apagado com
+ruído da carcaça; fragmento de um dígito em caixa separada ao lado do rótulo (layout); memória e
+hora junto do rótulo; dois dígitos fora da faixa continuam candidatos. Antes da correção, **6 de
+54** testes falharam (os de dígito isolado, visor apagado e layout). Os de memória e hora já
+passavam.
+
+**Correção mínima (`valueOf`):** um inteiro de **um único dígito** junto a um rótulo, na linha ou
+por layout, fica `unreadable` (campo vazio). É uma **regra de forma, não de faixa**: nenhum campo
+de pressão ou pulso de display tem um dígito. Nada é completado, trocado ou escolhido, e valores
+de dois ou mais dígitos fora da faixa continuam candidatos para a validação da revisão, como
+antes. Documentado também em [task-09-interpretacao-fotografia.md](task-09-interpretacao-fotografia.md).
+
+**Verificação:** 439 testes de `src/domain`, `src/services/recognition` e
+`src/features/assisted-entry` passaram (os 54 do interpretador incluídos). Reexecutando o
+Tesseract.js do projeto nas fotos inteiras (crua, Otsu e Otsu invertido) com o interpretador
+corrigido, as 20 fotos tiveram **0 errado-válido e 0 falso positivo** (antes: 2 errado-válido e
+o falso positivo da foto desligada). É uma verificação **dentro da amostra**: as mesmas fotos
+que revelaram o defeito. A leitura continua 0/57, porque a correção não faz o Tesseract ler
+segmentos.

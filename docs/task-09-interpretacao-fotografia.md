@@ -53,6 +53,10 @@ Não foi ligada persistência clínica, Firebase, auth ou writer às demonstraç
   SYS 80 / DIA 120 nunca vira SYS 120 / DIA 80. Decimais/dígitos ilegíveis não são
   arredondados ou escalados. kPa explícito bloqueia candidatos de pressão como
   `mixed-scale`, sem conversão; pulso identificado pode ser preservado.
+- Um inteiro de **um único dígito** junto a rótulo (na linha ou por layout) fica
+  `unreadable`: é regra de forma, não de faixa (nenhum campo do display tem um dígito).
+  Correção de 28/11/2026, após o laboratório observar fragmentos de segmento/ícone
+  virando candidato, inclusive com o aparelho desligado ([fotografia-lab](fotografia-lab.md)).
 - Campo sem rótulo e sem número órfão: `missing`. Rótulo sem leitura associável:
   `unreadable`. Números órfãos sem identificação segura: `unidentified-number` nos
   campos sem rótulo. Conflitos: `ambiguous-label`. Nenhum deles preenche o campo.

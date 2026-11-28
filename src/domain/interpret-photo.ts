@@ -50,6 +50,9 @@ function valueOf(parts: string[], basis: 'label' | 'layout'): Candidate {
   const meaningful = parts.filter(part => ![':', '=', '/', '(', ')'].includes(part));
   if (meaningful.length > 1 && meaningful.every(part => /^\d+$/.test(part))) return uncertain('ambiguous-label');
   if (meaningful.length !== 1 || !/^\d+$/.test(meaningful[0])) return uncertain('unreadable');
+  // Regra de forma, não de faixa: nenhum campo do display tem um único dígito, e um dígito isolado
+  // junto ao rótulo é tipicamente fragmento de segmento/ícone (docs/fotografia-lab.md). Fica vazio.
+  if (meaningful[0].length < 2) return uncertain('unreadable');
   const value = Number(meaningful[0]);
   return Number.isSafeInteger(value) ? candidate(value, basis) : uncertain('unreadable');
 }
