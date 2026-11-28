@@ -1,6 +1,8 @@
 # 4. Metodologia
 
-[← 3. Referencial](03-referencial-teorico-trabalhos-correlatos.md) · [Índice](README.md) · [Próximo: 5. Desenvolvimento →](05-desenvolvimento.md)
+[← 3. Referencial](03-referencial-teorico-trabalhos-correlatos.md) · [Índice](README.md) · [Próximo: 4-A. Agentes de IA →](04a-desenvolvimento-assistido-por-agentes.md)
+
+> **Resumo.** O desenvolvimento foi dirigido por especificação (TAP → constituição → specs → plano) e por evidência (ledger só de acréscimos, com níveis de evidência explícitos). Os agentes de IA têm capítulo próprio (4-A). Os ensaios físicos usam estímulos sintéticos e retorno sanitizado. A homologação ocorre em produção, com conta de teste (D-003). Horas e despesas: não informado.
 
 ## 4.1 Visão geral
 
@@ -19,26 +21,18 @@ A constituição, as specs e o plano entraram no repositório em **26/10/2026**,
 
 ## 4.2 Fluxo de trabalho no repositório
 
-- **Branches e PRs.** Cada entrega foi feita numa branch própria e integrada a `staging` por pull request. Até a base deste relatório, o histórico de `staging` tem 94 merges de PR (do #1, em 28/07/2026, ao #95, em 26/11/2026). `main @ 3f8220f` (PR #60, 08/10/2026) é ancestral de `staging`, e `origin/main..origin/staging` soma **195 commits**.
+- **Branches e PRs.** Cada entrega foi feita numa branch própria e integrada a `staging` por pull request. Até a base deste relatório, o histórico de `staging` tem 101 merges de PR (do #1, em 28/07/2026, ao #102, em 27/11/2026). Em 27/11/2026 o autor levou `staging` para `main` (PR #103, D-012), e as duas árvores ficaram idênticas. Antes disso, `main` estava em `3f8220f` (PR #60, 08/10/2026), com 220 commits de diferença (E-048).
 - **Integração contínua.** O workflow `.github/workflows/ci.yml` tem quatro jobs: *App* (lint, typecheck, Jest e checks Node/PowerShell das ferramentas de campo), *Cloud Functions* (build e testes), *Security Rules* (emulador do Firestore) e *Bridge OCR* (Java puro). Um check "Vercel Preview Comments" também aparece nos PRs.
 - **Convenções.** Commits semânticos (Conventional Commits), TypeScript estrito, validação Zod de todo documento do Firestore e caminhos centralizados ([CLAUDE.md](../../CLAUDE.md) §3–§4).
 - **Clientes isolados.** As modalidades novas foram desenvolvidas em **clientes de avaliação separados do produto** (`demos/android-capture`, `demos/web-capture`, `demos/photo-review`, `demos/android-voice`, `demos/web-voice`), sem Firebase, sem gravação e com confirmação só em memória. Os módulos nativos (`native-modules/aferi-photo-capture`, `native-modules/aferi-local-voice`) não fazem parte do autolinking do produto.
 
 ## 4.3 Desenvolvimento assistido por agentes de IA
 
-O trabalho técnico foi executado majoritariamente por agentes de IA de programação, sob a direção do autor:
+O trabalho técnico foi executado majoritariamente por dois agentes de IA de programação, Claude Code (Anthropic) e Codex (OpenAI), sob a direção do autor. O autor decide escopo, prioridade e merges e faz tudo o que exige o mundo físico. Papéis, branches por agente, revisão cruzada e os defeitos que a verificação encontrou estão no **[capítulo 4-A](04a-desenvolvimento-assistido-por-agentes.md)**.
 
-| Ator | Papel | Fonte |
-|---|---|---|
-| Autor | Decide escopo e prioridade; aprova push, PR e merge; faz tudo o que exige o mundo físico (build Android no Windows, instalação e ensaios no Samsung, Chrome com microfone, contas e ambientes); relata os resultados de forma sanitizada | D-003, D-006; [reavaliação §4 e §8](../reavaliacao-2026-11-26.md) |
-| Claude Code (Anthropic) | PDF Web, correção de privacidade do Sentry, consolidações documentais, reavaliação de 26/11, redação deste relatório; revisão cruzada da voz no produto (confirmação, cancelamento, troca de conta) | D-002, D-006; diário do [registro](decisoes-e-evidencias.md) |
-| Codex (OpenAI) | Investigação de fotografia (TASK-07/09, até o PR #85), PoCs e clientes de voz (#93); revisão cruzada dos guardrails do PDF | D-002, D-006; [etapa 6](../task-09-etapa-6-viabilidade-roi591.md) |
+**Regras de coordenação** (D-006): um dono por alteração e por branch; arquivos reservados por frente; `tasks.md` só em PRs de consolidação; **nenhum agente faz push, abre PR, faz merge, publica rules ou opera produção sem autorização expressa do autor**. Cada bloqueio admite no máximo duas rodadas de correção; na terceira, o agente para e reporta ([reavaliação §11](../reavaliacao-2026-11-26.md)).
 
-**Regras de coordenação** (D-006): um dono por alteração e por branch; `package.json` e lock só na branch do PDF; `app/(app)/history.tsx` só no PDF; `app/(app)/index.tsx` reservado à voz; `tasks.md` só em PRs de consolidação; **nenhum agente faz push, abre PR, faz merge, publica rules ou opera produção sem autorização expressa do autor**. Prompts de execução estão versionados em [docs/prompts](../prompts/).
-
-**Limite da atribuição.** O campo de autor do Git não separa o trabalho do Codex do trabalho do autor. Dos 405 commits de `staging`, 182 têm autor "Claude" e 223 têm o nome do autor; desde 26/10/2026 são 35 e 160, respectivamente. A atribuição por agente segue os registros documentais citados acima, não o Git.
-
-**Limite de investigação.** Cada bloqueio admite no máximo duas rodadas de correção. Na terceira, o agente para e reporta ([reavaliação §11](../reavaliacao-2026-11-26.md)).
+**Limite da atribuição.** O campo de autor do Git não separa o Codex do autor: dos 430 commits de `staging`, 193 têm autor "Claude" e 237 têm o nome do autor (E-048). A atribuição por agente segue os registros documentais, não o Git.
 
 ## 4.4 Ledger de decisões e regras de evidência
 
@@ -52,7 +46,7 @@ O [registro de decisões e evidências](decisoes-e-evidencias.md) é a fonte pri
 6. **Horas e despesas "não informadas"** até o autor fornecê-las.
 7. **Nada é registrado como concluído** sem a evidência exigida pela spec. Nenhuma caixa de `tasks.md` foi marcada sem essa evidência; estão marcadas apenas TASK-03 (desenho), TASK-14 (parser puro) e TASK-19 (acompanhamento).
 
-Também se distingue **relato do autor transcrito** de **verificação reproduzida**. Os ensaios em aparelho e navegador (E-027, E-028) são relatos do autor, conferidos no texto mas não reproduzidos pelos agentes.
+Também se distingue **relato do autor transcrito** de **verificação reproduzida**. Os ensaios em aparelho e navegador (E-027, E-028, E-042) e a validação do PDF Web em fluxo logado (E-045) são relatos do autor, conferidos no texto mas não reproduzidos pelos agentes.
 
 ### Níveis de evidência usados no capítulo 7
 
@@ -61,7 +55,8 @@ Também se distingue **relato do autor transcrito** de **verificação reproduzi
 | **Implementado** | Código em `staging`, revisado e com lint e typecheck verdes | Módulo `aferi-local-voice` |
 | **Testado com dublês** | Testes automatizados com portas, SDK, rede ou relógio simulados, emulador do Firestore ou Chromium headless com dados sintéticos. Não envolve hardware nem serviço real | Testes de `useReportPdf`; construtor falso do `SpeechRecognition` |
 | **Demonstrado** | Execução real em aparelho ou navegador físico, com estímulos sintéticos (cartões, frases), num cliente isolado ou sem login, relatada e não reproduzida por terceiros | V1 de voz no Samsung e no Chrome; leitura do cartão A |
-| **Validado** | Critérios de aceite da spec atendidos **no produto**, nas plataformas declaradas, com a evidência que a spec exige (aparelho real, fluxo logado, inspeção de armazenamento e rede em runtime) | **Nenhuma funcionalidade nova atingiu este nível** |
+| **Validado pelo autor** | Funcionalidade usada **no produto**, em fluxo logado e com dados reais, pelo autor, conferindo resultados esperados; relatada e não reproduzida. Pode não cobrir todos os critérios da spec | PDF Web (E-045) |
+| **Validado** | Critérios de aceite da spec atendidos **no produto**, nas plataformas declaradas, com a evidência que a spec exige (aparelho real, fluxo logado, inspeção de armazenamento e rede em runtime) | **Nenhuma funcionalidade nova atingiu este nível por completo** |
 
 ## 4.5 Protocolos de ensaio físico
 

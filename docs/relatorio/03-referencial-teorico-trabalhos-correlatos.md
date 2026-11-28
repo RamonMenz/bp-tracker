@@ -30,8 +30,8 @@ O reconhecedor produz texto, e uma etapa separada e determinística o transforma
 
 ## 3.5 Geração local de documentos, privacidade e acessibilidade
 
-- **PDF.** A Web usa jsPDF [R16] com o plugin AutoTable [R17], que desenha diretamente no PDF (texto selecionável, tabela com várias páginas). O Android usaria Expo Print [R15], que converte HTML/CSS em PDF pelo motor de impressão do sistema.
-- **LGPD.** Dados de saúde são dados pessoais sensíveis (Lei 13.709/2018, art. 5º, II) [R3]. Daí vêm, na constituição, a minimização, a ausência de logs clínicos e o processamento em memória.
+- **PDF.** A Web usa jsPDF [R16] com o plugin AutoTable [R17], que desenha diretamente no PDF (texto selecionável, tabela com várias páginas). O Android usa Expo Print [R15] (desde o PR #100, 27/11/2026), que converte HTML/CSS em PDF pelo WebView do sistema.
+- **LGPD.** Dados de saúde são dados pessoais sensíveis (Lei 13.709/2018, art. 5º, II) [R3]. Daí vêm, na constituição, a minimização, a ausência de logs clínicos e o processamento em memória. Os coletores de falhas oferecem filtros (`beforeSend`, `beforeBreadcrumb`) [R19], mas os padrões dos SDKs coletam por omissão; o projeto os desligou ou redigiu (capítulo 5, §5.6).
 - **Acessibilidade.** O critério de contraste AA (4,5:1) e as exigências de operação por teclado e leitor de tela seguem a WCAG 2.2 [R4]. O projeto não declara conformidade WCAG completa ([capítulo 9](09-discussao-limitacoes.md)).
 
 ## 3.6 Trabalhos correlatos
@@ -42,8 +42,8 @@ Os números abaixo vêm dos resumos e dos trechos dos trabalhos localizados por 
 |---|---|---|---|
 | Shenoy e Aalami, AMIA 2017 [R7] | App de smartphone com modelo próprio para dígitos de sete segmentos em monitores médicos | Leitura correta em 98,2% dos casos; os autores observam que o Tesseract lê bem texto comum, mas teve dificuldade com sete segmentos | Mesmo problema. Usa modelo treinado para a tarefa, o que o TAP exclui ([P041](../fontes/tap-aferi-v1.0.md#p041)) |
 | Timofeev, Paramonov e Mamedov, FRUCT [R8] | 374 fotos de 7 tonômetros com 9 celulares; algoritmo próprio implementado num app de diário de pressão | Tesseract e SSOCR extraíram informação de menos de 5% das fotos | Aponta o mesmo limite do OCR genérico em sete segmentos que o projeto observou nas suas condições |
-| Kulkarni et al., Frontiers in AI 2021 [R9] | Rede convolucional para transcrever o LCD de medidores de pressão pela câmera, sem depender de rede | [PENDENTE: conferir os resultados no artigo] | Mesmo cenário, com processamento local; usa modelo treinado para a tarefa |
-| Finnegan et al. (Oxford), J. Med. Eng. Technol. 2019 [R10] | Localização e classificação de dígitos treinadas com dígitos sintéticos | [PENDENTE: referência a confirmar pelo autor; o DOI não foi resolvido na busca] | Uso de estímulos sintéticos |
+| Kulkarni et al., Frontiers in AI 2021 [R9] | Pré-processamento, segmentação do LCD por contornos e rede convolucional para transcrever sistólica, diastólica e frequência cardíaca de fotos de celular | Dados de 49 parteiras leigas e 1.697 gestantes na Guatemala rural, em triagem de rotina. [PENDENTE: conferir as taxas de acerto no artigo] | Mesmo cenário (foto do LCD do medidor); usa modelo treinado para a tarefa |
+| Finnegan, Villarroel, Velardo e Tarassenko (Oxford), J. Med. Eng. Technol. 2019 [R10] | Classificador de dígitos treinado com dígitos sintéticos de sete segmentos, mais filtragem e agrupamento de segmentos; glicosímetro e medidor de pressão | Conjunto de fotos de vários celulares e classificador publicados pelos autores. [PENDENTE: conferir as taxas no texto completo] | Uso de estímulos sintéticos para treinar, e não só para ensaiar, como no Aferi |
 
 Nenhum trabalho correlato comparando STT local em pt-BR para enunciação de pressão arterial foi localizado na busca feita para este rascunho. [PENDENTE: o autor deve ampliar a busca, por exemplo em SBC OpenLib, IEEE Xplore e PubMed, se for incluir correlatos de voz.]
 

@@ -215,3 +215,84 @@ Formato: `AAAA-MM-DD — responsável — o que foi feito — evidência (arquiv
   leitura de código — testes **não reexecutados** nesta sessão; ensaios de aparelho e navegador
   transcritos dos registros, não reproduzidos; nenhuma caixa marcada, nenhuma funcionalidade
   declarada concluída; horas e despesas não informadas; nada publicado.
+- 2026-11-28 — Claude Code (atualização do relatório final) — decisões D-010 a D-013, evidências
+  E-036 a E-048 e pendências Q-022 a Q-025 (seção "Entradas de 28/11/2026", abaixo); capítulos
+  do relatório atualizados — verificação por `git` (histórico completo, `origin/staging @ f8cfdee`),
+  GitHub (PRs #95 a #104, check-runs e logs do CI do #103) e leitura dos documentos — testes
+  **não reexecutados**; relatos do autor transcritos e marcados como tais; nada publicado.
+
+---
+
+## Entradas de 28/11/2026
+
+Base: `origin/staging @ f8cfdee` (merge do PR #102), histórico completo. A árvore de
+`origin/main @ 3153c05` (merge do PR #103) é idêntica (`git diff 3153c05 f8cfdee` vazio). Horários
+dos merges em UTC, como o GitHub os informa (todos em 27/11/2026, também no horário de Brasília).
+
+### Decisões
+
+#### D-010 — 27/11/2026 — `RECORD_AUDIO` declarado no produto Android
+- **Decisão (aceita pelo autor, segundo o documento da V3):** o produto passa a autolinkar
+  `aferi-local-voice` (e não `aferi-photo-capture`) e declara `RECORD_AUDIO` também na configuração
+  Expo do app, para constar no manifesto gerado pelo prebuild. Só afeta builds nativos novos.
+- **Fonte:** [voz-android-produto.md](../voz-android-produto.md) §Decisões; PR [#101](https://github.com/RamonMenz/bp-tracker/pull/101).
+
+#### D-011 — 27/11/2026 — Aceitar hipóteses Android só com interpretação unânime
+- **Fato que motivou (relato do autor):** E-042. **Decisão de projeto:** o reconhecedor entrega até
+  cinco hipóteses finais distintas; o JS interpreta todas com o parser; a revisão só abre se as
+  interpretações coincidirem integralmente; senão, `ambiguous-result`. Não escolhe a primeira.
+- **Alcance:** a demo usa o conjunto de hipóteses; o modo `recognition` do produto mantém o contrato
+  de transcrição única (task-12 §27/11).
+- **Fonte:** PR [#102](https://github.com/RamonMenz/bp-tracker/pull/102); [task-12 §27/11](../task-12-voz-android.md#27112026--concordância-das-hipóteses-finais).
+
+#### D-012 — 27/11/2026 — Levar `staging` para `main`
+- **Decisão (autor):** PR [#103](https://github.com/RamonMenz/bp-tracker/pull/103), mesclado em
+  27/11/2026 às 22:55 UTC (`3153c05`, autor do merge: o autor do projeto). Segundo o corpo do PR,
+  a Vercel de produção é alimentada por `main`, e o merge publica o site Web com o PDF Web e a
+  correção do Sentry; a voz fica no código atrás de flags desligadas; o merge **não** publica rules
+  nem Functions.
+- **Não verificado:** a configuração da Vercel (fora do repositório) e a ausência das flags de voz
+  em produção (Q-025). Q-020 fica **respondida apenas pela afirmação do PR**.
+- **Contexto:** a pausa da fotografia (D-001) e a homologação em produção com conta de teste (D-003)
+  continuam valendo e não foram alteradas.
+
+#### D-013 — 27/11/2026 — Correções de Q-013 e Q-017 pelo código
+- **Decisão:** Q-017 foi resolvida corrigindo o código, não a documentação (PR [#97](https://github.com/RamonMenz/bp-tracker/pull/97)).
+  Q-013/Q-018 foram resolvidas redigindo a mensagem antes do Crashlytics (PR [#98](https://github.com/RamonMenz/bp-tracker/pull/98)).
+  Perda aceita: o texto da mensagem some também do console do Crashlytics (diagnóstico por tipo,
+  stack e `scope`, como na Web).
+
+### Evidências
+
+| ID | Evidência | Como reproduzir |
+|---|---|---|
+| E-036 | PR [#95](https://github.com/RamonMenz/bp-tracker/pull/95), mesclado em 27/11 (02:27 UTC): `poppler-utils` instalado no job App; sem poppler e com `CI`, os 8 testes de conteúdo do PDF **falham** em vez de serem pulados. Log do job App do #95: 1.001 testes, nenhum pulado. **Supera Q-015 e E-032 no CI** | `.github/workflows/ci.yml`; `render-report-pdf.test.ts`; run `45928245875` |
+| E-037 | PR #97 (18:31 UTC): `render` passa pelo mesmo prazo único de 30 s, contado do início da preparação; novo teste falhava antes (`Expected: "idle"`, `Received: "preparing"`); 1.002 testes/85 suítes (reportado). **Supera E-033 e Q-017** | `useReportPdf.ts`; `useReportPdf.test.ts` ("prazo no import do jsPDF/AutoTable"); nota em `pdf-relatorio.md` §8.1 |
+| E-038 | PR #98 (18:56 UTC): `redactError` em `crashReporter.native.ts` entrega ao Crashlytics uma cópia com a mensagem fixa `[mensagem removida por privacidade]`, sem `cause` nem propriedades extras; 4 testes com sentinelas, 3 falhavam antes. **Supera E-034 e Q-013/Q-018 no adapter.** Não verificado: chegada a um Crashlytics real. Resíduo: handlers globais da biblioteca (Q-022) | `crashReporter.native.test.ts`; [sentry-privacidade.md](../sentry-privacidade.md) nota de 27/11 |
+| E-039 | PR #99 (19:08 UTC), V2 Web: entrada "Registrar por voz" atrás de `EXPO_PUBLIC_WEB_VOICE_ENABLED` (desligada por padrão), capacidade local pt-BR exigida, carregamento sob demanda, `source: 'voice'` só após confirmação explícita e ACK. Guarda VOZ-01 no CI (export sem a flag não contém código de voz). Testes com reconhecedor **SIMULADO** (1.026 testes/86 suítes, reportado); rules de voz no emulador do CI (94 testes/3 suítes). **Nenhum ensaio com voz real nem login** | [voz-produto.md](../voz-produto.md); `tools/voz-produto/bundle-off.check.cjs` |
+| E-040 | PR #100 (22:07 UTC), P3 PDF Android: `expo-print ~57.0.1` (57.0.2 no lock), template HTML/CSS com o mesmo modelo, entrega por folha de compartilhamento, temporários no cache com limpeza. 1.094 aprovados e 3 pulados (opt-in Chromium)/90 suítes (reportado). Defeito achado e corrigido: o descarte do resultado tardio apagava o arquivo adotado antes do compartilhamento. Bundle `.hbc` +213.799 B (+99.998 gzip). **Nada validado em aparelho**; exige build EAS novo | [pdf-android.md](../pdf-android.md) §6, §8, §11 |
+| E-041 | PR #101 (22:16 UTC), V3 Android: entrada atrás de `EXPO_PUBLIC_ANDROID_VOICE_ENABLED`; autolinking lista `aferi-local-voice` e não `aferi-photo-capture`; prebuild com config fictícia declara `RECORD_AUDIO` e não `CAMERA`; guarda VOZ-01 no export Android. Testes com reconhecedor **SIMULADO** (1.049/87, reportado). **Kotlin do produto não compilado; nenhum ensaio em aparelho** | [voz-android-produto.md](../voz-android-produto.md) |
+| E-042 | **Rodada Android de 27/11 (relato do autor):** no Samsung, as duas formas curtas sem pulso falharam em **10 de 10** tentativas (0 acertos), com predomínio de `ambiguous-result` e algumas revisões vazias; as mesmas formas com "pulso setenta e dois" acertaram **6 de 6**. A inspeção do código confirmou que duas strings distintas bastavam para recusar o resultado antes do parser. Commit e hash do APK dessa rodada **não registrados** (Q-023) | [task-12 §27/11](../task-12-voz-android.md#27112026--concordância-das-hipóteses-finais) |
+| E-043 | PR #102 (22:26 UTC): consenso de interpretações (D-011); testes com a porta nativa simulada; 1.131 testes/90 suítes (reportado). **Compilação Kotlin e eficácia no Samsung não verificadas** | PR #102; `android-voice-session.test.ts`, `useAndroidVoiceReview.test.ts` |
+| E-044 | CI do PR #103 (run `46077186975`, árvore = `staging @ f8cfdee`): **App** verde, Jest com **91 suítes (90 aprovadas, 1 pulada) e 1.134 testes (1.131 aprovados, 3 pulados)**; os 3 pulados são, por inferência, a suíte opt-in `report-html.chromium.test.ts` (3 testes opt-in segundo `pdf-android.md` §11); guardas VOZ-01 Web e Android no log; **Security Rules** 94/94 em 3 suítes; Functions e Bridge OCR verdes | GitHub `get_check_runs` do #103; logs dos jobs `140767551459` e `140767551810` (conferidos nesta redação) |
+| E-045 | **Validação do PDF Web pelo autor em fluxo logado (relato do autor):** 53 registros no período "Tudo", com os 5 primeiros e os 5 últimos conferidos; período "Personalizado"; 7 e 30 dias com 8 registros de teste e números esperados conferidos; impressão colorida e em cinza legível; registros de teste removidos depois, com o total de volta a 53. **Fonte:** corpo do PR #103 (53 registros, "Tudo", "Personalizado", 7 e 30 dias, dados de teste removidos) e relato do autor na solicitação de 28/11 (demais detalhes). Não reproduzido pelos agentes; navegador, conta usada, ambiente (frontend local ou produção) e data **não registrados**. Responde Q-014 (53 registros, abaixo do limite de 3.000) e parte de Q-011 | PR #103; Q-011, Q-014 |
+| E-046 | **Aparelho da V1 de voz (informação do autor, 28/11):** Samsung Galaxy S25 FE, Android 17/API 37; Chrome 158 no ensaio Web (E-028). Não se registrou se é o mesmo aparelho físico da fotografia (`SM-S731B`) | relato do autor; E-027, E-028 |
+| E-047 | PR [#104](https://github.com/RamonMenz/bp-tracker/pull/104) (`feat/eas-standalone`, perfil EAS `standalone-teste` com a voz Android ligada só nele) **aberto, não mesclado** em 28/11. Não conta como entrega | GitHub `list_pull_requests` |
+| E-048 | Contagens em 28/11: `staging` com **430** commits e **101** merges de PR; `origin/main..origin/staging` = **0** (era 186 em E-030); `3f8220f..staging` = **220** commits; `src/`, `app/`, `functions/` e `firestore.rules` mudaram em **139 arquivos (+15.069/−74)** desde `3f8220f`. Supera as contagens de E-030 | `git rev-list --count`, `git diff --shortstat 3f8220f origin/staging -- src app functions firestore.rules` |
+
+### Pendências
+
+| ID | Pendência | Referência |
+|---|---|---|
+| Q-022 | **(decisão)** O `@react-native-firebase/crashlytics` instala, ao carregar, handlers globais de erro JS fatal e de promise rejeitada que enviam `error.message` cru sem passar pelo adapter redigido (E-038). Desligar via `firebase.json` ou trocar o handler global | Constituição §2; [sentry-privacidade.md](../sentry-privacidade.md#nota-de-2026-11-27--lado-nativo-crashlytics) |
+| Q-023 | **(autor)** Rastreabilidade da rodada Android de 27/11 (0 de 10 sem pulso; 6 de 6 com pulso, E-042) e da rodada refeita a partir de `staging`: **o repositório não registra** o commit compilado nem o SHA-256 do APK. Registrar os dois para fechar Q-016 | Q-016; [task-12 §27/11](../task-12-voz-android.md#27112026--concordância-das-hipóteses-finais) |
+| Q-024 | **(autor)** Validação em aparelho e navegador pendente para: correção por consenso (#102, E-043); V2 Web com voz real e login (#99, E-039); V3 Android com Dev Client novo (#101, E-041); PDF Android com build EAS novo (#100, E-040). Nenhum desses tem evidência fora de dublês | VOZ-*, PDF-*; [pdf-android §9](../pdf-android.md#9-o-que-o-autor-precisa-conferir-no-aparelho-samsung) |
+| Q-025 | **(autor)** Conferir que `EXPO_PUBLIC_WEB_VOICE_ENABLED` e `EXPO_PUBLIC_ANDROID_VOICE_ENABLED` **não existem** nas variáveis de produção da Vercel, como pede o PR #103. Nada no repositório comprova isso | D-012; E-044 |
+
+### Marcos do TAP × estado em 28/11/2026 (complementa M-001 a M-005, sem alterá-los)
+
+| ID | Marco | Estado em 28/11/2026 |
+|---|---|---|
+| M-001 | 27/10 — duas modalidades integradas e casos coletados | **Não atendido no prazo.** Voz integrada ao produto atrás de flags desligadas em 27/11 (#99, #101), sem validação; fotografia fora do produto; nenhum corpus |
+| M-002 | 10/11 — comparação concluída | **Não atendida** (nenhuma comparação executada) |
+| M-003 | 24/11 — PDF operante; referencial, método e desenvolvimento redigidos | **Não atendido no prazo.** PDF Web no produto desde 26/11 (#87) e validado pelo autor em fluxo logado depois disso (E-045, data não registrada); Android implementado em 27/11 (#100), não validado; rascunho do relatório em 27/11 (#96) |

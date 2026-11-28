@@ -12,7 +12,7 @@
 | Objetivo do ciclo | Registro assistido de medições por fotografia e por voz e relatório PDF para consulta médica, com escolha técnica apoiada em comparação documentada entre abordagens | TAP [P019](../fontes/tap-aferi-v1.0.md#p019) |
 | Instituição | Universidade Feevale, ICCT | TAP [P059](../fontes/tap-aferi-v1.0.md#p059) |
 | Unidade curricular | [PENDENTE: nome e código da unidade curricular; o TAP só diz "unidade curricular"] | TAP [P017](../fontes/tap-aferi-v1.0.md#p017) |
-| Repositório | `RamonMenz/bp-tracker` (GitHub). O ciclo é desenvolvido na branch `staging` | [reavaliação §2](../reavaliacao-2026-11-26.md) |
+| Repositório | `RamonMenz/bp-tracker` (GitHub). O ciclo é desenvolvido na branch `staging`, levada a `main` em 27/11/2026 (PR #103) | [reavaliação §2](../reavaliacao-2026-11-26.md); D-012 |
 | Termo de Abertura | TAP v1.0, datado de 22/09/2026. O arquivo foi recebido no repositório em 27/10/2026 (SHA-256 `a097e30c…94d5e2`) | [transcrição](../fontes/tap-aferi-v1.0.md) |
 
 ## 1.2 Autor e partes
@@ -29,10 +29,10 @@
 
 | Item | Conteúdo |
 |---|---|
-| Situação | Rascunho para revisão do autor. Não é a versão entregue |
-| Data da redação | 27/11/2026 |
-| Base verificada | `origin/staging @ 9de7d90` (merge do PR [#95](https://github.com/RamonMenz/bp-tracker/pull/95), 26/11/2026, 23h27, UTC−3), com histórico completo (`git fetch --unshallow`) |
-| Fonte principal | [Registro de decisões, evidências e pendências](decisoes-e-evidencias.md) (D-001 a D-009, E-001 a E-035, Q-001 a Q-021) |
+| Situação | Rascunho para revisão do autor (segunda versão). Não é a versão entregue |
+| Data da redação | 1ª versão em 27/11/2026 (PR #96); atualizada em 28/11/2026 |
+| Base verificada | `origin/staging @ f8cfdee` (merge do PR [#102](https://github.com/RamonMenz/bp-tracker/pull/102), 27/11/2026, 19h26, UTC−3), com histórico completo; a árvore de `origin/main @ 3153c05` (PR #103) é idêntica. 1ª versão: `9de7d90` |
+| Fonte principal | [Registro de decisões, evidências e pendências](decisoes-e-evidencias.md) (D-001 a D-013, E-001 a E-048, Q-001 a Q-025) |
 | Redação | Feita por agente de IA (Claude Code) a pedido do autor, a partir dos documentos do repositório e de verificações por `git`, GitHub e leitura de código (ver [capítulo 4](04-metodologia.md)). O autor revisa o conteúdo e assume a autoria |
 | Esforço e custo | Horas realizadas, despesas e saldo do teto de R$ 300,00: **não informado** (Q-009) |
 | Datas de entrega | Atividade avaliativa 03 (60%) em 08/12/2026; ajustes até 15/12/2026 (TAP [P100](../fontes/tap-aferi-v1.0.md#p100)) |
