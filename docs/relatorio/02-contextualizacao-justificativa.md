@@ -17,11 +17,11 @@ Há uma terceira lacuna, de apresentação. A exportação em CSV não é um for
 
 Objetivo geral (TAP [P019](../fontes/tap-aferi-v1.0.md#p019)): desenvolver registro assistido de medições por fotografia e por voz, oferecer a informação registrada num formato adequado à consulta médica e fundamentar a escolha técnica de cada modalidade numa comparação documentada entre abordagens alternativas.
 
-| Entrega | Natureza no TAP | Estado em 27/11/2026 (detalhes no [capítulo 7](07-resultados.md)) |
+| Entrega | Natureza no TAP | Estado em 28/11/2026 (detalhes no [capítulo 7](07-resultados.md)) |
 |---|---|---|
 | Registro por fotografia, com confirmação | Principal e **irredutível** ([P021](../fontes/tap-aferi-v1.0.md#p021), [P117](../fontes/tap-aferi-v1.0.md#p117)) | Fora do produto. Resultado negativo no visor de sete segmentos nas condições observadas; investigação pausada (D-001) |
-| Registro por voz, em pt-BR, com confirmação | Principal; admite entrega parcial declarada ([P022](../fontes/tap-aferi-v1.0.md#p022), [P116](../fontes/tap-aferi-v1.0.md#p116)) | Capacidade demonstrada em clientes isolados; não integrada ao produto |
-| Relatório PDF para consulta | Principal ([P023](../fontes/tap-aferi-v1.0.md#p023)) | Web implementada e testada; Android inexistente; nada validado em fluxo logado |
+| Registro por voz, em pt-BR, com confirmação | Principal; admite entrega parcial declarada ([P022](../fontes/tap-aferi-v1.0.md#p022), [P116](../fontes/tap-aferi-v1.0.md#p116)) | Capacidade demonstrada em clientes isolados; integrada ao produto Web e Android atrás de flags desligadas, testada só com reconhecedor simulado; não validada |
+| Relatório PDF para consulta | Principal ([P023](../fontes/tap-aferi-v1.0.md#p023)) | Web no produto e validada pelo autor em fluxo logado (relato); Android implementado e testado com dublês, não validado em aparelho |
 | Relatório técnico final com decisão e comparação | Principal e **irredutível** ([P024](../fontes/tap-aferi-v1.0.md#p024), [P117](../fontes/tap-aferi-v1.0.md#p117)) | Este documento. A comparação entre abordagens não foi executada ([capítulo 6](06-decisao-tecnica-comparacao.md)) |
 | Complementos: observabilidade anônima, serviço próprio, indicadores agregados, testes além do necessário | Cortáveis, do último para o primeiro ([P025–P029](../fontes/tap-aferi-v1.0.md#p025)) | Não realizados como complementos (TASK-28 aberta) |
 

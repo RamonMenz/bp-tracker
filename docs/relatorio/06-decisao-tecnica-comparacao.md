@@ -36,6 +36,12 @@ Decisões posteriores do ciclo, todas registradas no ledger com data real:
 - **D-007**: PDF Web antes do Android.
 - **D-008**: worker de PDF avaliado e não adotado, com medição de 567 KB na abertura.
 - **D-009**: prévia embutida só com visualizador de PDF.
+- **D-010**, 27/11: `RECORD_AUDIO` declarado no produto Android.
+- **D-011**, 27/11: hipóteses de voz aceitas só com interpretação unânime.
+- **D-012**, 27/11: `staging` levada a `main`.
+- **D-013**, 27/11: Q-013 e Q-017 resolvidas no código (Crashlytics e prazo do PDF).
+
+Nenhuma delas troca a stack congelada: o PDF Android foi implementado com o `expo-print` da decisão original (#100), e a voz no produto usa os reconhecedores locais escolhidos.
 
 D-008 é o único caso deste ciclo em que **duas abordagens foram de fato experimentadas e comparadas por medição** antes de decidir.
 

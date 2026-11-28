@@ -1,6 +1,8 @@
 # 5. Desenvolvimento
 
-[← 4. Metodologia](04-metodologia.md) · [Índice](README.md) · [Próximo: 6. Decisão técnica →](06-decisao-tecnica-comparacao.md)
+[← 4-A. Agentes de IA](04a-desenvolvimento-assistido-por-agentes.md) · [Índice](README.md) · [Próximo: 6. Decisão técnica →](06-decisao-tecnica-comparacao.md)
+
+> **Resumo.** Sobre o legado preservado, o ciclo construiu: a fotografia (fora do produto, pausada), a voz (demos isoladas e, desde 27/11, integração ao produto Web e Android atrás de flags desligadas), o relatório PDF (Web no produto; Android implementado com `expo-print`) e correções de privacidade (Sentry Web, Crashlytics). Em 27/11 `staging` foi levada a `main` (#103).
 
 ## 5.1 Legado × produzido neste ciclo
 
@@ -14,9 +16,9 @@
 - App Check, Crashlytics (nativo) e Sentry (Web).
 - Na data da baseline, 45 suítes e 384 testes do app e 16 testes das Functions, aprovados localmente.
 
-**Delimitação operacional.** O código funcional de `7d72cb3` (26/10/2026) é idêntico ao de `main @ 3f8220f` (merge do PR #60, 08/10/2026). Entre as duas, só entraram constituição, specs e `tasks.md`, o que foi conferido por `git diff` em `src`, `app`, `functions`, `firestore.rules` e `package.json`. Este relatório trata como **produzido no ciclo** o que entrou em `staging` depois de `3f8220f`. De `3f8220f` a `9de7d90`, `src/`, `app/`, `functions/` e `firestore.rules` mudaram em 113 arquivos (+11.114/−40 linhas). Fora disso ficam os módulos nativos, os clientes `demos/`, a PoC `pocs/`, as ferramentas `tools/`, os documentos e o CI.
+**Delimitação operacional.** O código funcional de `7d72cb3` (26/10/2026) é idêntico ao de `main @ 3f8220f` (merge do PR #60, 08/10/2026). Entre as duas, só entraram constituição, specs e `tasks.md`, o que foi conferido por `git diff` em `src`, `app`, `functions`, `firestore.rules` e `package.json`. Este relatório trata como **produzido no ciclo** o que entrou em `staging` depois de `3f8220f`. De `3f8220f` a `f8cfdee`, `src/`, `app/`, `functions/` e `firestore.rules` mudaram em 139 arquivos (+15.069/−74 linhas) (E-048; em 27/11, na base `9de7d90`, eram 113 arquivos, +11.114/−40). Fora disso ficam os módulos nativos, os clientes `demos/`, a PoC `pocs/`, as ferramentas `tools/`, os documentos e o CI.
 
-**Pendência de delimitação (Q-005).** O PR #1 é de 28/07/2026, uma semana antes do início da Fase 1 (04/08), e os PRs #4–#60 foram mesclados entre 13/08 e 08/10, já dentro das Fases 1 e 2. O histórico tem 41 commits antes de 04/08/2026 e 364 a partir dessa data. [PENDENTE: data de corte do legado e aprovação do aproveitamento pela orientadora (TAP [P105](../fontes/tap-aferi-v1.0.md#p105)).] Aqui não se atribui ao ciclo nenhuma das funcionalidades da lista de P044.
+**Pendência de delimitação (Q-005).** O PR #1 é de 28/07/2026, uma semana antes do início da Fase 1 (04/08), e os PRs #4–#60 foram mesclados entre 13/08 e 08/10, já dentro das Fases 1 e 2. O histórico tem 41 commits antes de 04/08/2026; o total em `staging` é de 430 commits (E-048). [PENDENTE: data de corte do legado e aprovação do aproveitamento pela orientadora (TAP [P105](../fontes/tap-aferi-v1.0.md#p105)).] Aqui não se atribui ao ciclo nenhuma das funcionalidades da lista de P044.
 
 ## 5.2 Arquitetura
 
@@ -38,7 +40,17 @@ Princípios materializados:
 - **Modelo de dados** (TASK-11, PR #62). `source` aceita `manual`, `photo` e `voice` em tipos, Zod e rules (`firestore.rules:114`) e é imutável no update. Documentos antigos e `sessionReadings` continuam válidos. A semântica de `source` após edição ou sessão segue a opção conservadora P01, **sem aceite formal** (Q-004). **Não há registro de publicação dessas rules em produção** (E-014, E-035).
 - **Carregamento sob demanda.** O caminho manual não inicializa câmera, microfone, motores nem bibliotecas de PDF.
 
-**Estado da integração:** nenhuma rota de `app/` usa fotografia ou voz (uma busca por `photo|camera|voice|speech` em `app/` volta vazia). A única funcionalidade nova montada no produto é o relatório PDF na Web (`app/(app)/history.tsx`).
+**Estado da integração (atualizado em 28/11):**
+
+| Funcionalidade | No produto? | Como |
+|---|---|---|
+| Fotografia | Não | Só nos clientes isolados (`demos/`); o produto não autolinka `aferi-photo-capture` |
+| Voz Web (V2) | Sim, **desligada por padrão** | Flag `EXPO_PUBLIC_WEB_VOICE_ENABLED`; sem ela, o código de voz fica fora do bundle (E-039) |
+| Voz Android (V3) | Sim, **desligada por padrão** | Flag `EXPO_PUBLIC_ANDROID_VOICE_ENABLED`; o produto autolinka `aferi-local-voice` e declara `RECORD_AUDIO` (D-010, E-041) |
+| PDF Web | Sim | Histórico (`app/(app)/history.tsx`) |
+| PDF Android | Sim, no código | Exige Dev Client novo com `expo-print`, ainda não gerado (E-040) |
+
+*Nota:* até 27/11 (base `9de7d90`), nenhuma rota de `app/` usava fotografia ou voz.
 
 ## 5.3 Fotografia do visor
 
@@ -63,27 +75,31 @@ A investigação ocupou os PRs #64 a #85, de 11/11 a 26/11/2026, no Samsung SM-S
 | Web (TASK-13) | `web-voice.web.ts`: `processLocally = true` e pt-BR com `available()`; instalação do pacote local **só por toque do usuário**, depois de `downloadable` (D-004); nunca usa o reconhecedor remoto padrão | [voz Web](../task-13-voz-web.md) |
 | Revisão (TASK-15) | Revisão de voz sobre a mesma base da fotografia; o modo `recognition` com escritor só é instanciado em testes (E-008) | [revisão de voz](../task-15-revisao-voz.md) |
 | V1 de capacidade (PR #93, 26/11) | Listener registrado antes de `checkRecognitionSupport`; endurecimento do cliente de voz no mesmo nível do de fotografia; ferramentas de build e identidade para Windows (`tools/task12/`) com checks no CI; reaproveitamento da permissão já concedida | E-026 |
+| V2 no produto Web (PR #99, 27/11) | "Registrar por voz" abaixo do formulário manual, atrás de flag desligada; exige login, aceite vigente e `available()` local; revisão editável; `source: 'voice'` só após "Confirmar e salvar medição" e ACK; *epoch* por login invalida a revisão; guarda VOZ-01 no CI | [voz-produto](../voz-produto.md), E-039 |
+| V3 no produto Android (PR #101, 27/11) | "Verificar voz local" (API 33+, pt-BR em `installedOnDeviceLanguages`) antes de oferecer a voz; permissão só ao começar a falar; mesma revisão e porta de escrita da V2; cancelamento por background, foco e troca de *epoch* | [voz-android-produto](../voz-android-produto.md), E-041 |
+| Consenso de hipóteses (PR #102, 27/11) | Até cinco hipóteses finais; o parser interpreta todas; revisão só com interpretação unânime; senão, `ambiguous-result` (D-011). Aplicado ao cliente de avaliação; o modo `recognition` do produto mantém a transcrição única | [task-12 §27/11](../task-12-voz-android.md#27112026--concordância-das-hipóteses-finais), E-043 |
 
-Pendente (D-004): no Android, `triggerModelDownload` não existe no módulo (zero ocorrências em `native-modules/`).
+Nos testes da V2, da V3 e do consenso, o reconhecedor é **SIMULADO**. Pendente (D-004): no Android, `triggerModelDownload` não existe no módulo, e o produto não pede download de modelo.
 
 ## 5.5 Relatório PDF
 
-Feito em três etapas na Web, mescladas em 26/11/2026: P1 ([#87](https://github.com/RamonMenz/bp-tracker/pull/87)), P2 ([#88](https://github.com/RamonMenz/bp-tracker/pull/88)) e P4 ([#89](https://github.com/RamonMenz/bp-tracker/pull/89)). Detalhes em [docs/pdf-relatorio.md](../pdf-relatorio.md).
+Feito em três etapas na Web, mescladas em 26/11/2026: P1 ([#87](https://github.com/RamonMenz/bp-tracker/pull/87)), P2 ([#88](https://github.com/RamonMenz/bp-tracker/pull/88)) e P4 ([#89](https://github.com/RamonMenz/bp-tracker/pull/89)), mais a correção do prazo ([#97](https://github.com/RamonMenz/bp-tracker/pull/97), 27/11). O Android veio na P3 ([#100](https://github.com/RamonMenz/bp-tracker/pull/100), 27/11). Detalhes em [docs/pdf-relatorio.md](../pdf-relatorio.md) e [docs/pdf-android.md](../pdf-android.md).
 
 - **Modelo puro** (`src/lib/report/`). Período em dias civis no fuso fixado, com início inclusivo e fim exclusivo; horário de verão tratado com luxon. Médias por registro, com pulso ausente fora do denominador e sessão de duas leituras contada uma vez. Cobertura e avisos. O exemplo da spec dá 130,0/90,0 mmHg (N=3) e pulso 70,0 bpm (N=2).
 - **Leitura própria** `getReadingsForReport`. Devolve id, `fromCache`, `hasPendingWrites` e a contagem de omitidos. O `getAllReadings` do CSV **não mudou**.
 - **Renderização** com jsPDF 4.2.1 e AutoTable 5.0.9 (fixados, MIT), carregados sob demanda. A4 retrato, cabeçalho repetido, "Página X de Y", gráfico vetorial com datas reais, Helvetica padrão (WinAnsi). Caracteres fora do CP1252 viram "?" e o documento declara quantos foram trocados. Observação de usuário é renderizada como texto literal.
 - **Fluxo.** Botão "Gerar relatório PDF" no Histórico, diálogo de período, revisão e prévia (embutida só com `navigator.pdfViewerEnabled`, D-009) e "Salvar PDF" por `Blob` com revogação da URL depois de 60 s.
-- **Limites de operação.** Até 3.000 registros: acima disso o relatório é recusado, sem truncar. Prazo de 30 s, que **não cobre** o import do jsPDF/AutoTable (E-033, Q-017). Geração na thread principal, porque um worker levaria 567 KB à abertura do app (D-008).
+- **Limites de operação.** Até 3.000 registros: acima disso o relatório é recusado, sem truncar. Prazo único de 30 s, que desde o #97 cobre também o import do jsPDF/AutoTable (E-037; antes não cobria, E-033). Geração na thread principal, porque um worker levaria 567 KB à abertura do app (D-008).
 - **Bundle Web (P1).** Entrada +12.101 B (+3.136 B gzip); chunks sob demanda +571.110 B (+179.705 B gzip). Valores medidos pelo agente e não reexecutados (E-018).
-- **Android:** `expo-print` não está instalado e o adaptador nativo declara indisponibilidade (D-007). O jsPDF não serve no runtime nativo porque o `TextDecoder` do Expo só aceita UTF-8 (E-022).
+- **Android (P3, #100).** Mesmo hook e mesmo modelo da Web. Template HTML/CSS autocontido (A4, `thead` repetido, SVG com a mesma geometria, escape de todo texto variável, CSP `default-src 'none'`) convertido por `expo-print` ~57.0.1. Revisão **sem prévia embutida** (declarado na interface). Entrega pela folha de compartilhamento do sistema. Temporários no cache, apagados na hora ou 5 min depois de a folha fechar, com varredura de resíduos; nunca em `documentDirectory`. O bundle `.hbc` cresceu 214 KB (sobretudo luxon) e não contém jsPDF. O jsPDF não serve no runtime nativo porque o `TextDecoder` do Expo só aceita UTF-8 (E-022). **Exige build EAS novo** (E-040).
 
 ## 5.6 Privacidade
 
 - **Em projeto:** processamento local como regra (sem nuvem para OCR, STT ou PDF), mídia só em memória e revisão sem texto bruto nem confiança no documento clínico.
 - **Mensagens de erro seguras:** o repositório lança `ReadingsQueryError(reason)`, e o hook escolhe a mensagem pelo motivo. Nenhum `error.message` cru vai ao usuário ou ao logger no PDF.
 - **Sentry Web (PR [#91](https://github.com/RamonMenz/bp-tracker/pull/91), 26/11/2026).** Os breadcrumbs padrão do `@sentry/browser` 10.70.0 (`dom`, `console`, `fetch`, `xhr`, `history`) podiam levar `aria-label`s do Histórico no formato "N por N" (valores de pressão). A correção desliga a integração `Breadcrumbs`, descarta qualquer breadcrumb em `beforeBreadcrumb` e reduz o evento em `beforeSend` (sem `request`, `user` ou `message`, e com a mensagem da exceção trocada por um texto fixo). Dez testes com o SDK real: 9 falhavam antes da correção e todos passam depois ([sentry-privacidade.md](../sentry-privacidade.md), E-024).
-- **Pendente no nativo:** `crashReporter.native.ts` repassa ao Crashlytics a mensagem original do erro (`toError` não redige). O defeito foi confirmado por leitura e não foi alterado (Q-013, E-034).
+- **Crashlytics (PR [#98](https://github.com/RamonMenz/bp-tracker/pull/98), 27/11/2026).** O adapter nativo repassava a mensagem original do erro (E-034). Agora entrega uma cópia com a mensagem fixa `[mensagem removida por privacidade]`, sem `cause` nem propriedades extras, preservando tipo, stack e `scope` (E-038). **Resíduo:** os handlers globais do próprio `@react-native-firebase/crashlytics` ainda enviam a mensagem crua de erros fatais e promises não tratadas (Q-022).
+- **Voz no produto:** transcrição e confiança ficam fora do documento, da observação, dos logs e dos coletores; a suíte de rules rejeita documentos com esses metadados (E-039).
 
 ## 5.7 Correções de segurança e de isolamento
 
@@ -95,4 +111,13 @@ Feito em três etapas na Web, mescladas em 26/11/2026: P1 ([#87](https://github.
 | Breadcrumbs e mensagens do Sentry Web com dado de saúde | Legado (#91) | E-024 |
 | Clientes de avaliação com `allowBackup` ligado e *network inspector* ativo | Demos (#75, #76, #93) | E-026, E-029 |
 | Suítes de rules que se apagavam em paralelo no emulador | Testes, P4 | [pdf-relatorio §12](../pdf-relatorio.md) |
-| Conteúdo do PDF pulado no CI por falta de poppler | CI (#95) | `.github/workflows/ci.yml` instala `poppler-utils`, e o teste falha no CI se ele faltar (`9f85807`, `6fb1f57`) |
+| Conteúdo do PDF pulado no CI por falta de poppler | CI (#95) | `.github/workflows/ci.yml` instala `poppler-utils`, e o teste falha no CI se ele faltar (`9f85807`, `6fb1f57`; E-036) |
+| Prazo de 30 s sem cobrir o import do jsPDF | PDF (#97) | E-037 |
+| Mensagem de exceção crua ao Crashlytics | Legado (#98) | E-038 |
+| Descarte tardio apagava o PDF Android adotado antes do compartilhamento | PDF, P3 (#100) | Teste que falhava antes (E-040) |
+| Hipóteses de grafia diferente recusadas antes do parser | Voz Android (#102) | E-042, E-043; sem validação em aparelho |
+
+## 5.8 Integração em `main` e builds
+
+- **Release (PR [#103](https://github.com/RamonMenz/bp-tracker/pull/103), 27/11/2026, D-012).** `staging` foi levada a `main` pelo autor. Segundo o PR, a Vercel de produção é alimentada por `main`; o efeito visível na Web é o PDF e a correção do Sentry, com a voz desligada. O merge não publica rules nem Functions.
+- **Build EAS de teste (PR [#104](https://github.com/RamonMenz/bp-tracker/pull/104)).** Perfil `standalone-teste` com a voz Android ligada só nele. **Aberto, não mesclado** em 28/11 (E-047).

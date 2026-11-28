@@ -2,15 +2,18 @@
 
 [← 11. Referências](11-referencias.md) · [Índice](README.md)
 
+> **Resumo.** Antes de 08/12, a prioridade é validar em aparelho o que já está no produto: a correção da voz, a V2, a V3 e o PDF Android. Depois vêm a decisão sobre a fotografia, o corpus e as comparações.
+
 Itens derivados das pendências registradas, sem prazo nem compromisso. Os que dependem de decisão da orientadora estão marcados como tal. Nenhum deles foi autorizado por este documento.
 
 ## 12.1 Para fechar as entregas deste ciclo, se o prazo e a orientadora permitirem
 
-1. **PDF:** validar a Web em fluxo logado com dados reais (só leitura), num Chrome com visualizador de PDF, com impressão A4 e em cinza e com leitor de tela real (Q-011, Q-014). Decidir entre corrigir o código e corrigir a documentação do prazo de 30 s (Q-017). Implementar o PDF Android com `expo-print` se houver Dev Client do produto (P3, TASK-24, Q-010).
-2. **Voz no produto:** V2 (Web atrás de flag desligada por padrão) e V3 (Android com rebuild do Dev Client), com os testes de confirmação, cancelamento e troca de conta previstos na [reavaliação §6](../reavaliacao-2026-11-26.md). Antes de habilitar, definir com a orientadora o critério de privacidade do serviço do sistema (Q-019) e o aceite de P01 (Q-004).
-3. **Reprodutibilidade da V1:** repetir o build a partir de um commit publicado (por exemplo, `1140197` ou posterior) e registrar o hash (Q-016). Tabular as tentativas por frase.
-4. **Privacidade nativa:** decidir se a mensagem de erro também será redigida antes do Crashlytics (Q-013/Q-018).
-5. **Produção:** verificar a publicação das rules com `photo`/`voice`, a Function `onUserDelete` e a branch de produção da Vercel, sempre por ação expressa do autor (Q-020, Q-021).
+1. **Voz Android:** gerar o APK a partir de um commit publicado, registrar o commit e o SHA-256 (Q-016, Q-023) e repetir o reteste de 10 tentativas sem pulso e 6 com pulso, inclusive offline, para medir o efeito do consenso (#102).
+2. **Voz no produto:** com o Dev Client novo (PR #104, se aprovado), executar o roteiro da V3 ([voz-android-produto](../voz-android-produto.md#roteiro-no-aparelho-após-o-novo-build)) com a conta de teste; executar a V2 num Chrome com pacote local e login. Antes de habilitar a flag para uso, definir com a orientadora o critério de privacidade do serviço (Q-019) e o aceite de P01 (Q-004).
+3. **PDF Android:** build EAS e roteiro de [pdf-android §9](../pdf-android.md#9-o-que-o-autor-precisa-conferir-no-aparelho-samsung): leitor externo, A4, paginação, cinza, temporários, tempo com 1.095 e 3.000 registros e TalkBack.
+4. **PDF Web:** registrar ambiente e data da validação do autor (E-045); testar leitor de tela real, navegador móvel e prévia com visualizador de PDF (Q-011).
+5. **Privacidade nativa:** decidir sobre os handlers globais do Crashlytics (Q-022) e conferir a chegada real ao Sentry e ao Crashlytics.
+6. **Produção:** verificar a publicação das rules com `photo`/`voice`, a Function `onUserDelete` e a ausência das flags de voz na Vercel, sempre por ação expressa do autor (Q-021, Q-025).
 
 ## 12.2 Fotografia (depende da orientadora, Q-001/Q-002)
 
@@ -30,3 +33,5 @@ Itens derivados das pendências registradas, sem prazo nem compromisso. Os que d
 - Conversão deste relatório em artigo no formato SBC (P039).
 - Indicadores agregados de adesão sobre os lembretes configurados (P028) e telemetria anônima e agregada das novas modalidades (P026).
 - Acessibilidade do próprio PDF (marcação, PDF/UA) e navegação por teclado completa nos rádios da Web.
+- Refatorar o renderizador jsPDF para usar as funções de geometria compartilhadas com o template Android ([pdf-android §2](../pdf-android.md#2-decisões)).
+- Instalação explícita do modelo pt-BR no Android (`triggerModelDownload`, D-004), hoje ausente.
